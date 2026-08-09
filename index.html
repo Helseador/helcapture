@@ -1,0 +1,777 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>HelCapture</title>
+<style>
+  :root {
+    --teal: #2ABFC0;
+    --teal-dark: #1E9899;
+    --teal-light: #E8F8F8;
+    --navy: #1B2A4A;
+    --navy-light: #2C3E6B;
+    --white: #FFFFFF;
+    --gray-50: #F8FAFC;
+    --gray-100: #F1F5F9;
+    --gray-200: #E2E8F0;
+    --gray-400: #94A3B8;
+    --gray-600: #475569;
+    --gray-800: #1E293B;
+    --danger: #EF4444;
+    --success: #10B981;
+    --warning: #F59E0B;
+    --radius: 16px;
+    --radius-sm: 10px;
+    --shadow-sm: 0 2px 8px rgba(27,42,74,0.08);
+  }
+  * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  html,body { font-family:'Segoe UI',system-ui,-apple-system,sans-serif; background:var(--gray-50); color:var(--gray-800); min-height:100vh; overflow-x:hidden; }
+
+  /* SCREENS */
+  .screen { display:none; min-height:100vh; flex-direction:column; }
+  .screen.active { display:flex; }
+
+  /* SPLASH */
+  #screen-splash {
+    background:linear-gradient(160deg,var(--navy) 0%,var(--navy-light) 60%,var(--teal-dark) 100%);
+    align-items:center; justify-content:center; gap:24px; padding:40px 24px;
+  }
+  .splash-tagline { color:rgba(255,255,255,0.65); font-size:14px; text-align:center; }
+  .geo-status {
+    background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.15);
+    border-radius:var(--radius); padding:22px 24px; width:100%; max-width:340px; text-align:center;
+  }
+  .geo-icon { font-size:36px; margin-bottom:10px; }
+  .geo-title { color:var(--white); font-size:15px; font-weight:600; margin-bottom:6px; }
+  .geo-desc { color:rgba(255,255,255,0.6); font-size:13px; line-height:1.5; }
+  .geo-coords { margin-top:12px; background:rgba(42,191,192,0.2); border-radius:8px; padding:8px 12px; color:var(--teal); font-size:11px; font-family:monospace; display:none; }
+  .geo-error { color:#FCA5A5; font-size:13px; margin-top:10px; display:none; }
+  .btn-primary { background:var(--teal); color:var(--white); border:none; border-radius:var(--radius-sm); padding:14px 32px; font-size:15px; font-weight:600; cursor:pointer; width:100%; max-width:340px; transition:background 0.2s,transform 0.1s; display:none; }
+  .btn-primary:active { transform:scale(0.97); background:var(--teal-dark); }
+  .btn-retry { background:transparent; color:var(--teal); border:1.5px solid var(--teal); border-radius:var(--radius-sm); padding:12px 32px; font-size:14px; font-weight:600; cursor:pointer; width:100%; max-width:340px; margin-top:8px; display:none; }
+
+  /* HEADER */
+  .app-header { background:var(--white); border-bottom:1px solid var(--gray-200); padding:14px 20px; display:flex; align-items:center; justify-content:space-between; position:sticky; top:0; z-index:100; box-shadow:var(--shadow-sm); }
+  .header-badge { background:var(--teal-light); color:var(--teal-dark); font-size:11px; font-weight:700; padding:4px 10px; border-radius:20px; }
+  .geo-dot { width:8px; height:8px; border-radius:50%; background:var(--success); display:inline-block; margin-right:5px; animation:pulse 2s infinite; }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+
+  /* CONTENT */
+  .main-content { flex:1; padding:20px 16px 48px; display:flex; flex-direction:column; gap:16px; max-width:480px; width:100%; margin:0 auto; }
+
+  /* CARD */
+  .card { background:var(--white); border-radius:var(--radius); padding:20px; box-shadow:var(--shadow-sm); border:1px solid var(--gray-200); }
+  .card-title { font-size:13px; font-weight:700; color:var(--teal-dark); text-transform:uppercase; letter-spacing:0.8px; margin-bottom:16px; display:flex; align-items:center; gap:8px; }
+  .card-title span { font-size:16px; }
+
+  /* TOGGLE SECTION */
+  .section-toggle {
+    background:var(--white); border-radius:var(--radius); border:1.5px solid var(--gray-200);
+    overflow:hidden; box-shadow:var(--shadow-sm);
+  }
+  .section-toggle-header {
+    display:flex; align-items:center; justify-content:space-between;
+    padding:16px 20px; cursor:pointer; user-select:none;
+    transition:background 0.2s;
+  }
+  .section-toggle-header:active { background:var(--gray-50); }
+  .section-toggle-header.active { border-bottom:1px solid var(--gray-200); }
+  .section-toggle-left { display:flex; align-items:center; gap:12px; }
+  .section-toggle-icon { font-size:22px; }
+  .section-toggle-name { font-size:15px; font-weight:700; color:var(--navy); }
+  .section-toggle-sub { font-size:12px; color:var(--gray-400); margin-top:1px; }
+  .toggle-switch { position:relative; width:44px; height:24px; flex-shrink:0; }
+  .toggle-switch input { opacity:0; width:0; height:0; }
+  .toggle-slider { position:absolute; inset:0; background:var(--gray-200); border-radius:24px; transition:background 0.2s; }
+  .toggle-slider:before { content:''; position:absolute; width:18px; height:18px; left:3px; top:3px; background:white; border-radius:50%; transition:transform 0.2s; box-shadow:0 1px 4px rgba(0,0,0,0.2); }
+  input:checked + .toggle-slider { background:var(--teal); }
+  input:checked + .toggle-slider:before { transform:translateX(20px); }
+  .section-body { padding:20px; display:none; flex-direction:column; gap:14px; }
+  .section-body.open { display:flex; }
+
+  /* FORM */
+  .field { display:flex; flex-direction:column; gap:6px; }
+  label { font-size:13px; font-weight:600; color:var(--gray-600); }
+  input[type="text"],input[type="date"],input[type="number"],select,textarea {
+    background:var(--gray-50); border:1.5px solid var(--gray-200); border-radius:var(--radius-sm);
+    padding:12px 14px; font-size:15px; color:var(--gray-800); width:100%; font-family:inherit;
+    transition:border-color 0.2s; -webkit-appearance:none;
+  }
+  input:focus,select:focus,textarea:focus { outline:none; border-color:var(--teal); background:var(--white); }
+  textarea { resize:none; line-height:1.5; }
+  select { background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%2394A3B8' stroke-width='2'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E"); background-repeat:no-repeat; background-position:right 12px center; padding-right:36px; cursor:pointer; }
+
+  /* GEO PILL */
+  .geo-pill { display:flex; align-items:center; gap:10px; background:var(--teal-light); border:1px solid var(--teal); border-radius:var(--radius-sm); padding:10px 14px; }
+  .geo-pill-icon { font-size:18px; }
+  .geo-pill-text { flex:1; }
+  .geo-pill-title { font-size:12px; font-weight:700; color:var(--teal-dark); }
+  .geo-pill-coords { font-size:11px; color:var(--gray-600); font-family:monospace; margin-top:1px; }
+
+  /* STEPS */
+  .steps { display:flex; align-items:center; justify-content:center; gap:0; padding:4px 0; }
+  .step-dot { width:28px; height:28px; border-radius:50%; border:2px solid var(--gray-200); background:var(--white); color:var(--gray-400); font-size:12px; font-weight:700; display:flex; align-items:center; justify-content:center; transition:all 0.3s; }
+  .step-dot.active { border-color:var(--teal); background:var(--teal); color:white; }
+  .step-dot.done { border-color:var(--teal); background:var(--teal-light); color:var(--teal-dark); }
+  .step-line { flex:1; height:2px; background:var(--gray-200); max-width:48px; }
+  .step-line.done { background:var(--teal); }
+
+  /* FOTO */
+  .foto-section-label { font-size:13px; font-weight:700; color:var(--gray-600); margin-bottom:8px; display:flex; align-items:center; justify-content:space-between; }
+  .foto-section-label span { font-size:12px; font-weight:400; color:var(--gray-400); }
+  .photos-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:6px; margin-bottom:10px; }
+  .photo-thumb { aspect-ratio:1; border-radius:8px; overflow:hidden; position:relative; background:var(--gray-100); border:1.5px solid var(--gray-200); }
+  .photo-thumb img { width:100%; height:100%; object-fit:cover; }
+  .remove-photo { position:absolute; top:3px; right:3px; background:rgba(0,0,0,0.6); color:white; border:none; border-radius:50%; width:20px; height:20px; font-size:12px; cursor:pointer; display:flex; align-items:center; justify-content:center; }
+  .photo-source-btns { display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:10px; }
+  .btn-source { border:1.5px solid var(--gray-200); background:var(--white); border-radius:var(--radius-sm); padding:10px; font-size:13px; font-weight:600; color:var(--navy); cursor:pointer; display:flex; align-items:center; justify-content:center; gap:6px; transition:border-color 0.2s,background 0.2s; }
+  .btn-source:active { background:var(--teal-light); border-color:var(--teal); }
+  input[type="file"] { display:none; }
+
+  /* REFERENCIA ROW */
+  .ref-row { display:grid; grid-template-columns:1fr 80px; gap:8px; align-items:end; }
+  .ref-list { display:flex; flex-direction:column; gap:8px; }
+  .ref-item { display:grid; grid-template-columns:1fr 80px 32px; gap:6px; align-items:center; }
+  .ref-item input { margin:0; }
+  .btn-icon { background:none; border:1.5px solid var(--gray-200); border-radius:8px; width:32px; height:44px; cursor:pointer; font-size:16px; display:flex; align-items:center; justify-content:center; color:var(--danger); flex-shrink:0; }
+  .btn-add-ref { background:var(--teal-light); border:1.5px dashed var(--teal); border-radius:var(--radius-sm); color:var(--teal-dark); font-size:13px; font-weight:600; padding:10px; cursor:pointer; width:100%; text-align:center; }
+
+  /* BTNS */
+  .btn-submit { background:linear-gradient(135deg,var(--teal) 0%,var(--teal-dark) 100%); color:var(--white); border:none; border-radius:var(--radius); padding:16px; font-size:16px; font-weight:700; cursor:pointer; width:100%; transition:opacity 0.2s,transform 0.1s; box-shadow:0 4px 16px rgba(42,191,192,0.35); }
+  .btn-submit:active { transform:scale(0.98); opacity:0.9; }
+  .btn-back { background:var(--gray-200); color:var(--gray-600); border:none; border-radius:var(--radius); padding:16px; font-size:15px; font-weight:600; cursor:pointer; width:100%; }
+
+  /* SUCCESS */
+  #screen-success { background:linear-gradient(160deg,var(--navy) 0%,var(--navy-light) 60%,var(--teal-dark) 100%); align-items:center; justify-content:center; padding:40px 24px; text-align:center; gap:20px; }
+  .success-icon { font-size:72px; }
+  .success-title { color:var(--white); font-size:24px; font-weight:700; }
+  .success-sub { color:rgba(255,255,255,0.7); font-size:15px; line-height:1.6; max-width:300px; }
+  .success-id { background:rgba(255,255,255,0.1); border-radius:var(--radius-sm); padding:10px 20px; color:var(--teal); font-size:13px; font-family:monospace; }
+  .btn-new { background:var(--teal); color:white; border:none; border-radius:var(--radius-sm); padding:14px 32px; font-size:15px; font-weight:700; cursor:pointer; width:100%; max-width:320px; }
+
+  /* OVERLAY */
+  .overlay { position:fixed; inset:0; background:rgba(27,42,74,0.75); display:none; align-items:center; justify-content:center; z-index:999; flex-direction:column; gap:16px; }
+  .overlay.active { display:flex; }
+  .spinner { width:44px; height:44px; border:4px solid rgba(255,255,255,0.2); border-top-color:var(--teal); border-radius:50%; animation:spin 0.8s linear infinite; }
+  @keyframes spin { to { transform:rotate(360deg); } }
+  .overlay-text { color:white; font-size:15px; font-weight:600; }
+
+  /* TOAST */
+  .toast { position:fixed; bottom:24px; left:50%; transform:translateX(-50%) translateY(80px); background:var(--navy); color:white; padding:12px 20px; border-radius:var(--radius-sm); font-size:14px; font-weight:600; z-index:1000; transition:transform 0.3s ease; white-space:nowrap; max-width:90vw; text-align:center; }
+  .toast.show { transform:translateX(-50%) translateY(0); }
+  .toast.error { background:var(--danger); }
+  .toast.success { background:var(--success); }
+
+  /* MISC */
+  .divider { height:1px; background:var(--gray-200); margin:4px 0; }
+  .optional-tag { font-size:11px; background:var(--gray-100); color:var(--gray-400); padding:2px 8px; border-radius:20px; font-weight:600; }
+</style>
+</head>
+<body>
+
+<div class="overlay" id="overlay"><div class="spinner"></div><div class="overlay-text" id="overlay-text">Guardando...</div></div>
+<div class="toast" id="toast"></div>
+
+<!-- ══ SPLASH ══ -->
+<div class="screen active" id="screen-splash">
+  <div style="text-align:center;">
+    <svg height="42" viewBox="0 0 200 42" xmlns="http://www.w3.org/2000/svg">
+      <text y="34" font-family="'Segoe UI',sans-serif" font-size="30" font-weight="800">
+        <tspan fill="#2ABFC0">Hel</tspan><tspan fill="#FFFFFF">Capture</tspan>
+      </text>
+    </svg>
+    <div style="color:rgba(255,255,255,0.4); font-size:11px; margin-top:4px; letter-spacing:1px;">BY GRUPO HELSE</div>
+  </div>
+  <p class="splash-tagline">Captura inteligente de eventos de impulso</p>
+
+  <div class="geo-status">
+    <div class="geo-icon" id="geo-icon">📍</div>
+    <div class="geo-title" id="geo-title">Obteniendo ubicación...</div>
+    <div class="geo-desc" id="geo-desc">HelCapture necesita tu ubicación para registrar dónde ocurrió la actividad.</div>
+    <div class="geo-coords" id="geo-coords"></div>
+    <div class="geo-error" id="geo-error"></div>
+  </div>
+
+  <button class="btn-primary" id="btn-start">Registrar actividad →</button>
+  <button class="btn-retry" id="btn-retry" onclick="solicitarGeo()">🔄 Reintentar</button>
+</div>
+
+<!-- ══ FORM ══ -->
+<div class="screen" id="screen-form">
+  <div class="app-header">
+    <svg height="28" viewBox="0 0 180 32" xmlns="http://www.w3.org/2000/svg">
+      <text y="26" font-family="'Segoe UI',sans-serif" font-size="22" font-weight="800">
+        <tspan fill="#2ABFC0">Hel</tspan><tspan fill="#1B2A4A">Capture</tspan>
+      </text>
+    </svg>
+    <div class="header-badge"><span class="geo-dot"></span>GPS activo</div>
+  </div>
+
+  <div class="main-content">
+    <div class="steps">
+      <div class="step-dot active" id="step1">1</div>
+      <div class="step-line" id="line1"></div>
+      <div class="step-dot" id="step2">2</div>
+      <div class="step-line" id="line2"></div>
+      <div class="step-dot" id="step3">3</div>
+      <div class="step-line" id="line3"></div>
+      <div class="step-dot" id="step4">4</div>
+    </div>
+
+    <!-- ── PASO 1: INFO EVENTO ── -->
+    <div id="paso1">
+      <div class="card">
+        <div class="card-title"><span>📋</span> Información del evento</div>
+        <div class="field" style="margin-bottom:14px">
+          <label>Nombre del evento *</label>
+          <input type="text" id="nombre-evento" placeholder="Ej. Lanzamiento Nutrición 2026" maxlength="100">
+        </div>
+        <div class="field" style="margin-bottom:14px">
+          <label>Tipo de evento *</label>
+          <select id="tipo-evento">
+            <option value="">Selecciona el tipo...</option>
+            <option value="Feria">🏪 Feria</option>
+            <option value="Charla">🎤 Charla</option>
+            <option value="Capacitación">📚 Capacitación</option>
+            <option value="Evento presencial">📅 Evento presencial</option>
+            <option value="Otro">📌 Otro</option>
+          </select>
+        </div>
+        <div class="field" style="margin-bottom:14px">
+          <label>Fecha del evento *</label>
+          <input type="date" id="fecha-evento">
+        </div>
+        <div class="field" style="margin-bottom:14px">
+          <label>Lugar / Sede *</label>
+          <input type="text" id="lugar-evento" placeholder="Ej. Centro Comercial Gran Estación, Bogotá">
+        </div>
+        <div class="field" style="margin-bottom:16px">
+          <label>Número de asistentes *</label>
+          <input type="number" id="asistentes" placeholder="Ej. 45" inputmode="numeric" min="0">
+        </div>
+        <div class="geo-pill">
+          <div class="geo-pill-icon">📍</div>
+          <div class="geo-pill-text">
+            <div class="geo-pill-title">Ubicación capturada</div>
+            <div class="geo-pill-coords" id="geo-display">Cargando coordenadas...</div>
+          </div>
+        </div>
+      </div>
+      <button class="btn-submit" onclick="irPaso2()">Continuar → Fotos del evento</button>
+    </div>
+
+    <!-- ── PASO 2: FOTOS GENERALES + SECCIONES ── -->
+    <div id="paso2" style="display:none">
+
+      <!-- Fotos generales -->
+      <div class="card">
+        <div class="card-title"><span>📸</span> Fotos del evento</div>
+        <div id="fotos-generales-ui"></div>
+      </div>
+
+      <!-- MUESTREO -->
+      <div class="section-toggle" id="toggle-muestreo">
+        <div class="section-toggle-header" onclick="toggleSeccion('muestreo')">
+          <div class="section-toggle-left">
+            <div class="section-toggle-icon">🧪</div>
+            <div>
+              <div class="section-toggle-name">Muestreo</div>
+              <div class="section-toggle-sub">Degustaciones y sampling</div>
+            </div>
+          </div>
+          <label class="toggle-switch" onclick="event.stopPropagation()">
+            <input type="checkbox" id="chk-muestreo" onchange="toggleSeccion('muestreo')">
+            <span class="toggle-slider"></span>
+          </label>
+        </div>
+        <div class="section-body" id="body-muestreo">
+          <div class="field">
+            <label>Descripción del muestreo</label>
+            <textarea id="muestreo-desc" rows="3" placeholder="Productos degustados, público objetivo, metodología..."></textarea>
+          </div>
+          <div class="field">
+            <label>Observaciones</label>
+            <textarea id="muestreo-obs" rows="2" placeholder="Reacciones del público, feedback, novedades..."></textarea>
+          </div>
+          <div>
+            <div class="foto-section-label">Evidencia fotográfica <span id="cnt-muestreo">0/8</span></div>
+            <div class="photos-grid" id="grid-muestreo"></div>
+            <div class="photo-source-btns" id="btns-muestreo">
+              <button class="btn-source" onclick="document.getElementById('cam-muestreo').click()">📷 Cámara</button>
+              <button class="btn-source" onclick="document.getElementById('gal-muestreo').click()">🖼️ Galería</button>
+            </div>
+            <input type="file" id="cam-muestreo" accept="image/*" capture="environment" onchange="agregarFotos(this,'muestreo')">
+            <input type="file" id="gal-muestreo" accept="image/*" multiple onchange="agregarFotos(this,'muestreo')">
+          </div>
+        </div>
+      </div>
+
+      <!-- VENTAS -->
+      <div class="section-toggle" id="toggle-ventas">
+        <div class="section-toggle-header" onclick="toggleSeccion('ventas')">
+          <div class="section-toggle-left">
+            <div class="section-toggle-icon">💰</div>
+            <div>
+              <div class="section-toggle-name">Ventas</div>
+              <div class="section-toggle-sub">Referencias y cantidades vendidas</div>
+            </div>
+          </div>
+          <label class="toggle-switch" onclick="event.stopPropagation()">
+            <input type="checkbox" id="chk-ventas" onchange="toggleSeccion('ventas')">
+            <span class="toggle-slider"></span>
+          </label>
+        </div>
+        <div class="section-body" id="body-ventas">
+          <div>
+            <label style="font-size:13px;font-weight:600;color:var(--gray-600);display:block;margin-bottom:8px;">Referencias vendidas</label>
+            <div class="ref-list" id="ref-list-ventas"></div>
+            <button class="btn-add-ref" onclick="addRef('ventas')">+ Agregar referencia</button>
+          </div>
+          <div class="field">
+            <label>Observaciones de ventas</label>
+            <textarea id="ventas-obs" rows="2" placeholder="Productos más demandados, objeciones, oportunidades..."></textarea>
+          </div>
+          <div>
+            <div class="foto-section-label">Evidencia fotográfica <span id="cnt-ventas">0/8</span></div>
+            <div class="photos-grid" id="grid-ventas"></div>
+            <div class="photo-source-btns" id="btns-ventas">
+              <button class="btn-source" onclick="document.getElementById('cam-ventas').click()">📷 Cámara</button>
+              <button class="btn-source" onclick="document.getElementById('gal-ventas').click()">🖼️ Galería</button>
+            </div>
+            <input type="file" id="cam-ventas" accept="image/*" capture="environment" onchange="agregarFotos(this,'ventas')">
+            <input type="file" id="gal-ventas" accept="image/*" multiple onchange="agregarFotos(this,'ventas')">
+          </div>
+        </div>
+      </div>
+
+      <!-- OBSEQUIOS -->
+      <div class="section-toggle" id="toggle-obsequios">
+        <div class="section-toggle-header" onclick="toggleSeccion('obsequios')">
+          <div class="section-toggle-left">
+            <div class="section-toggle-icon">🎁</div>
+            <div>
+              <div class="section-toggle-name">Obsequios</div>
+              <div class="section-toggle-sub">Cantidad y referencias entregadas</div>
+            </div>
+          </div>
+          <label class="toggle-switch" onclick="event.stopPropagation()">
+            <input type="checkbox" id="chk-obsequios" onchange="toggleSeccion('obsequios')">
+            <span class="toggle-slider"></span>
+          </label>
+        </div>
+        <div class="section-body" id="body-obsequios">
+          <div>
+            <label style="font-size:13px;font-weight:600;color:var(--gray-600);display:block;margin-bottom:8px;">Referencias entregadas</label>
+            <div class="ref-list" id="ref-list-obsequios"></div>
+            <button class="btn-add-ref" onclick="addRef('obsequios')">+ Agregar referencia</button>
+          </div>
+          <div class="field">
+            <label>Observaciones de obsequios</label>
+            <textarea id="obsequios-obs" rows="2" placeholder="Reacciones, destino de los obsequios, observaciones..."></textarea>
+          </div>
+          <div>
+            <div class="foto-section-label">Evidencia fotográfica <span id="cnt-obsequios">0/8</span></div>
+            <div class="photos-grid" id="grid-obsequios"></div>
+            <div class="photo-source-btns" id="btns-obsequios">
+              <button class="btn-source" onclick="document.getElementById('cam-obsequios').click()">📷 Cámara</button>
+              <button class="btn-source" onclick="document.getElementById('gal-obsequios').click()">🖼️ Galería</button>
+            </div>
+            <input type="file" id="cam-obsequios" accept="image/*" capture="environment" onchange="agregarFotos(this,'obsequios')">
+            <input type="file" id="gal-obsequios" accept="image/*" multiple onchange="agregarFotos(this,'obsequios')">
+          </div>
+        </div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+        <button class="btn-back" onclick="irPaso1()">← Volver</button>
+        <button class="btn-submit" onclick="irPaso3()">Continuar →</button>
+      </div>
+    </div>
+
+    <!-- ── PASO 3: GASTOS ── -->
+    <div id="paso3" style="display:none">
+      <div class="card">
+        <div class="card-title"><span>💵</span> Legalización de gastos <span class="optional-tag">opcional</span></div>
+        <div class="ref-list" id="ref-list-gastos" style="margin-bottom:12px;"></div>
+        <button class="btn-add-ref" onclick="addGasto()">+ Agregar gasto</button>
+        <div style="height:14px;"></div>
+        <div class="field">
+          <label>Observaciones de gastos</label>
+          <textarea id="gastos-obs" rows="2" placeholder="Justificación general, pendientes, etc."></textarea>
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+        <button class="btn-back" onclick="irPaso2()">← Volver</button>
+        <button class="btn-submit" onclick="irPaso4()">Continuar →</button>
+      </div>
+    </div>
+
+    <!-- ── PASO 4: CIERRE ── -->
+    <div id="paso4" style="display:none">
+      <div class="card">
+        <div class="card-title"><span>🎯</span> Detalle e impacto</div>
+        <div class="field" style="margin-bottom:14px">
+          <label>Descripción de la actividad *</label>
+          <textarea id="desc-actividad" rows="4" placeholder="Describe qué se hizo: demostraciones, charlas, materiales entregados..."></textarea>
+        </div>
+        <div class="field">
+          <label>Impacto y resultados *</label>
+          <textarea id="impacto" rows="4" placeholder="Logros obtenidos, leads generados, feedback del público..."></textarea>
+        </div>
+        <div style="height:14px;"></div>
+        <div class="field">
+          <label>Observaciones adicionales</label>
+          <textarea id="obs-adicional" rows="3" placeholder="Novedades, inconvenientes, oportunidades de mejora..."></textarea>
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+        <button class="btn-back" onclick="irPaso3()">← Volver</button>
+        <button class="btn-submit" onclick="enviarActividad()">✅ Cerrar actividad</button>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ══ SUCCESS ══ -->
+<div class="screen" id="screen-success">
+  <div class="success-icon">✅</div>
+  <div class="success-title">¡Actividad registrada!</div>
+  <div class="success-sub">El evento quedó guardado con tu ubicación, fotos y toda la información capturada.</div>
+  <div class="success-id" id="success-id">ID: ---</div>
+  <button class="btn-new" onclick="nuevaActividad()">+ Registrar otra actividad</button>
+</div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import { getFirestore, collection, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+const firebaseConfig = {
+  apiKey: "TU_API_KEY",
+  authDomain: "TU_PROJECT.firebaseapp.com",
+  projectId: "TU_PROJECT_ID",
+  storageBucket: "TU_PROJECT.appspot.com",
+  messagingSenderId: "TU_SENDER_ID",
+  appId: "TU_APP_ID"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+
+// ── ESTADO ──
+window._geo = null;
+window._fotosData = {
+  generales: [],
+  muestreo: [],
+  ventas: [],
+  obsequios: []
+};
+window._refs = { ventas: [], obsequios: [] };
+window._gastos = [];
+
+// ── GEO ──
+window.solicitarGeo = function() {
+  const icon = document.getElementById('geo-icon');
+  const title = document.getElementById('geo-title');
+  const desc = document.getElementById('geo-desc');
+  const coords = document.getElementById('geo-coords');
+  const errEl = document.getElementById('geo-error');
+  const btnStart = document.getElementById('btn-start');
+  const btnRetry = document.getElementById('btn-retry');
+
+  icon.textContent = '⏳'; title.textContent = 'Obteniendo ubicación...';
+  errEl.style.display = 'none'; coords.style.display = 'none';
+  btnStart.style.display = 'none'; btnRetry.style.display = 'none';
+
+  if (!navigator.geolocation) {
+    icon.textContent = '❌'; title.textContent = 'GPS no disponible';
+    errEl.textContent = 'Tu dispositivo no soporta geolocalización.'; errEl.style.display = 'block'; return;
+  }
+
+  navigator.geolocation.getCurrentPosition(pos => {
+    window._geo = { lat: pos.coords.latitude, lng: pos.coords.longitude, accuracy: pos.coords.accuracy, timestamp: new Date().toISOString() };
+    icon.textContent = '✅'; title.textContent = 'Ubicación obtenida';
+    desc.textContent = 'Tu posición fue registrada exitosamente.';
+    coords.textContent = `${pos.coords.latitude.toFixed(6)}, ${pos.coords.longitude.toFixed(6)} · ±${Math.round(pos.coords.accuracy)}m`;
+    coords.style.display = 'block'; btnStart.style.display = 'block';
+    document.getElementById('geo-display').textContent = `${pos.coords.latitude.toFixed(5)}, ${pos.coords.longitude.toFixed(5)} · ±${Math.round(pos.coords.accuracy)}m`;
+  }, err => {
+    icon.textContent = '⚠️'; title.textContent = 'No se pudo obtener ubicación';
+    const msgs = { 1:'Permiso denegado. Activa la ubicación en tu navegador.', 2:'Posición no disponible. Verifica tu GPS.', 3:'Tiempo agotado. Intenta de nuevo.' };
+    errEl.textContent = msgs[err.code] || 'Error desconocido.'; errEl.style.display = 'block'; btnRetry.style.display = 'block';
+  }, { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 });
+};
+
+document.getElementById('btn-start').addEventListener('click', () => {
+  document.getElementById('fecha-evento').value = new Date().toISOString().split('T')[0];
+  initFotosUI('generales', 5);
+  showScreen('screen-form');
+});
+
+// ── SCREENS ──
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  window.scrollTo(0,0);
+}
+
+// ── STEPS ──
+function setStep(n) {
+  for (let i=1;i<=4;i++) {
+    const d = document.getElementById('step'+i);
+    d.classList.remove('active','done');
+    if (i<n) d.classList.add('done');
+    else if (i===n) d.classList.add('active');
+  }
+  for (let i=1;i<=3;i++) {
+    document.getElementById('line'+i).classList.toggle('done', i<n);
+  }
+}
+
+// ── NAVEGACIÓN ──
+window.irPaso1 = function() { showPaso(1); setStep(1); };
+window.irPaso2 = function() {
+  const nombre = document.getElementById('nombre-evento').value.trim();
+  const tipo = document.getElementById('tipo-evento').value;
+  const fecha = document.getElementById('fecha-evento').value;
+  const lugar = document.getElementById('lugar-evento').value.trim();
+  const asistentes = document.getElementById('asistentes').value.trim();
+  if (!nombre||!tipo||!fecha||!lugar||!asistentes) { showToast('Completa todos los campos obligatorios','error'); return; }
+  showPaso(2); setStep(2);
+};
+window.irPaso3 = function() {
+  if (window._fotosData.generales.length === 0) { showToast('Agrega al menos 1 foto del evento','error'); return; }
+  showPaso(3); setStep(3);
+};
+window.irPaso4 = function() { showPaso(4); setStep(4); };
+
+function showPaso(n) {
+  for(let i=1;i<=4;i++) {
+    const el = document.getElementById('paso'+i);
+    if(el) el.style.display = i===n ? 'block' : 'none';
+  }
+  window.scrollTo(0,0);
+}
+
+// ── TOGGLE SECCIONES ──
+window.toggleSeccion = function(nombre) {
+  const chk = document.getElementById('chk-'+nombre);
+  const body = document.getElementById('body-'+nombre);
+  const header = document.querySelector('#toggle-'+nombre+' .section-toggle-header');
+  // Sync checkbox si se clickeó el header
+  if (!chk.dataset.manual) chk.checked = !chk.checked;
+  chk.dataset.manual = '';
+  body.classList.toggle('open', chk.checked);
+  header.classList.toggle('active', chk.checked);
+  if (chk.checked && nombre==='ventas' && window._refs.ventas.length===0) addRef('ventas');
+  if (chk.checked && nombre==='obsequios' && window._refs.obsequios.length===0) addRef('obsequios');
+};
+
+// ── FOTOS ──
+function initFotosUI(seccion, max) {
+  renderFotosUI(seccion, max);
+}
+
+window.agregarFotos = function(input, seccion) {
+  const max = seccion === 'generales' ? 5 : 8;
+  const arr = window._fotosData[seccion];
+  const files = Array.from(input.files);
+  const restantes = max - arr.length;
+  const toAdd = files.slice(0, restantes);
+  if (files.length > restantes) showToast(`Máximo ${max} fotos en esta sección`, 'error');
+  toAdd.forEach(file => {
+    const reader = new FileReader();
+    reader.onload = e => { arr.push({ dataUrl: e.target.result, nombre: file.name, size: file.size }); renderFotosUI(seccion, max); };
+    reader.readAsDataURL(file);
+  });
+  input.value = '';
+};
+
+window.removeFoto = function(seccion, i) {
+  window._fotosData[seccion].splice(i,1);
+  const max = seccion === 'generales' ? 5 : 8;
+  renderFotosUI(seccion, max);
+};
+
+function renderFotosUI(seccion, max) {
+  const arr = window._fotosData[seccion];
+  const count = arr.length;
+  const isGenerales = seccion === 'generales';
+  const gridId = isGenerales ? 'fotos-generales-ui' : 'grid-'+seccion;
+  const cntId = 'cnt-'+seccion;
+  const btnsId = 'btns-'+seccion;
+
+  if (isGenerales) {
+    const container = document.getElementById('fotos-generales-ui');
+    let html = `<div style="text-align:right;font-size:12px;color:var(--gray-400);margin-bottom:8px;"><strong style="color:var(--teal-dark)">${count}</strong> / ${max} fotos</div>`;
+    html += `<div class="photos-grid" id="grid-generales">`;
+    arr.forEach((f,i) => {
+      html += `<div class="photo-thumb"><img src="${f.dataUrl}" alt="Foto ${i+1}"><button class="remove-photo" onclick="removeFoto('generales',${i})">×</button></div>`;
+    });
+    html += `</div>`;
+    if (count < max) {
+      html += `<div class="photo-source-btns"><button class="btn-source" onclick="document.getElementById('cam-generales').click()">📷 Cámara</button><button class="btn-source" onclick="document.getElementById('gal-generales').click()">🖼️ Galería</button></div>`;
+    }
+    html += `<input type="file" id="cam-generales" accept="image/*" capture="environment" onchange="agregarFotos(this,'generales')"><input type="file" id="gal-generales" accept="image/*" multiple onchange="agregarFotos(this,'generales')">`;
+    container.innerHTML = html;
+  } else {
+    const cntEl = document.getElementById(cntId);
+    if (cntEl) cntEl.textContent = `${count}/${max}`;
+    const grid = document.getElementById('grid-'+seccion);
+    if (!grid) return;
+    grid.innerHTML = arr.map((f,i) =>
+      `<div class="photo-thumb"><img src="${f.dataUrl}" alt="Foto ${i+1}"><button class="remove-photo" onclick="removeFoto('${seccion}',${i})">×</button></div>`
+    ).join('');
+    const btns = document.getElementById(btnsId);
+    if (btns) btns.style.display = count >= max ? 'none' : 'grid';
+  }
+}
+
+// ── REFERENCIAS (ventas / obsequios) ──
+window.addRef = function(seccion) {
+  const list = document.getElementById('ref-list-'+seccion);
+  const idx = window._refs[seccion].length;
+  window._refs[seccion].push({ referencia: '', cantidad: '' });
+  const div = document.createElement('div');
+  div.className = 'ref-item';
+  div.id = `ref-${seccion}-${idx}`;
+  div.innerHTML = `
+    <input type="text" placeholder="Referencia / producto" oninput="updateRef('${seccion}',${idx},'referencia',this.value)">
+    <input type="number" placeholder="Cant." min="0" inputmode="numeric" oninput="updateRef('${seccion}',${idx},'cantidad',this.value)">
+    <button class="btn-icon" onclick="removeRef('${seccion}',${idx})">×</button>
+  `;
+  list.appendChild(div);
+};
+
+window.updateRef = function(seccion, idx, campo, valor) {
+  if (window._refs[seccion][idx]) window._refs[seccion][idx][campo] = valor;
+};
+
+window.removeRef = function(seccion, idx) {
+  const el = document.getElementById(`ref-${seccion}-${idx}`);
+  if (el) el.remove();
+  window._refs[seccion][idx] = null;
+};
+
+// ── GASTOS ──
+window.addGasto = function() {
+  const list = document.getElementById('ref-list-gastos');
+  const idx = window._gastos.length;
+  window._gastos.push({ concepto: '', valor: '' });
+  const div = document.createElement('div');
+  div.className = 'ref-item';
+  div.id = `gasto-${idx}`;
+  div.innerHTML = `
+    <input type="text" placeholder="Concepto del gasto" oninput="updateGasto(${idx},'concepto',this.value)">
+    <input type="number" placeholder="$ valor" min="0" inputmode="numeric" oninput="updateGasto(${idx},'valor',this.value)">
+    <button class="btn-icon" onclick="removeGasto(${idx})">×</button>
+  `;
+  list.appendChild(div);
+};
+
+window.updateGasto = function(idx, campo, valor) {
+  if (window._gastos[idx]) window._gastos[idx][campo] = valor;
+};
+
+window.removeGasto = function(idx) {
+  const el = document.getElementById(`gasto-${idx}`);
+  if (el) el.remove();
+  window._gastos[idx] = null;
+};
+
+// ── ENVIAR ──
+window.enviarActividad = async function() {
+  const desc = document.getElementById('desc-actividad').value.trim();
+  const impacto = document.getElementById('impacto').value.trim();
+  if (!desc||!impacto) { showToast('Completa la descripción e impacto','error'); return; }
+
+  showOverlay('Guardando actividad...');
+
+  const chkMuestreo = document.getElementById('chk-muestreo').checked;
+  const chkVentas = document.getElementById('chk-ventas').checked;
+  const chkObsequios = document.getElementById('chk-obsequios').checked;
+
+  const payload = {
+    evento: {
+      nombre: document.getElementById('nombre-evento').value.trim(),
+      tipo: document.getElementById('tipo-evento').value,
+      fecha: document.getElementById('fecha-evento').value,
+      lugar: document.getElementById('lugar-evento').value.trim(),
+      asistentes: parseInt(document.getElementById('asistentes').value) || 0,
+    },
+    ubicacion: window._geo,
+    fotosGenerales: window._fotosData.generales,
+    muestreo: chkMuestreo ? {
+      activo: true,
+      descripcion: document.getElementById('muestreo-desc').value.trim(),
+      observaciones: document.getElementById('muestreo-obs').value.trim(),
+      fotos: window._fotosData.muestreo
+    } : { activo: false },
+    ventas: chkVentas ? {
+      activo: true,
+      referencias: window._refs.ventas.filter(Boolean),
+      observaciones: document.getElementById('ventas-obs').value.trim(),
+      fotos: window._fotosData.ventas
+    } : { activo: false },
+    obsequios: chkObsequios ? {
+      activo: true,
+      referencias: window._refs.obsequios.filter(Boolean),
+      observaciones: document.getElementById('obsequios-obs').value.trim(),
+      fotos: window._fotosData.obsequios
+    } : { activo: false },
+    gastos: {
+      items: window._gastos.filter(Boolean),
+      observaciones: document.getElementById('gastos-obs').value.trim()
+    },
+    cierre: {
+      descripcion: desc,
+      impacto: impacto,
+      observaciones: document.getElementById('obs-adicional').value.trim()
+    },
+    creadoEn: serverTimestamp(),
+    version: '1.1.0'
+  };
+
+  try {
+    const docRef = await addDoc(collection(db, 'actividades'), payload);
+    hideOverlay();
+    document.getElementById('success-id').textContent = 'ID: ' + docRef.id.slice(0,12).toUpperCase();
+    showScreen('screen-success');
+  } catch(e) {
+    hideOverlay();
+    console.error(e);
+    showToast('Error al guardar. Verifica tu conexión.','error');
+  }
+};
+
+window.nuevaActividad = function() {
+  window._geo = null;
+  window._fotosData = { generales:[], muestreo:[], ventas:[], obsequios:[] };
+  window._refs = { ventas:[], obsequios:[] };
+  window._gastos = [];
+  document.querySelectorAll('input[type="text"],input[type="number"],textarea').forEach(el => el.value='');
+  document.querySelectorAll('input[type="checkbox"]').forEach(el => { el.checked=false; });
+  document.querySelectorAll('.section-body').forEach(el => el.classList.remove('open'));
+  document.querySelectorAll('.ref-list').forEach(el => el.innerHTML='');
+  document.getElementById('tipo-evento').value='';
+  irPaso1();
+  solicitarGeo();
+  showScreen('screen-splash');
+};
+
+// ── UTILS ──
+function showOverlay(msg) { document.getElementById('overlay-text').textContent=msg; document.getElementById('overlay').classList.add('active'); }
+function hideOverlay() { document.getElementById('overlay').classList.remove('active'); }
+window.showToast = function(msg,type='') {
+  const t = document.getElementById('toast');
+  t.textContent=msg; t.className='toast '+type; t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'),3000);
+};
+
+// ── INIT ──
+solicitarGeo();
+initFotosUI('generales', 5);
+</script>
+</body>
+</html>

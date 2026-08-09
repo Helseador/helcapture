@@ -1,0 +1,1052 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HelConnect — Admin</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.6.0/jspdf.plugin.autotable.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/PptxGenJS/3.12.0/pptxgen.bundled.js"></script>
+<style>
+:root {
+  --teal:#2ABFC0; --teal-dark:#1E9899; --teal-light:#E8F8F8;
+  --navy:#1B2A4A; --navy-light:#2C3E6B;
+  --white:#fff; --gray-50:#F8FAFC; --gray-100:#F1F5F9;
+  --gray-200:#E2E8F0; --gray-400:#94A3B8; --gray-600:#475569; --gray-800:#1E293B;
+  --danger:#EF4444; --success:#10B981; --warning:#F59E0B;
+  --sidebar:260px;
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--gray-50);color:var(--gray-800);display:flex;height:100vh;overflow:hidden;}
+
+/* ── SIDEBAR ── */
+.sidebar{width:var(--sidebar);background:var(--navy);display:flex;flex-direction:column;flex-shrink:0;overflow-y:auto;}
+.sidebar-header{padding:24px 20px 16px;border-bottom:1px solid rgba(255,255,255,0.08);}
+.sidebar-logo{display:flex;align-items:center;gap:10px;}
+.sidebar-logo svg{flex-shrink:0;}
+.sidebar-subtitle{color:rgba(255,255,255,0.4);font-size:11px;margin-top:6px;letter-spacing:0.5px;}
+.nav{padding:12px 0;flex:1;}
+.nav-item{display:flex;align-items:center;gap:12px;padding:11px 20px;color:rgba(255,255,255,0.65);cursor:pointer;font-size:14px;font-weight:500;transition:all 0.15s;border-left:3px solid transparent;user-select:none;}
+.nav-item:hover{background:rgba(255,255,255,0.06);color:white;}
+.nav-item.active{background:rgba(42,191,192,0.15);color:var(--teal);border-left-color:var(--teal);}
+.nav-icon{font-size:18px;width:22px;text-align:center;}
+.nav-section{padding:16px 20px 6px;font-size:10px;font-weight:700;color:rgba(255,255,255,0.25);letter-spacing:1.5px;text-transform:uppercase;}
+.sidebar-footer{padding:16px 20px;border-top:1px solid rgba(255,255,255,0.08);}
+.live-badge{display:flex;align-items:center;gap:8px;background:rgba(16,185,129,0.15);border:1px solid rgba(16,185,129,0.3);border-radius:8px;padding:8px 12px;}
+.live-dot{width:8px;height:8px;border-radius:50%;background:var(--success);animation:pulse 2s infinite;}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+.live-text{color:rgba(255,255,255,0.7);font-size:12px;font-weight:600;}
+
+/* ── MAIN ── */
+.main{flex:1;display:flex;flex-direction:column;overflow:hidden;}
+.topbar{background:var(--white);border-bottom:1px solid var(--gray-200);padding:0 28px;height:60px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0;}
+.topbar-title{font-size:18px;font-weight:700;color:var(--navy);}
+.topbar-actions{display:flex;align-items:center;gap:12px;}
+.content{flex:1;overflow-y:auto;padding:28px;}
+
+/* ── VIEWS ── */
+.view{display:none;} .view.active{display:block;}
+
+/* ── STATS ── */
+.stats-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:24px;}
+.stat-card{background:var(--white);border-radius:14px;padding:20px;border:1px solid var(--gray-200);position:relative;overflow:hidden;}
+.stat-card::before{content:'';position:absolute;top:0;right:0;width:60px;height:60px;border-radius:0 14px 0 60px;opacity:0.08;}
+.stat-card.teal::before{background:var(--teal);}
+.stat-card.navy::before{background:var(--navy);}
+.stat-card.success::before{background:var(--success);}
+.stat-card.warning::before{background:var(--warning);}
+.stat-label{font-size:12px;color:var(--gray-400);font-weight:600;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:6px;}
+.stat-value{font-size:28px;font-weight:800;color:var(--navy);}
+.stat-icon{font-size:22px;position:absolute;top:18px;right:18px;opacity:0.5;}
+
+/* ── TABLE ── */
+.table-card{background:var(--white);border-radius:14px;border:1px solid var(--gray-200);overflow:hidden;}
+.table-toolbar{padding:16px 20px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--gray-200);gap:12px;flex-wrap:wrap;}
+.table-toolbar-title{font-size:15px;font-weight:700;color:var(--navy);}
+.search-box{display:flex;align-items:center;gap:8px;background:var(--gray-50);border:1.5px solid var(--gray-200);border-radius:8px;padding:8px 12px;min-width:220px;}
+.search-box input{border:none;background:none;font-size:14px;color:var(--gray-800);outline:none;width:100%;}
+table{width:100%;border-collapse:collapse;}
+thead{background:var(--gray-50);}
+th{padding:11px 16px;text-align:left;font-size:12px;font-weight:700;color:var(--gray-400);text-transform:uppercase;letter-spacing:0.5px;border-bottom:1px solid var(--gray-200);}
+td{padding:13px 16px;font-size:14px;border-bottom:1px solid var(--gray-100);vertical-align:middle;}
+tr:last-child td{border-bottom:none;}
+tr:hover td{background:var(--gray-50);}
+.badge{display:inline-flex;align-items:center;gap:4px;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700;}
+.badge.teal{background:var(--teal-light);color:var(--teal-dark);}
+.badge.navy{background:#EEF2FF;color:var(--navy);}
+.badge.success{background:#D1FAE5;color:#065F46;}
+.badge.warning{background:#FEF3C7;color:#92400E;}
+.badge.danger{background:#FEE2E2;color:#991B1B;}
+.badge.gray{background:var(--gray-100);color:var(--gray-600);}
+
+/* ── BUTTONS ── */
+.btn{display:inline-flex;align-items:center;gap:6px;padding:8px 16px;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;border:none;transition:all 0.15s;}
+.btn-teal{background:var(--teal);color:white;}
+.btn-teal:hover{background:var(--teal-dark);}
+.btn-navy{background:var(--navy);color:white;}
+.btn-navy:hover{background:var(--navy-light);}
+.btn-outline{background:white;color:var(--gray-600);border:1.5px solid var(--gray-200);}
+.btn-outline:hover{border-color:var(--teal);color:var(--teal);}
+.btn-danger{background:var(--danger);color:white;}
+.btn-sm{padding:6px 12px;font-size:12px;}
+.btn-icon-only{padding:7px;border-radius:8px;background:var(--gray-100);border:none;cursor:pointer;font-size:14px;color:var(--gray-600);}
+.btn-icon-only:hover{background:var(--gray-200);}
+
+/* ── MODAL ── */
+.modal-bg{position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:500;display:none;align-items:center;justify-content:center;padding:20px;}
+.modal-bg.open{display:flex;}
+.modal{background:white;border-radius:16px;padding:28px;width:100%;max-width:680px;max-height:90vh;overflow-y:auto;}
+.modal-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;}
+.modal-title{font-size:18px;font-weight:700;color:var(--navy);}
+.modal-close{background:none;border:none;font-size:20px;cursor:pointer;color:var(--gray-400);}
+
+/* ── DETAIL SECTIONS ── */
+.detail-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px;}
+.detail-item{}
+.detail-label{font-size:11px;font-weight:700;color:var(--gray-400);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:3px;}
+.detail-value{font-size:14px;color:var(--gray-800);}
+.section-block{background:var(--gray-50);border-radius:10px;padding:14px;margin-bottom:12px;}
+.section-block-title{font-size:12px;font-weight:700;color:var(--teal-dark);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:10px;display:flex;align-items:center;gap:6px;}
+.foto-mini-grid{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px;}
+.foto-mini{width:72px;height:72px;border-radius:8px;object-fit:cover;border:1.5px solid var(--gray-200);cursor:pointer;}
+.ref-table-mini{width:100%;font-size:13px;}
+.ref-table-mini th{font-size:11px;padding:6px 8px;}
+.ref-table-mini td{padding:6px 8px;}
+.map-link{display:inline-flex;align-items:center;gap:5px;color:var(--teal-dark);font-size:13px;font-weight:600;text-decoration:none;}
+.map-link:hover{text-decoration:underline;}
+
+/* ── USERS ── */
+.users-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:16px;}
+.user-card{background:white;border-radius:14px;border:1px solid var(--gray-200);padding:20px;display:flex;flex-direction:column;gap:12px;}
+.user-avatar{width:44px;height:44px;border-radius:50%;background:var(--teal);color:white;display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:700;flex-shrink:0;}
+.user-info{flex:1;}
+.user-name{font-size:15px;font-weight:700;color:var(--navy);}
+.user-email{font-size:13px;color:var(--gray-400);margin-top:2px;}
+.user-actions{display:flex;gap:8px;}
+
+/* ── REPORTS ── */
+.reports-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;}
+.report-card{background:white;border-radius:14px;border:1px solid var(--gray-200);padding:24px;display:flex;flex-direction:column;gap:14px;cursor:pointer;transition:border-color 0.15s,box-shadow 0.15s;}
+.report-card:hover{border-color:var(--teal);box-shadow:0 4px 20px rgba(42,191,192,0.12);}
+.report-icon{font-size:32px;}
+.report-title{font-size:15px;font-weight:700;color:var(--navy);}
+.report-desc{font-size:13px;color:var(--gray-400);line-height:1.5;}
+.report-format{display:flex;gap:6px;flex-wrap:wrap;}
+
+/* ── FORM ELEMENTS ── */
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px;}
+.form-field{display:flex;flex-direction:column;gap:5px;}
+.form-field label{font-size:12px;font-weight:600;color:var(--gray-600);}
+.form-field input,.form-field select,.form-field textarea{border:1.5px solid var(--gray-200);border-radius:8px;padding:9px 12px;font-size:14px;font-family:inherit;outline:none;transition:border-color 0.15s;}
+.form-field input:focus,.form-field select:focus,.form-field textarea:focus{border-color:var(--teal);}
+
+/* ── FILTER BAR ── */
+.filter-bar{display:flex;gap:10px;margin-bottom:20px;flex-wrap:wrap;}
+.filter-select{border:1.5px solid var(--gray-200);border-radius:8px;padding:8px 12px;font-size:13px;font-family:inherit;background:white;cursor:pointer;outline:none;}
+.filter-select:focus{border-color:var(--teal);}
+
+/* ── EMPTY STATE ── */
+.empty-state{text-align:center;padding:60px 20px;color:var(--gray-400);}
+.empty-state .icon{font-size:48px;margin-bottom:12px;}
+.empty-state p{font-size:15px;}
+
+/* ── TOAST ── */
+.toast{position:fixed;bottom:24px;right:24px;background:var(--navy);color:white;padding:12px 20px;border-radius:10px;font-size:14px;font-weight:600;z-index:999;transform:translateY(80px);transition:transform 0.3s;opacity:0;}
+.toast.show{transform:translateY(0);opacity:1;}
+.toast.success{background:var(--success);}
+.toast.error{background:var(--danger);}
+
+/* ── LIGHTBOX ── */
+.lightbox{position:fixed;inset:0;background:rgba(0,0,0,0.9);z-index:600;display:none;align-items:center;justify-content:center;}
+.lightbox.open{display:flex;}
+.lightbox img{max-width:90vw;max-height:90vh;border-radius:8px;}
+.lightbox-close{position:absolute;top:20px;right:20px;background:rgba(255,255,255,0.1);color:white;border:none;border-radius:50%;width:40px;height:40px;font-size:20px;cursor:pointer;}
+
+/* ── SCROLLBAR ── */
+::-webkit-scrollbar{width:6px;height:6px;}
+::-webkit-scrollbar-track{background:transparent;}
+::-webkit-scrollbar-thumb{background:var(--gray-200);border-radius:3px;}
+</style>
+</head>
+<body>
+
+<!-- SIDEBAR -->
+<div class="sidebar">
+  <div class="sidebar-header">
+    <div class="sidebar-logo">
+      <svg height="30" viewBox="0 0 190 32" xmlns="http://www.w3.org/2000/svg">
+        <text y="26" font-family="'Segoe UI',sans-serif" font-size="22" font-weight="800">
+          <tspan fill="#2ABFC0">Hel</tspan><tspan fill="#FFFFFF">Connect</tspan>
+        </text>
+      </svg>
+    </div>
+    <div class="sidebar-subtitle">PANEL ADMINISTRATIVO · BY GRUPO HELSE</div>
+  </div>
+
+  <nav class="nav">
+    <div class="nav-section">Principal</div>
+    <div class="nav-item active" onclick="navigate('dashboard')">
+      <span class="nav-icon">📊</span> Dashboard
+    </div>
+    <div class="nav-item" onclick="navigate('actividades')">
+      <span class="nav-icon">📋</span> Actividades
+    </div>
+
+    <div class="nav-section">Informes</div>
+    <div class="nav-item" onclick="navigate('informes')">
+      <span class="nav-icon">📄</span> Generar informes
+    </div>
+
+    <div class="nav-section">Gestión</div>
+    <div class="nav-item" onclick="navigate('usuarios')">
+      <span class="nav-icon">👥</span> Usuarios
+    </div>
+  </nav>
+
+  <div class="sidebar-footer">
+    <div class="live-badge">
+      <div class="live-dot"></div>
+      <div class="live-text">Tiempo real activo</div>
+    </div>
+  </div>
+</div>
+
+<!-- MAIN -->
+<div class="main">
+  <div class="topbar">
+    <div class="topbar-title" id="topbar-title">Dashboard</div>
+    <div class="topbar-actions">
+      <span style="font-size:13px;color:var(--gray-400)" id="last-update">Sincronizando...</span>
+      <button class="btn btn-outline btn-sm" onclick="exportarExcel()">📊 Excel</button>
+      <button class="btn btn-teal btn-sm" onclick="navigate('informes')">📄 Informes</button>
+    </div>
+  </div>
+
+  <div class="content">
+
+    <!-- ══ DASHBOARD ══ -->
+    <div class="view active" id="view-dashboard">
+      <div class="stats-grid">
+        <div class="stat-card teal">
+          <div class="stat-label">Total actividades</div>
+          <div class="stat-value" id="stat-total">–</div>
+          <div class="stat-icon">📋</div>
+        </div>
+        <div class="stat-card navy">
+          <div class="stat-label">Este mes</div>
+          <div class="stat-value" id="stat-mes">–</div>
+          <div class="stat-icon">📅</div>
+        </div>
+        <div class="stat-card success">
+          <div class="stat-label">Total asistentes</div>
+          <div class="stat-value" id="stat-asistentes">–</div>
+          <div class="stat-icon">👥</div>
+        </div>
+        <div class="stat-card warning">
+          <div class="stat-label">Con legalización</div>
+          <div class="stat-value" id="stat-gastos">–</div>
+          <div class="stat-icon">💵</div>
+        </div>
+      </div>
+
+      <div class="table-card">
+        <div class="table-toolbar">
+          <div class="table-toolbar-title">Últimas actividades registradas</div>
+          <div class="search-box">
+            <span>🔍</span>
+            <input type="text" id="search-dashboard" placeholder="Buscar evento, lugar..." oninput="filtrarTabla()">
+          </div>
+        </div>
+        <div style="overflow-x:auto;">
+          <table>
+            <thead>
+              <tr>
+                <th>Evento</th>
+                <th>Tipo</th>
+                <th>Fecha</th>
+                <th>Lugar</th>
+                <th>Asistentes</th>
+                <th>Secciones</th>
+                <th>Acciones</th>
+              </tr>
+            </thead>
+            <tbody id="tabla-actividades"></tbody>
+          </table>
+        </div>
+        <div class="empty-state" id="empty-dashboard" style="display:none;">
+          <div class="icon">📭</div>
+          <p>No hay actividades registradas aún</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══ ACTIVIDADES ══ -->
+    <div class="view" id="view-actividades">
+      <div class="filter-bar">
+        <select class="filter-select" id="filtro-tipo" onchange="filtrarActividades()">
+          <option value="">Todos los tipos</option>
+          <option>Feria</option><option>Charla</option>
+          <option>Capacitación</option><option>Evento presencial</option><option>Otro</option>
+        </select>
+        <input type="date" class="filter-select" id="filtro-desde" onchange="filtrarActividades()">
+        <input type="date" class="filter-select" id="filtro-hasta" onchange="filtrarActividades()">
+        <select class="filter-select" id="filtro-seccion" onchange="filtrarActividades()">
+          <option value="">Todas las secciones</option>
+          <option value="muestreo">Con muestreo</option>
+          <option value="ventas">Con ventas</option>
+          <option value="obsequios">Con obsequios</option>
+          <option value="gastos">Con gastos</option>
+        </select>
+        <button class="btn btn-outline btn-sm" onclick="limpiarFiltros()">✕ Limpiar</button>
+      </div>
+      <div class="table-card">
+        <div class="table-toolbar">
+          <div class="table-toolbar-title">Todas las actividades <span id="count-filtradas" style="color:var(--gray-400);font-weight:400;font-size:13px;"></span></div>
+          <div class="search-box">
+            <span>🔍</span>
+            <input type="text" id="search-actividades" placeholder="Buscar..." oninput="filtrarActividades()">
+          </div>
+        </div>
+        <div style="overflow-x:auto;">
+          <table>
+            <thead>
+              <tr>
+                <th>Evento</th><th>Tipo</th><th>Fecha</th><th>Lugar</th>
+                <th>Asistentes</th><th>Muestreo</th><th>Ventas</th><th>Obsequios</th><th>Gastos</th><th>GPS</th><th>Ver</th>
+              </tr>
+            </thead>
+            <tbody id="tabla-all"></tbody>
+          </table>
+        </div>
+        <div class="empty-state" id="empty-actividades" style="display:none;">
+          <div class="icon">🔍</div>
+          <p>No hay resultados para los filtros aplicados</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══ INFORMES ══ -->
+    <div class="view" id="view-informes">
+      <div style="margin-bottom:20px;">
+        <div style="font-size:15px;color:var(--gray-600);margin-bottom:16px;">Selecciona el rango de fechas para el informe:</div>
+        <div class="filter-bar">
+          <input type="date" class="filter-select" id="inf-desde">
+          <input type="date" class="filter-select" id="inf-hasta">
+          <select class="filter-select" id="inf-tipo">
+            <option value="">Todos los tipos</option>
+            <option>Feria</option><option>Charla</option>
+            <option>Capacitación</option><option>Evento presencial</option>
+          </select>
+        </div>
+      </div>
+      <div class="reports-grid">
+        <div class="report-card" onclick="generarPDF()">
+          <div class="report-icon">📄</div>
+          <div class="report-title">Informe PDF</div>
+          <div class="report-desc">Resumen ejecutivo con métricas, detalle de cada actividad, secciones de muestreo, ventas y obsequios.</div>
+          <div class="report-format">
+            <span class="badge danger">PDF</span>
+          </div>
+        </div>
+        <div class="report-card" onclick="generarPPTX()">
+          <div class="report-icon">📊</div>
+          <div class="report-title">Presentación PPTX</div>
+          <div class="report-desc">Diapositivas automáticas por actividad con métricas de impacto, secciones activas y fotos de evidencia.</div>
+          <div class="report-format">
+            <span class="badge navy">PPTX</span>
+          </div>
+        </div>
+        <div class="report-card" onclick="exportarExcel()">
+          <div class="report-icon">📈</div>
+          <div class="report-title">Informe Excel</div>
+          <div class="report-desc">Hoja por módulo: Actividades, Muestreo, Ventas, Obsequios y Legalización de gastos por punto.</div>
+          <div class="report-format">
+            <span class="badge success">XLSX</span>
+          </div>
+        </div>
+        <div class="report-card" onclick="generarLegalizacion()">
+          <div class="report-icon">💵</div>
+          <div class="report-title">Formato legalización</div>
+          <div class="report-desc">Excel de gastos con concepto, valor y punto de venta para tramite contable.</div>
+          <div class="report-format">
+            <span class="badge success">XLSX</span>
+          </div>
+        </div>
+        <div class="report-card" onclick="generarVentas()">
+          <div class="report-icon">💰</div>
+          <div class="report-title">Informe de ventas</div>
+          <div class="report-desc">Resumen de referencias vendidas y cantidades por evento, agrupado por producto.</div>
+          <div class="report-format">
+            <span class="badge success">XLSX</span><span class="badge danger">PDF</span>
+          </div>
+        </div>
+        <div class="report-card" onclick="generarMuestreo()">
+          <div class="report-icon">🧪</div>
+          <div class="report-title">Informe de muestreo</div>
+          <div class="report-desc">Actividades con degustaciones y sampling, con conteo de asistentes y observaciones.</div>
+          <div class="report-format">
+            <span class="badge success">XLSX</span><span class="badge danger">PDF</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══ USUARIOS ══ -->
+    <div class="view" id="view-usuarios">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;">
+        <div style="font-size:15px;color:var(--gray-600);">Gestiona el equipo de impulso y administradores</div>
+        <button class="btn btn-teal" onclick="abrirModalUsuario()">+ Nuevo usuario</button>
+      </div>
+      <div class="users-grid" id="users-grid">
+        <div class="empty-state"><div class="icon">👥</div><p>Cargando usuarios...</p></div>
+      </div>
+    </div>
+
+  </div><!-- /content -->
+</div><!-- /main -->
+
+<!-- ══ MODAL DETALLE ══ -->
+<div class="modal-bg" id="modal-detalle">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title" id="modal-titulo">Detalle de actividad</div>
+      <button class="modal-close" onclick="cerrarModal('modal-detalle')">×</button>
+    </div>
+    <div id="modal-body"></div>
+  </div>
+</div>
+
+<!-- ══ MODAL USUARIO ══ -->
+<div class="modal-bg" id="modal-usuario">
+  <div class="modal" style="max-width:420px;">
+    <div class="modal-header">
+      <div class="modal-title" id="modal-user-titulo">Nuevo usuario</div>
+      <button class="modal-close" onclick="cerrarModal('modal-usuario')">×</button>
+    </div>
+    <div class="form-row">
+      <div class="form-field">
+        <label>Nombre completo</label>
+        <input type="text" id="u-nombre" placeholder="Juan Pérez">
+      </div>
+      <div class="form-field">
+        <label>Correo</label>
+        <input type="text" id="u-email" placeholder="juan@helteks.com">
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-field">
+        <label>Rol</label>
+        <select id="u-rol">
+          <option value="impulsor">Impulsor</option>
+          <option value="coordinador">Coordinador</option>
+          <option value="admin">Administrador</option>
+        </select>
+      </div>
+      <div class="form-field">
+        <label>Estado</label>
+        <select id="u-estado">
+          <option value="activo">Activo</option>
+          <option value="inactivo">Inactivo</option>
+        </select>
+      </div>
+    </div>
+    <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:8px;">
+      <button class="btn btn-outline" onclick="cerrarModal('modal-usuario')">Cancelar</button>
+      <button class="btn btn-teal" onclick="guardarUsuario()">Guardar usuario</button>
+    </div>
+  </div>
+</div>
+
+<!-- LIGHTBOX -->
+<div class="lightbox" id="lightbox" onclick="cerrarLightbox()">
+  <button class="lightbox-close" onclick="cerrarLightbox()">×</button>
+  <img id="lightbox-img" src="" alt="">
+</div>
+
+<!-- TOAST -->
+<div class="toast" id="toast"></div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import {
+  getFirestore, collection, onSnapshot, addDoc, updateDoc, doc, query, orderBy, serverTimestamp
+} from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+const firebaseConfig = {
+  apiKey: "TU_API_KEY",
+  authDomain: "TU_PROJECT.firebaseapp.com",
+  projectId: "TU_PROJECT_ID",
+  storageBucket: "TU_PROJECT.appspot.com",
+  messagingSenderId: "TU_SENDER_ID",
+  appId: "TU_APP_ID"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+
+// ── ESTADO ──
+window._actividades = [];
+window._usuarios = [];
+window._editUserId = null;
+
+// ── TIEMPO REAL: ACTIVIDADES ──
+const q = query(collection(db, 'actividades'), orderBy('creadoEn', 'desc'));
+onSnapshot(q, snap => {
+  window._actividades = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+  actualizarStats();
+  renderTabla(window._actividades);
+  renderTablaAll(window._actividades);
+  document.getElementById('last-update').textContent = 'Actualizado: ' + new Date().toLocaleTimeString('es-CO');
+});
+
+// ── TIEMPO REAL: USUARIOS ──
+onSnapshot(collection(db, 'usuarios'), snap => {
+  window._usuarios = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+  renderUsuarios();
+});
+
+// ── STATS ──
+function actualizarStats() {
+  const acts = window._actividades;
+  document.getElementById('stat-total').textContent = acts.length;
+  const mes = new Date().getMonth();
+  const anio = new Date().getFullYear();
+  const esMes = acts.filter(a => {
+    if (!a.creadoEn) return false;
+    const d = a.creadoEn.toDate ? a.creadoEn.toDate() : new Date(a.creadoEn);
+    return d.getMonth()===mes && d.getFullYear()===anio;
+  });
+  document.getElementById('stat-mes').textContent = esMes.length;
+  const totalAsistentes = acts.reduce((s,a) => s + (parseInt(a.evento?.asistentes)||0), 0);
+  document.getElementById('stat-asistentes').textContent = totalAsistentes.toLocaleString('es-CO');
+  const conGastos = acts.filter(a => a.gastos?.items?.length > 0);
+  document.getElementById('stat-gastos').textContent = conGastos.length;
+}
+
+// ── TABLA DASHBOARD ──
+function renderTabla(data) {
+  const tbody = document.getElementById('tabla-actividades');
+  const empty = document.getElementById('empty-dashboard');
+  if (!data.length) { tbody.innerHTML=''; empty.style.display='block'; return; }
+  empty.style.display='none';
+  tbody.innerHTML = data.slice(0,20).map(a => `
+    <tr>
+      <td><strong>${a.evento?.nombre||'–'}</strong></td>
+      <td>${badgeType(a.evento?.tipo)}</td>
+      <td>${fmtFecha(a.evento?.fecha)}</td>
+      <td style="max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${a.evento?.lugar||'–'}</td>
+      <td style="text-align:center;">${a.evento?.asistentes||0}</td>
+      <td>${seccionesBadges(a)}</td>
+      <td><button class="btn btn-outline btn-sm" onclick="verDetalle('${a.id}')">Ver</button></td>
+    </tr>
+  `).join('');
+}
+
+// ── TABLA ALL ──
+window.renderTablaAll = function(data) {
+  const tbody = document.getElementById('tabla-all');
+  const empty = document.getElementById('empty-actividades');
+  document.getElementById('count-filtradas').textContent = `(${data.length})`;
+  if (!data.length) { tbody.innerHTML=''; empty.style.display='block'; return; }
+  empty.style.display='none';
+  tbody.innerHTML = data.map(a => `
+    <tr>
+      <td><strong>${a.evento?.nombre||'–'}</strong></td>
+      <td>${badgeType(a.evento?.tipo)}</td>
+      <td>${fmtFecha(a.evento?.fecha)}</td>
+      <td style="max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${a.evento?.lugar||'–'}</td>
+      <td style="text-align:center;">${a.evento?.asistentes||0}</td>
+      <td style="text-align:center;">${a.muestreo?.activo ? '✅' : '–'}</td>
+      <td style="text-align:center;">${a.ventas?.activo ? '✅' : '–'}</td>
+      <td style="text-align:center;">${a.obsequios?.activo ? '✅' : '–'}</td>
+      <td style="text-align:center;">${(a.gastos?.items||[]).length > 0 ? '✅' : '–'}</td>
+      <td style="text-align:center;">${a.ubicacion ? `<a href="https://maps.google.com/?q=${a.ubicacion.lat},${a.ubicacion.lng}" target="_blank" class="map-link">📍</a>` : '–'}</td>
+      <td><button class="btn btn-outline btn-sm" onclick="verDetalle('${a.id}')">Ver</button></td>
+    </tr>
+  `).join('');
+};
+
+// ── DETALLE ──
+window.verDetalle = function(id) {
+  const a = window._actividades.find(x => x.id===id);
+  if (!a) return;
+  document.getElementById('modal-titulo').textContent = a.evento?.nombre || 'Detalle';
+
+  let html = `
+    <div class="detail-grid">
+      <div class="detail-item"><div class="detail-label">Tipo</div><div class="detail-value">${a.evento?.tipo||'–'}</div></div>
+      <div class="detail-item"><div class="detail-label">Fecha</div><div class="detail-value">${fmtFecha(a.evento?.fecha)}</div></div>
+      <div class="detail-item"><div class="detail-label">Lugar</div><div class="detail-value">${a.evento?.lugar||'–'}</div></div>
+      <div class="detail-item"><div class="detail-label">Asistentes</div><div class="detail-value">${a.evento?.asistentes||0}</div></div>
+    </div>`;
+
+  if (a.ubicacion) {
+    html += `<div class="section-block">
+      <div class="section-block-title">📍 Ubicación GPS</div>
+      <a href="https://maps.google.com/?q=${a.ubicacion.lat},${a.ubicacion.lng}" target="_blank" class="map-link">
+        Ver en Google Maps · ${a.ubicacion.lat?.toFixed(5)}, ${a.ubicacion.lng?.toFixed(5)} · ±${Math.round(a.ubicacion.accuracy||0)}m
+      </a>
+    </div>`;
+  }
+
+  // Fotos generales
+  if (a.fotosGenerales?.length) {
+    html += `<div class="section-block"><div class="section-block-title">📸 Fotos del evento</div>
+      <div class="foto-mini-grid">${a.fotosGenerales.map(f => `<img class="foto-mini" src="${f.dataUrl}" onclick="verFoto('${f.dataUrl}')">`).join('')}</div>
+    </div>`;
+  }
+
+  // Muestreo
+  if (a.muestreo?.activo) {
+    html += `<div class="section-block">
+      <div class="section-block-title">🧪 Muestreo</div>
+      ${a.muestreo.descripcion ? `<p style="font-size:13px;color:var(--gray-600);margin-bottom:6px;">${a.muestreo.descripcion}</p>` : ''}
+      ${a.muestreo.observaciones ? `<p style="font-size:13px;color:var(--gray-400);">${a.muestreo.observaciones}</p>` : ''}
+      ${a.muestreo.fotos?.length ? `<div class="foto-mini-grid">${a.muestreo.fotos.map(f=>`<img class="foto-mini" src="${f.dataUrl}" onclick="verFoto('${f.dataUrl}')">`).join('')}</div>` : ''}
+    </div>`;
+  }
+
+  // Ventas
+  if (a.ventas?.activo) {
+    const refs = (a.ventas.referencias||[]).filter(Boolean);
+    html += `<div class="section-block">
+      <div class="section-block-title">💰 Ventas</div>
+      ${refs.length ? `<table class="ref-table-mini"><thead><tr><th>Referencia</th><th>Cantidad</th></tr></thead><tbody>${refs.map(r=>`<tr><td>${r.referencia}</td><td>${r.cantidad}</td></tr>`).join('')}</tbody></table>` : ''}
+      ${a.ventas.observaciones ? `<p style="font-size:13px;color:var(--gray-400);margin-top:8px;">${a.ventas.observaciones}</p>` : ''}
+      ${a.ventas.fotos?.length ? `<div class="foto-mini-grid">${a.ventas.fotos.map(f=>`<img class="foto-mini" src="${f.dataUrl}" onclick="verFoto('${f.dataUrl}')">`).join('')}</div>` : ''}
+    </div>`;
+  }
+
+  // Obsequios
+  if (a.obsequios?.activo) {
+    const refs = (a.obsequios.referencias||[]).filter(Boolean);
+    html += `<div class="section-block">
+      <div class="section-block-title">🎁 Obsequios</div>
+      ${refs.length ? `<table class="ref-table-mini"><thead><tr><th>Referencia</th><th>Cantidad</th></tr></thead><tbody>${refs.map(r=>`<tr><td>${r.referencia}</td><td>${r.cantidad}</td></tr>`).join('')}</tbody></table>` : ''}
+      ${a.obsequios.observaciones ? `<p style="font-size:13px;color:var(--gray-400);margin-top:8px;">${a.obsequios.observaciones}</p>` : ''}
+      ${a.obsequios.fotos?.length ? `<div class="foto-mini-grid">${a.obsequios.fotos.map(f=>`<img class="foto-mini" src="${f.dataUrl}" onclick="verFoto('${f.dataUrl}')">`).join('')}</div>` : ''}
+    </div>`;
+  }
+
+  // Gastos
+  const gastos = (a.gastos?.items||[]).filter(Boolean);
+  if (gastos.length) {
+    const total = gastos.reduce((s,g)=>s+(parseFloat(g.valor)||0),0);
+    html += `<div class="section-block">
+      <div class="section-block-title">💵 Gastos legalizados</div>
+      <table class="ref-table-mini"><thead><tr><th>Concepto</th><th>Valor</th></tr></thead>
+      <tbody>${gastos.map(g=>`<tr><td>${g.concepto}</td><td>$${parseFloat(g.valor).toLocaleString('es-CO')}</td></tr>`).join('')}
+      <tr><td><strong>Total</strong></td><td><strong>$${total.toLocaleString('es-CO')}</strong></td></tr>
+      </tbody></table>
+    </div>`;
+  }
+
+  // Cierre
+  if (a.cierre) {
+    html += `<div class="section-block">
+      <div class="section-block-title">🎯 Detalle e impacto</div>
+      <p style="font-size:13px;color:var(--gray-600);margin-bottom:8px;"><strong>Descripción:</strong> ${a.cierre.descripcion||'–'}</p>
+      <p style="font-size:13px;color:var(--gray-600);"><strong>Impacto:</strong> ${a.cierre.impacto||'–'}</p>
+      ${a.cierre.observaciones ? `<p style="font-size:13px;color:var(--gray-400);margin-top:6px;">${a.cierre.observaciones}</p>` : ''}
+    </div>`;
+  }
+
+  document.getElementById('modal-body').innerHTML = html;
+  document.getElementById('modal-detalle').classList.add('open');
+};
+
+// ── FILTROS ──
+window.filtrarTabla = function() {
+  const q = document.getElementById('search-dashboard').value.toLowerCase();
+  const filtradas = window._actividades.filter(a =>
+    (a.evento?.nombre||'').toLowerCase().includes(q) ||
+    (a.evento?.lugar||'').toLowerCase().includes(q)
+  );
+  renderTabla(filtradas);
+};
+
+window.filtrarActividades = function() {
+  const q = document.getElementById('search-actividades').value.toLowerCase();
+  const tipo = document.getElementById('filtro-tipo').value;
+  const desde = document.getElementById('filtro-desde').value;
+  const hasta = document.getElementById('filtro-hasta').value;
+  const sec = document.getElementById('filtro-seccion').value;
+
+  let data = window._actividades.filter(a => {
+    if (q && !(a.evento?.nombre||'').toLowerCase().includes(q) && !(a.evento?.lugar||'').toLowerCase().includes(q)) return false;
+    if (tipo && a.evento?.tipo !== tipo) return false;
+    if (desde && a.evento?.fecha < desde) return false;
+    if (hasta && a.evento?.fecha > hasta) return false;
+    if (sec === 'muestreo' && !a.muestreo?.activo) return false;
+    if (sec === 'ventas' && !a.ventas?.activo) return false;
+    if (sec === 'obsequios' && !a.obsequios?.activo) return false;
+    if (sec === 'gastos' && !(a.gastos?.items||[]).filter(Boolean).length) return false;
+    return true;
+  });
+  renderTablaAll(data);
+};
+
+window.limpiarFiltros = function() {
+  ['filtro-tipo','filtro-desde','filtro-hasta','filtro-seccion','search-actividades'].forEach(id => {
+    const el = document.getElementById(id); if(el) el.value='';
+  });
+  renderTablaAll(window._actividades);
+};
+
+// ── INFORMES ──
+function getActividadesFiltradas() {
+  const desde = document.getElementById('inf-desde').value;
+  const hasta = document.getElementById('inf-hasta').value;
+  const tipo = document.getElementById('inf-tipo').value;
+  return window._actividades.filter(a => {
+    if (desde && a.evento?.fecha < desde) return false;
+    if (hasta && a.evento?.fecha > hasta) return false;
+    if (tipo && a.evento?.tipo !== tipo) return false;
+    return true;
+  });
+}
+
+window.exportarExcel = function() {
+  const acts = getActividadesFiltradas();
+  if (!acts.length) { showToast('No hay datos para exportar','error'); return; }
+
+  const wb = XLSX.utils.book_new();
+
+  // Hoja 1: Actividades
+  const rowsActs = acts.map(a => ({
+    'Evento': a.evento?.nombre||'',
+    'Tipo': a.evento?.tipo||'',
+    'Fecha': a.evento?.fecha||'',
+    'Lugar': a.evento?.lugar||'',
+    'Asistentes': a.evento?.asistentes||0,
+    'Descripción': a.cierre?.descripcion||'',
+    'Impacto': a.cierre?.impacto||'',
+    'GPS Lat': a.ubicacion?.lat||'',
+    'GPS Lng': a.ubicacion?.lng||'',
+    'Muestreo': a.muestreo?.activo ? 'Sí' : 'No',
+    'Ventas': a.ventas?.activo ? 'Sí' : 'No',
+    'Obsequios': a.obsequios?.activo ? 'Sí' : 'No',
+  }));
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(rowsActs), 'Actividades');
+
+  // Hoja 2: Ventas
+  const rowsVentas = [];
+  acts.filter(a=>a.ventas?.activo).forEach(a => {
+    (a.ventas.referencias||[]).filter(Boolean).forEach(r => {
+      rowsVentas.push({ 'Evento': a.evento?.nombre, 'Fecha': a.evento?.fecha, 'Lugar': a.evento?.lugar, 'Referencia': r.referencia, 'Cantidad': r.cantidad, 'Observaciones': a.ventas.observaciones||'' });
+    });
+  });
+  if (rowsVentas.length) XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(rowsVentas), 'Ventas');
+
+  // Hoja 3: Obsequios
+  const rowsObsequios = [];
+  acts.filter(a=>a.obsequios?.activo).forEach(a => {
+    (a.obsequios.referencias||[]).filter(Boolean).forEach(r => {
+      rowsObsequios.push({ 'Evento': a.evento?.nombre, 'Fecha': a.evento?.fecha, 'Lugar': a.evento?.lugar, 'Referencia': r.referencia, 'Cantidad': r.cantidad, 'Observaciones': a.obsequios.observaciones||'' });
+    });
+  });
+  if (rowsObsequios.length) XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(rowsObsequios), 'Obsequios');
+
+  // Hoja 4: Muestreo
+  const rowsMuestreo = acts.filter(a=>a.muestreo?.activo).map(a => ({
+    'Evento': a.evento?.nombre, 'Fecha': a.evento?.fecha, 'Lugar': a.evento?.lugar,
+    'Asistentes': a.evento?.asistentes, 'Descripción muestreo': a.muestreo.descripcion||'', 'Observaciones': a.muestreo.observaciones||''
+  }));
+  if (rowsMuestreo.length) XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(rowsMuestreo), 'Muestreo');
+
+  // Hoja 5: Gastos
+  const rowsGastos = [];
+  acts.forEach(a => {
+    (a.gastos?.items||[]).filter(Boolean).forEach(g => {
+      rowsGastos.push({ 'Evento': a.evento?.nombre, 'Fecha': a.evento?.fecha, 'Lugar': a.evento?.lugar, 'Concepto': g.concepto, 'Valor': g.valor });
+    });
+  });
+  if (rowsGastos.length) XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(rowsGastos), 'Gastos');
+
+  XLSX.writeFile(wb, `HelCapture_Informe_${new Date().toISOString().split('T')[0]}.xlsx`);
+  showToast('Excel generado ✓', 'success');
+};
+
+window.generarLegalizacion = function() {
+  const acts = getActividadesFiltradas();
+  const rows = [];
+  acts.forEach(a => {
+    (a.gastos?.items||[]).filter(Boolean).forEach(g => {
+      rows.push({ 'Punto / Evento': a.evento?.nombre||'', 'Fecha': a.evento?.fecha||'', 'Lugar': a.evento?.lugar||'', 'Concepto del gasto': g.concepto||'', 'Valor ($)': parseFloat(g.valor)||0, 'Observaciones': a.gastos?.observaciones||'' });
+    });
+  });
+  if (!rows.length) { showToast('No hay gastos para legalizar','error'); return; }
+  const wb = XLSX.utils.book_new();
+  const ws = XLSX.utils.json_to_sheet(rows);
+  XLSX.utils.book_append_sheet(wb, ws, 'Legalización');
+  XLSX.writeFile(wb, `HelCapture_Legalizacion_${new Date().toISOString().split('T')[0]}.xlsx`);
+  showToast('Formato legalización generado ✓', 'success');
+};
+
+window.generarVentas = function() {
+  const acts = getActividadesFiltradas().filter(a=>a.ventas?.activo);
+  if (!acts.length) { showToast('No hay actividades con ventas','error'); return; }
+  const rows = [];
+  acts.forEach(a => {
+    (a.ventas.referencias||[]).filter(Boolean).forEach(r => {
+      rows.push({ 'Evento': a.evento?.nombre, 'Fecha': a.evento?.fecha, 'Lugar': a.evento?.lugar, 'Referencia': r.referencia, 'Cantidad': parseInt(r.cantidad)||0, 'Observaciones': a.ventas.observaciones||'' });
+    });
+  });
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(rows), 'Ventas');
+  XLSX.writeFile(wb, `HelCapture_Ventas_${new Date().toISOString().split('T')[0]}.xlsx`);
+  showToast('Informe de ventas generado ✓', 'success');
+};
+
+window.generarMuestreo = function() {
+  const acts = getActividadesFiltradas().filter(a=>a.muestreo?.activo);
+  if (!acts.length) { showToast('No hay actividades con muestreo','error'); return; }
+  const rows = acts.map(a => ({ 'Evento': a.evento?.nombre, 'Fecha': a.evento?.fecha, 'Lugar': a.evento?.lugar, 'Asistentes': a.evento?.asistentes, 'Descripción': a.muestreo.descripcion, 'Observaciones': a.muestreo.observaciones }));
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(rows), 'Muestreo');
+  XLSX.writeFile(wb, `HelCapture_Muestreo_${new Date().toISOString().split('T')[0]}.xlsx`);
+  showToast('Informe de muestreo generado ✓', 'success');
+};
+
+window.generarPDF = function() {
+  const { jsPDF } = window.jspdf;
+  const acts = getActividadesFiltradas();
+  if (!acts.length) { showToast('No hay datos para el PDF','error'); return; }
+
+  const doc = new jsPDF();
+  const teal = [42, 191, 192];
+  const navy = [27, 42, 74];
+
+  // Portada
+  doc.setFillColor(...navy); doc.rect(0,0,210,40,'F');
+  doc.setTextColor(255,255,255); doc.setFontSize(22); doc.setFont('helvetica','bold');
+  doc.text('HelCapture', 14, 22);
+  doc.setFontSize(11); doc.setFont('helvetica','normal');
+  doc.text('Informe de actividades de impulso · By Grupo Helse', 14, 32);
+  doc.setTextColor(0,0,0);
+
+  // Resumen
+  doc.setFontSize(10); doc.setTextColor(100,100,100);
+  doc.text(`Generado: ${new Date().toLocaleDateString('es-CO')} · Total actividades: ${acts.length}`, 14, 50);
+
+  const totalAsistentes = acts.reduce((s,a)=>s+(parseInt(a.evento?.asistentes)||0),0);
+  doc.autoTable({
+    startY: 56,
+    head: [['Evento','Tipo','Fecha','Lugar','Asistentes']],
+    body: acts.map(a=>[a.evento?.nombre||'', a.evento?.tipo||'', a.evento?.fecha||'', a.evento?.lugar||'', a.evento?.asistentes||0]),
+    headStyles: { fillColor: teal, textColor: 255, fontStyle: 'bold' },
+    alternateRowStyles: { fillColor: [245,250,250] },
+    styles: { fontSize: 9 },
+    margin: { left: 14, right: 14 }
+  });
+
+  // Detalle por actividad
+  acts.forEach((a, idx) => {
+    doc.addPage();
+    doc.setFillColor(...navy); doc.rect(0,0,210,20,'F');
+    doc.setTextColor(255,255,255); doc.setFontSize(13); doc.setFont('helvetica','bold');
+    doc.text(a.evento?.nombre||'Sin nombre', 14, 13);
+    doc.setTextColor(0,0,0); doc.setFontSize(9); doc.setFont('helvetica','normal');
+    let y = 28;
+    doc.text(`Tipo: ${a.evento?.tipo||'–'}  |  Fecha: ${a.evento?.fecha||'–'}  |  Lugar: ${a.evento?.lugar||'–'}  |  Asistentes: ${a.evento?.asistentes||0}`, 14, y); y+=8;
+    if (a.ubicacion) { doc.setTextColor(...teal); doc.text(`GPS: ${a.ubicacion.lat?.toFixed(5)}, ${a.ubicacion.lng?.toFixed(5)}`, 14, y); doc.setTextColor(0,0,0); y+=7; }
+    if (a.cierre?.descripcion) { doc.setFont('helvetica','bold'); doc.text('Descripción:', 14, y); doc.setFont('helvetica','normal'); y+=5; const lines = doc.splitTextToSize(a.cierre.descripcion, 180); doc.text(lines, 14, y); y += lines.length*4+4; }
+    if (a.cierre?.impacto) { doc.setFont('helvetica','bold'); doc.text('Impacto:', 14, y); doc.setFont('helvetica','normal'); y+=5; const lines = doc.splitTextToSize(a.cierre.impacto, 180); doc.text(lines, 14, y); y += lines.length*4+4; }
+
+    const gastos = (a.gastos?.items||[]).filter(Boolean);
+    if (gastos.length) {
+      doc.autoTable({ startY: y, head:[['Concepto','Valor']], body: gastos.map(g=>[g.concepto, `$${parseFloat(g.valor).toLocaleString('es-CO')}`]), headStyles:{fillColor:teal}, styles:{fontSize:9}, margin:{left:14,right:14} });
+    }
+  });
+
+  doc.save(`HelCapture_Informe_${new Date().toISOString().split('T')[0]}.pdf`);
+  showToast('PDF generado ✓', 'success');
+};
+
+window.generarPPTX = function() {
+  const acts = getActividadesFiltradas();
+  if (!acts.length) { showToast('No hay datos para la presentación','error'); return; }
+
+  const pptx = new PptxGenJS();
+  pptx.layout = 'LAYOUT_WIDE';
+
+  // Slide portada
+  const cover = pptx.addSlide();
+  cover.background = { color: '1B2A4A' };
+  cover.addText('HelCapture', { x:0.5, y:1.5, w:11, h:1.2, fontSize:48, bold:true, color:'2ABFC0', fontFace:'Segoe UI' });
+  cover.addText('Informe de actividades de impulso · By Grupo Helse', { x:0.5, y:2.8, w:11, h:0.6, fontSize:18, color:'FFFFFF', fontFace:'Segoe UI' });
+  cover.addText(`${acts.length} actividades · ${new Date().toLocaleDateString('es-CO')}`, { x:0.5, y:3.5, w:11, h:0.5, fontSize:14, color:'94A3B8' });
+
+  // Slide resumen
+  const resumen = pptx.addSlide();
+  resumen.background = { color: 'F8FAFC' };
+  resumen.addText('Resumen ejecutivo', { x:0.5, y:0.3, w:12, h:0.7, fontSize:24, bold:true, color:'1B2A4A' });
+  const totalAsistentes = acts.reduce((s,a)=>s+(parseInt(a.evento?.asistentes)||0),0);
+  const conVentas = acts.filter(a=>a.ventas?.activo).length;
+  const conMuestreo = acts.filter(a=>a.muestreo?.activo).length;
+  const cards = [
+    { label:'Total actividades', val: acts.length.toString(), x:0.5 },
+    { label:'Total asistentes', val: totalAsistentes.toLocaleString('es-CO'), x:3.5 },
+    { label:'Con ventas', val: conVentas.toString(), x:6.5 },
+    { label:'Con muestreo', val: conMuestreo.toString(), x:9.5 },
+  ];
+  cards.forEach(c => {
+    resumen.addShape(pptx.ShapeType.roundRect, { x:c.x, y:1.2, w:2.7, h:1.8, fill:{color:'1B2A4A'}, line:{color:'2ABFC0',pt:2} });
+    resumen.addText(c.val, { x:c.x, y:1.4, w:2.7, h:0.9, fontSize:32, bold:true, color:'2ABFC0', align:'center' });
+    resumen.addText(c.label, { x:c.x, y:2.3, w:2.7, h:0.5, fontSize:12, color:'FFFFFF', align:'center' });
+  });
+
+  // Slide por actividad
+  acts.forEach(a => {
+    const slide = pptx.addSlide();
+    slide.background = { color: 'FFFFFF' };
+    slide.addShape(pptx.ShapeType.rect, { x:0, y:0, w:13.33, h:0.9, fill:{color:'1B2A4A'} });
+    slide.addText(a.evento?.nombre||'Actividad', { x:0.3, y:0.1, w:10, h:0.7, fontSize:20, bold:true, color:'FFFFFF' });
+    slide.addText(`${a.evento?.tipo||''} · ${a.evento?.fecha||''} · ${a.evento?.lugar||''}`, { x:0.3, y:1.0, w:12, h:0.4, fontSize:12, color:'475569' });
+    slide.addText(`👥 ${a.evento?.asistentes||0} asistentes`, { x:0.3, y:1.5, w:4, h:0.4, fontSize:13, bold:true, color:'2ABFC0' });
+
+    let y = 2.1;
+    const secciones = [];
+    if (a.muestreo?.activo) secciones.push('🧪 Muestreo');
+    if (a.ventas?.activo) secciones.push('💰 Ventas');
+    if (a.obsequios?.activo) secciones.push('🎁 Obsequios');
+    if ((a.gastos?.items||[]).filter(Boolean).length) secciones.push('💵 Gastos');
+    if (secciones.length) slide.addText('Secciones activas: ' + secciones.join('  '), { x:0.3, y, w:12, h:0.4, fontSize:11, color:'1E9899' });
+    y += 0.6;
+
+    if (a.cierre?.impacto) {
+      slide.addText('Impacto:', { x:0.3, y, w:12, h:0.35, fontSize:12, bold:true, color:'1B2A4A' });
+      y += 0.35;
+      slide.addText(a.cierre.impacto, { x:0.3, y, w:12.5, h:1.2, fontSize:11, color:'475569', wrap:true });
+    }
+  });
+
+  pptx.writeFile({ fileName: `HelCapture_Presentacion_${new Date().toISOString().split('T')[0]}.pptx` });
+  showToast('Presentación generada ✓', 'success');
+};
+
+// ── USUARIOS ──
+window.renderUsuarios = function() {
+  const grid = document.getElementById('users-grid');
+  if (!window._usuarios.length) {
+    grid.innerHTML = '<div class="empty-state"><div class="icon">👥</div><p>No hay usuarios registrados</p></div>'; return;
+  }
+  grid.innerHTML = window._usuarios.map(u => `
+    <div class="user-card">
+      <div style="display:flex;align-items:center;gap:14px;">
+        <div class="user-avatar">${(u.nombre||'U')[0].toUpperCase()}</div>
+        <div class="user-info">
+          <div class="user-name">${u.nombre||'Sin nombre'}</div>
+          <div class="user-email">${u.email||''}</div>
+          <div style="margin-top:6px;display:flex;gap:6px;">
+            ${badgeRol(u.rol)}
+            <span class="badge ${u.estado==='activo'?'success':'gray'}">${u.estado||'activo'}</span>
+          </div>
+        </div>
+      </div>
+      <div class="user-actions">
+        <button class="btn btn-outline btn-sm" onclick="editarUsuario('${u.id}')">✏️ Editar</button>
+        <button class="btn btn-sm ${u.estado==='activo'?'btn-danger':'btn-teal'}" onclick="toggleUsuario('${u.id}','${u.estado||'activo'}')">
+          ${u.estado==='activo'?'Inactivar':'Activar'}
+        </button>
+      </div>
+    </div>
+  `).join('');
+};
+
+window.abrirModalUsuario = function() {
+  window._editUserId = null;
+  document.getElementById('modal-user-titulo').textContent = 'Nuevo usuario';
+  ['u-nombre','u-email'].forEach(id => document.getElementById(id).value='');
+  document.getElementById('u-rol').value='impulsor';
+  document.getElementById('u-estado').value='activo';
+  document.getElementById('modal-usuario').classList.add('open');
+};
+
+window.editarUsuario = function(id) {
+  const u = window._usuarios.find(x=>x.id===id);
+  if (!u) return;
+  window._editUserId = id;
+  document.getElementById('modal-user-titulo').textContent = 'Editar usuario';
+  document.getElementById('u-nombre').value = u.nombre||'';
+  document.getElementById('u-email').value = u.email||'';
+  document.getElementById('u-rol').value = u.rol||'impulsor';
+  document.getElementById('u-estado').value = u.estado||'activo';
+  document.getElementById('modal-usuario').classList.add('open');
+};
+
+window.guardarUsuario = async function() {
+  const data = {
+    nombre: document.getElementById('u-nombre').value.trim(),
+    email: document.getElementById('u-email').value.trim(),
+    rol: document.getElementById('u-rol').value,
+    estado: document.getElementById('u-estado').value,
+    actualizadoEn: serverTimestamp()
+  };
+  if (!data.nombre) { showToast('El nombre es obligatorio','error'); return; }
+  try {
+    if (window._editUserId) {
+      await updateDoc(doc(db,'usuarios',window._editUserId), data);
+    } else {
+      await addDoc(collection(db,'usuarios'), { ...data, creadoEn: serverTimestamp() });
+    }
+    cerrarModal('modal-usuario');
+    showToast('Usuario guardado ✓','success');
+  } catch(e) { showToast('Error al guardar','error'); console.error(e); }
+};
+
+window.toggleUsuario = async function(id, estadoActual) {
+  const nuevo = estadoActual==='activo' ? 'inactivo' : 'activo';
+  try {
+    await updateDoc(doc(db,'usuarios',id), { estado: nuevo, actualizadoEn: serverTimestamp() });
+    showToast(`Usuario ${nuevo} ✓`, 'success');
+  } catch(e) { showToast('Error al actualizar','error'); }
+};
+
+// ── UTILS ──
+window.navigate = function(view) {
+  document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
+  document.getElementById('view-'+view).classList.add('active');
+  document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
+  const titles = { dashboard:'Dashboard', actividades:'Actividades', informes:'Generar informes', usuarios:'Usuarios' };
+  document.getElementById('topbar-title').textContent = titles[view]||view;
+  const navMap = { dashboard:0, actividades:1, informes:2, usuarios:3 };
+  const navItems = document.querySelectorAll('.nav-item');
+  if (navItems[navMap[view]]) navItems[navMap[view]].classList.add('active');
+};
+
+window.cerrarModal = function(id) { document.getElementById(id).classList.remove('open'); };
+window.verFoto = function(src) { document.getElementById('lightbox-img').src=src; document.getElementById('lightbox').classList.add('open'); };
+window.cerrarLightbox = function() { document.getElementById('lightbox').classList.remove('open'); };
+
+function showToast(msg, type='') {
+  const t = document.getElementById('toast');
+  t.textContent=msg; t.className='toast '+type; t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'),3000);
+}
+window.showToast = showToast;
+
+function fmtFecha(f) { if(!f) return '–'; const [y,m,d]=f.split('-'); return `${d}/${m}/${y}`; }
+
+function badgeType(tipo) {
+  const map = { 'Feria':'teal','Charla':'navy','Capacitación':'warning','Evento presencial':'success','Otro':'gray' };
+  return `<span class="badge ${map[tipo]||'gray'}">${tipo||'–'}</span>`;
+}
+
+function badgeRol(rol) {
+  const map = { 'admin':'navy','coordinador':'teal','impulsor':'gray' };
+  return `<span class="badge ${map[rol]||'gray'}">${rol||'impulsor'}</span>`;
+}
+
+function seccionesBadges(a) {
+  const parts = [];
+  if (a.muestreo?.activo) parts.push('<span class="badge teal" style="font-size:10px;">Muestreo</span>');
+  if (a.ventas?.activo) parts.push('<span class="badge success" style="font-size:10px;">Ventas</span>');
+  if (a.obsequios?.activo) parts.push('<span class="badge warning" style="font-size:10px;">Obsequios</span>');
+  if ((a.gastos?.items||[]).filter(Boolean).length) parts.push('<span class="badge navy" style="font-size:10px;">Gastos</span>');
+  return parts.join(' ') || '<span style="color:var(--gray-400);font-size:13px;">–</span>';
+}
+</script>
+</body>
+</html>
