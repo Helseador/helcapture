@@ -187,7 +187,7 @@
   </div>
 
   <button class="btn-primary" id="btn-start">Registrar actividad →</button>
-  <button class="btn-retry" id="btn-retry" onclick="solicitarGeo()">🔄 Reintentar</button>
+  <button class="btn-retry" id="btn-retry" data-action="retry-geo">🔄 Reintentar</button>
 </div>
 
 <!-- ══ FORM ══ -->
@@ -218,7 +218,7 @@
         </div>
         <div class="field" style="margin-bottom:14px">
           <label>Tipo de evento *</label>
-          <select id="tipo-evento" onchange="onTipoChange()">
+          <select id="tipo-evento">
             <option value="">Selecciona el tipo...</option>
             <option value="Feria">🏪 Feria</option>
             <option value="Charla">🎤 Charla</option>
@@ -248,7 +248,7 @@
           </div>
         </div>
       </div>
-      <button class="btn-submit" onclick="irPaso2()">Continuar → Fotos del evento</button>
+      <button class="btn-submit" data-nav="paso2">Continuar → Fotos del evento</button>
     </div>
 
     <!-- ── PASO 2: FOTOS GENERALES + SECCIONES ── -->
@@ -262,7 +262,7 @@
 
       <!-- MUESTREO -->
       <div class="section-toggle" id="toggle-muestreo">
-        <div class="section-toggle-header" onclick="toggleSeccion('muestreo')">
+        <div class="section-toggle-header" data-toggle="muestreo">
           <div class="section-toggle-left">
             <div class="section-toggle-icon">🧪</div>
             <div>
@@ -271,7 +271,7 @@
             </div>
           </div>
           <label class="toggle-switch" onclick="event.stopPropagation()">
-            <input type="checkbox" id="chk-muestreo" onchange="toggleSeccion('muestreo')">
+            <input type="checkbox" id="chk-muestreo" data-chk="muestreo">
             <span class="toggle-slider"></span>
           </label>
         </div>
@@ -288,18 +288,18 @@
             <div class="foto-section-label">Evidencia fotográfica <span id="cnt-muestreo">0/8</span></div>
             <div class="photos-grid" id="grid-muestreo"></div>
             <div class="photo-source-btns" id="btns-muestreo">
-              <button class="btn-source" onclick="document.getElementById('cam-muestreo').click()">📷 Cámara</button>
-              <button class="btn-source" onclick="document.getElementById('gal-muestreo').click()">🖼️ Galería</button>
+              <button class="btn-source" data-trigger="cam-muestreo">📷 Cámara</button>
+              <button class="btn-source" data-trigger="gal-muestreo">🖼️ Galería</button>
             </div>
-            <input type="file" id="cam-muestreo" accept="image/*" capture="environment" onchange="agregarFotos(this,'muestreo')">
-            <input type="file" id="gal-muestreo" accept="image/*" multiple onchange="agregarFotos(this,'muestreo')">
+            <input type="file" id="cam-muestreo" accept="image/*" capture="environment" data-seccion="muestreo">
+            <input type="file" id="gal-muestreo" accept="image/*" multiple data-seccion="muestreo">
           </div>
         </div>
       </div>
 
       <!-- VENTAS -->
       <div class="section-toggle" id="toggle-ventas">
-        <div class="section-toggle-header" onclick="toggleSeccion('ventas')">
+        <div class="section-toggle-header" data-toggle="ventas">
           <div class="section-toggle-left">
             <div class="section-toggle-icon">💰</div>
             <div>
@@ -308,7 +308,7 @@
             </div>
           </div>
           <label class="toggle-switch" onclick="event.stopPropagation()">
-            <input type="checkbox" id="chk-ventas" onchange="toggleSeccion('ventas')">
+            <input type="checkbox" id="chk-ventas" data-chk="ventas">
             <span class="toggle-slider"></span>
           </label>
         </div>
@@ -316,7 +316,7 @@
           <div>
             <label style="font-size:13px;font-weight:600;color:var(--gray-600);display:block;margin-bottom:8px;">Referencias vendidas</label>
             <div class="ref-list" id="ref-list-ventas"></div>
-            <button class="btn-add-ref" onclick="addRef('ventas')">+ Agregar referencia</button>
+            <button class="btn-add-ref" data-addref="ventas">+ Agregar referencia</button>
           </div>
           <div class="field">
             <label>Observaciones de ventas</label>
@@ -326,18 +326,18 @@
             <div class="foto-section-label">Evidencia fotográfica <span id="cnt-ventas">0/8</span></div>
             <div class="photos-grid" id="grid-ventas"></div>
             <div class="photo-source-btns" id="btns-ventas">
-              <button class="btn-source" onclick="document.getElementById('cam-ventas').click()">📷 Cámara</button>
-              <button class="btn-source" onclick="document.getElementById('gal-ventas').click()">🖼️ Galería</button>
+              <button class="btn-source" data-trigger="cam-ventas">📷 Cámara</button>
+              <button class="btn-source" data-trigger="gal-ventas">🖼️ Galería</button>
             </div>
-            <input type="file" id="cam-ventas" accept="image/*" capture="environment" onchange="agregarFotos(this,'ventas')">
-            <input type="file" id="gal-ventas" accept="image/*" multiple onchange="agregarFotos(this,'ventas')">
+            <input type="file" id="cam-ventas" accept="image/*" capture="environment" data-seccion="ventas">
+            <input type="file" id="gal-ventas" accept="image/*" multiple data-seccion="ventas">
           </div>
         </div>
       </div>
 
       <!-- OBSEQUIOS -->
       <div class="section-toggle" id="toggle-obsequios">
-        <div class="section-toggle-header" onclick="toggleSeccion('obsequios')">
+        <div class="section-toggle-header" data-toggle="obsequios">
           <div class="section-toggle-left">
             <div class="section-toggle-icon">🎁</div>
             <div>
@@ -346,7 +346,7 @@
             </div>
           </div>
           <label class="toggle-switch" onclick="event.stopPropagation()">
-            <input type="checkbox" id="chk-obsequios" onchange="toggleSeccion('obsequios')">
+            <input type="checkbox" id="chk-obsequios" data-chk="obsequios">
             <span class="toggle-slider"></span>
           </label>
         </div>
@@ -354,7 +354,7 @@
           <div>
             <label style="font-size:13px;font-weight:600;color:var(--gray-600);display:block;margin-bottom:8px;">Referencias entregadas</label>
             <div class="ref-list" id="ref-list-obsequios"></div>
-            <button class="btn-add-ref" onclick="addRef('obsequios')">+ Agregar referencia</button>
+            <button class="btn-add-ref" data-addref="obsequios">+ Agregar referencia</button>
           </div>
           <div class="field">
             <label>Observaciones de obsequios</label>
@@ -364,18 +364,18 @@
             <div class="foto-section-label">Evidencia fotográfica <span id="cnt-obsequios">0/8</span></div>
             <div class="photos-grid" id="grid-obsequios"></div>
             <div class="photo-source-btns" id="btns-obsequios">
-              <button class="btn-source" onclick="document.getElementById('cam-obsequios').click()">📷 Cámara</button>
-              <button class="btn-source" onclick="document.getElementById('gal-obsequios').click()">🖼️ Galería</button>
+              <button class="btn-source" data-trigger="cam-obsequios">📷 Cámara</button>
+              <button class="btn-source" data-trigger="gal-obsequios">🖼️ Galería</button>
             </div>
-            <input type="file" id="cam-obsequios" accept="image/*" capture="environment" onchange="agregarFotos(this,'obsequios')">
-            <input type="file" id="gal-obsequios" accept="image/*" multiple onchange="agregarFotos(this,'obsequios')">
+            <input type="file" id="cam-obsequios" accept="image/*" capture="environment" data-seccion="obsequios">
+            <input type="file" id="gal-obsequios" accept="image/*" multiple data-seccion="obsequios">
           </div>
         </div>
       </div>
 
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
-        <button class="btn-back" onclick="irPaso1()">← Volver</button>
-        <button class="btn-submit" onclick="irPaso3()">Continuar →</button>
+        <button class="btn-back" data-nav="paso1">← Volver</button>
+        <button class="btn-submit" data-nav="paso3">Continuar →</button>
       </div>
     </div>
 
@@ -384,7 +384,7 @@
       <div class="card">
         <div class="card-title"><span>💵</span> Legalización de gastos <span class="optional-tag">opcional</span></div>
         <div class="ref-list" id="ref-list-gastos" style="margin-bottom:12px;"></div>
-        <button class="btn-add-ref" onclick="addGasto()">+ Agregar gasto</button>
+        <button class="btn-add-ref" data-addgasto="true">+ Agregar gasto</button>
         <div style="height:14px;"></div>
         <div class="field">
           <label>Observaciones de gastos</label>
@@ -392,8 +392,8 @@
         </div>
       </div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
-        <button class="btn-back" onclick="irPaso2()">← Volver</button>
-        <button class="btn-submit" onclick="irPaso4()">Continuar →</button>
+        <button class="btn-back" data-nav="paso2">← Volver</button>
+        <button class="btn-submit" data-nav="paso4">Continuar →</button>
       </div>
     </div>
 
@@ -416,8 +416,8 @@
         </div>
       </div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
-        <button class="btn-back" onclick="irPaso3()">← Volver</button>
-        <button class="btn-submit" onclick="enviarActividad()">✅ Cerrar actividad</button>
+        <button class="btn-back" data-nav="paso3">← Volver</button>
+        <button class="btn-submit" data-action="enviar">✅ Cerrar actividad</button>
       </div>
     </div>
 
@@ -430,7 +430,7 @@
   <div class="success-title">¡Actividad registrada!</div>
   <div class="success-sub">El evento quedó guardado con tu ubicación, fotos y toda la información capturada.</div>
   <div class="success-id" id="success-id">ID: ---</div>
-  <button class="btn-new" onclick="nuevaActividad()">+ Registrar otra actividad</button>
+  <button class="btn-new" data-action="nueva">+ Registrar otra actividad</button>
 </div>
 
 <script type="module">
@@ -605,8 +605,15 @@ function renderFotosUI(seccion, max) {
     if (count < max) {
       html += `<div class="photo-source-btns"><button class="btn-source" onclick="document.getElementById('cam-generales').click()">📷 Cámara</button><button class="btn-source" onclick="document.getElementById('gal-generales').click()">🖼️ Galería</button></div>`;
     }
-    html += `<input type="file" id="cam-generales" accept="image/*" capture="environment" onchange="agregarFotos(this,'generales')"><input type="file" id="gal-generales" accept="image/*" multiple onchange="agregarFotos(this,'generales')">`;
+    html += `<input type="file" id="cam-generales" accept="image/*" capture="environment" data-seccion="generales"><input type="file" id="gal-generales" accept="image/*" multiple data-seccion="generales">`;
     container.innerHTML = html;
+    // Bind dinámico después del render
+    container.querySelectorAll('input[data-seccion]').forEach(inp => {
+      inp.addEventListener('change', () => agregarFotos(inp, inp.dataset.seccion));
+    });
+    container.querySelectorAll('[data-trigger]').forEach(el => {
+      el.addEventListener('click', () => { const t = document.getElementById(el.dataset.trigger); if(t) t.click(); });
+    });
   } else {
     const cntEl = document.getElementById(cntId);
     if (cntEl) cntEl.textContent = `${count}/${max}`;
