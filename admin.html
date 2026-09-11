@@ -1050,27 +1050,28 @@ const firebaseConfig = {
 
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
-const storage = getStorage(app);
+window._storage = getStorage(app);
 
 // ── ESTADO INFORME ──
 window._informeActual = { blob: null, url: null, nombre: null, tipo: null };
 
 // ── SISTEMA DE COMPARTIR INFORMES ──
 
-async function subirInformeAStorage(blob, nombre, tipo) {
+window._storage = null; // se asigna abajo al inicializar storage
+
+window.subirInformeAStorage = async function(blob, nombre, tipo) {
   const carpeta = tipo === 'xlsx' ? 'informes/excel' : tipo === 'pptx' ? 'informes/pptx' : 'informes/pdf';
   const ruta = `${carpeta}/${Date.now()}_${nombre}`;
-  const fileRef = storageRef(storage, ruta);
+  const fileRef = storageRef(window._storage, ruta);
   await uploadBytes(fileRef, blob, { contentType: tipo === 'pdf' ? 'application/pdf' : tipo === 'xlsx' ? 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' : 'application/vnd.openxmlformats-officedocument.presentationml.presentation' });
   return await getDownloadURL(fileRef);
-}
+};
 
-async function mostrarModalInforme(blob, nombre, tipo, icono) {
+window.mostrarModalInforme = async function(blob, nombre, tipo, icono) {
   const s = window._informeActual;
   s.blob = blob; s.nombre = nombre; s.tipo = tipo;
   s.url = null;
 
-  // Preparar modal
   document.getElementById('informe-listo-titulo').textContent = '✅ Informe generado';
   document.getElementById('informe-listo-icon').textContent = icono || (tipo === 'pdf' ? '📄' : tipo === 'pptx' ? '📊' : '📈');
   document.getElementById('informe-listo-nombre').textContent = nombre;
@@ -1080,7 +1081,6 @@ async function mostrarModalInforme(blob, nombre, tipo, icono) {
   document.getElementById('btn-informe-descargar').style.display = 'none';
   document.getElementById('btn-informe-whatsapp').style.display = 'none';
 
-  // Descarga local inmediata mientras sube
   const localUrl = URL.createObjectURL(blob);
   document.getElementById('btn-informe-descargar').onclick = () => {
     const a = document.createElement('a'); a.href = localUrl; a.download = nombre; a.click();
@@ -1089,9 +1089,8 @@ async function mostrarModalInforme(blob, nombre, tipo, icono) {
   document.getElementById('modal-informe-listo').classList.add('open');
 
   try {
-    const urlNube = await subirInformeAStorage(blob, nombre, tipo);
+    const urlNube = await window.subirInformeAStorage(blob, nombre, tipo);
     s.url = urlNube;
-
     document.getElementById('informe-link-text').textContent = urlNube;
     document.getElementById('informe-link-wrap').style.display = 'block';
     document.getElementById('informe-listo-estado').textContent = '¡Listo para compartir!';
@@ -1104,7 +1103,7 @@ async function mostrarModalInforme(blob, nombre, tipo, icono) {
     document.getElementById('informe-subiendo').style.display = 'none';
     document.getElementById('btn-informe-descargar').style.display = 'flex';
   }
-}
+};
 
 window.copiarLink = function() {
   const url = window._informeActual.url;
@@ -1114,7 +1113,6 @@ window.copiarLink = function() {
     btn.textContent = '✅ Copiado';
     setTimeout(() => btn.textContent = '📋 Copiar', 2000);
   }).catch(() => {
-    // Fallback para móviles
     const el = document.createElement('textarea');
     el.value = url; document.body.appendChild(el); el.select();
     document.execCommand('copy'); document.body.removeChild(el);
@@ -1130,10 +1128,9 @@ window.compartirWhatsApp = function() {
   window.open(`https://wa.me/?text=${msg}`, '_blank');
 };
 
-// Helper: jsPDF blob en lugar de save()
-function pdfToBlob(doc) {
+window.pdfToBlob = function(doc) {
   return doc.output('blob');
-}
+};
 
 // ── ESTADO ──
 window._actividades = [];
@@ -1443,7 +1440,7 @@ window.exportarExcel = async function() {
 
   const nombre = `HelCapture_Informe_${new Date().toISOString().split('T')[0]}.xlsx`;
   const wbBlob = new Blob([XLSX.write(wb, { bookType:'xlsx', type:'array' })], { type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
-  await mostrarModalInforme(wbBlob, nombre, 'xlsx', '📈');
+  await window.mostrarModalInforme(wbBlob, nombre, 'xlsx', '📈');
 };
 
 window.generarLegalizacion = async function() {
@@ -1460,7 +1457,7 @@ window.generarLegalizacion = async function() {
   XLSX.utils.book_append_sheet(wb, ws, 'Legalización');
   const nombre = `HelCapture_Legalizacion_${new Date().toISOString().split('T')[0]}.xlsx`;
   const wbBlob = new Blob([XLSX.write(wb, { bookType:'xlsx', type:'array' })], { type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
-  await mostrarModalInforme(wbBlob, nombre, 'xlsx', '💵');
+  await window.mostrarModalInforme(wbBlob, nombre, 'xlsx', '💵');
 };
 
 window.generarVentas = async function() {
@@ -1476,7 +1473,7 @@ window.generarVentas = async function() {
   XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(rows), 'Ventas');
   const nombre = `HelCapture_Ventas_${new Date().toISOString().split('T')[0]}.xlsx`;
   const wbBlob = new Blob([XLSX.write(wb, { bookType:'xlsx', type:'array' })], { type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
-  await mostrarModalInforme(wbBlob, nombre, 'xlsx', '💰');
+  await window.mostrarModalInforme(wbBlob, nombre, 'xlsx', '💰');
 };
 
 window.generarMuestreo = async function() {
@@ -1487,7 +1484,7 @@ window.generarMuestreo = async function() {
   XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(rows), 'Muestreo');
   const nombre = `HelCapture_Muestreo_${new Date().toISOString().split('T')[0]}.xlsx`;
   const wbBlob = new Blob([XLSX.write(wb, { bookType:'xlsx', type:'array' })], { type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
-  await mostrarModalInforme(wbBlob, nombre, 'xlsx', '🧪');
+  await window.mostrarModalInforme(wbBlob, nombre, 'xlsx', '🧪');
 };
 
 window.generarPDF = async function() {
@@ -1542,8 +1539,8 @@ window.generarPDF = async function() {
   });
 
   const nombre = `HelCapture_Informe_${new Date().toISOString().split('T')[0]}.pdf`;
-  const blob = pdfToBlob(doc);
-  await mostrarModalInforme(blob, nombre, 'pdf', '📄');
+  const blob = window.pdfToBlob(doc);
+  await window.mostrarModalInforme(blob, nombre, 'pdf', '📄');
 };
 
 window.generarPPTX = async function() {
@@ -1606,7 +1603,7 @@ window.generarPPTX = async function() {
 
   const nombre = `HelCapture_Presentacion_${new Date().toISOString().split('T')[0]}.pptx`;
   const pptxBlob = await pptx.write({ outputType: 'blob' });
-  await mostrarModalInforme(pptxBlob, nombre, 'pptx', '📊');
+  await window.mostrarModalInforme(pptxBlob, nombre, 'pptx', '📊');
 };
 
 // ── USUARIOS ──
@@ -2171,8 +2168,8 @@ window.exportarConstructorPDF = async function() {
   }
 
   const nombre = `${titulo.replace(/\s+/g,'_')}_${fecha||'informe'}.pdf`;
-  const blob = pdfToBlob(doc);
-  await mostrarModalInforme(blob, nombre, 'pdf', '📄');
+  const blob = window.pdfToBlob(doc);
+  await window.mostrarModalInforme(blob, nombre, 'pdf', '📄');
 };
 
 function agregarFotosEnPDF(doc, fotos, y, colorRGB) {
@@ -2313,7 +2310,7 @@ window.exportarConstructorPPTX = async function() {
 
   const nombre = `${titulo.replace(/\s+/g,'_')}_${fecha||'informe'}.pptx`;
   const pptxBlob = await pptx.write({ outputType: 'blob' });
-  await mostrarModalInforme(pptxBlob, nombre, 'pptx', '📊');
+  await window.mostrarModalInforme(pptxBlob, nombre, 'pptx', '📊');
 };
 </script>
 </body>
