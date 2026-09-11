@@ -731,7 +731,11 @@ async function cargarActividadesImpulsor() {
   showOverlay('Cargando actividades...');
   try {
     const snap = await db.collection('plantillas').where('estado','==','activa').get();
-    plantillasDisponibles = snap.docs.map(d=>({id:d.id,...d.data()}));
+    const hoy  = new Date().toISOString().split('T')[0];
+    // Filtrar las que ya vencieron (sin tocar Firestore, solo en cliente)
+    plantillasDisponibles = snap.docs
+      .map(d=>({id:d.id,...d.data()}))
+      .filter(p => !p.vencimiento || p.vencimiento >= hoy);
     hideOverlay();
     $('act-user-pill').textContent = `👤 ${impulsor.nombre}`;
     $('act-subtitle').textContent  = `${plantillasDisponibles.length} actividad(es) disponible(s)`;

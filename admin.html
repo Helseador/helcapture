@@ -1325,15 +1325,21 @@ tr:hover td { background: rgba(42,191,192,0.04); }
     </div>
     <div class="form-row">
       <div class="form-field">
+        <label>Fecha de vencimiento</label>
+        <input type="date" id="pl-vencimiento" title="La actividad se desactivará automáticamente al llegar esta fecha">
+      </div>
+      <div class="form-field">
+        <label>Meta de asistentes</label>
+        <input type="number" id="pl-meta" placeholder="Ej. 100" min="0">
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-field" style="grid-column:span 2;">
         <label>Estado</label>
         <select id="pl-estado">
           <option value="activa">Activa (visible para impulsores)</option>
           <option value="inactiva">Inactiva (oculta)</option>
         </select>
-      </div>
-      <div class="form-field">
-        <label>Meta de asistentes</label>
-        <input type="number" id="pl-meta" placeholder="Ej. 100" min="0">
       </div>
     </div>
     <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:8px;">
@@ -3194,17 +3200,52 @@ import('https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js').then(
   });
 });
 
+function estadoRealPlantilla(p) {
+  // Si está inactiva manualmente, eso manda
+  if (p.estado === 'inactiva') return 'inactiva';
+  // Si tiene vencimiento y ya pasó, está vencida
+  if (p.vencimiento) {
+    const hoy = new Date().toISOString().split('T')[0];
+    if (p.vencimiento < hoy) return 'vencida';
+    // Próxima a vencer (≤ 2 días)
+    const diasRestantes = Math.ceil((new Date(p.vencimiento) - new Date()) / (1000*60*60*24));
+    if (diasRestantes <= 2) return 'por-vencer';
+  }
+  return 'activa';
+}
+
 function renderPlantillas() {
   const grid = document.getElementById('plantillas-grid');
   if (!window._plantillas.length) {
     grid.innerHTML='<div class="empty-state"><div class="icon">📌</div><p>No hay actividades creadas aún</p></div>'; return;
   }
   const iconoTipo = { 'Feria':'🏪','Charla':'🎤','Capacitación':'📚','Evento presencial':'📅','Volanteo':'📢','Otro':'📌' };
+
+  const badgeEstado = {
+    'activa':     { cls:'activa',   label:'● Activa' },
+    'inactiva':   { cls:'inactiva', label:'○ Inactiva' },
+    'vencida':    { cls:'inactiva', label:'⛔ Vencida' },
+    'por-vencer': { cls:'activa',   label:'⚠️ Por vencer' },
+  };
+
   grid.innerHTML = window._plantillas.map(p => {
-    const icon = iconoTipo[p.tipo]||'📌';
-    const estadoCls = p.estado==='activa' ? 'activa' : 'inactiva';
-    const estadoLabel = p.estado==='activa' ? '● Activa' : '○ Inactiva';
-    return `<div class="plantilla-card">
+    const icon   = iconoTipo[p.tipo]||'📌';
+    const estado = estadoRealPlantilla(p);
+    const badge  = badgeEstado[estado];
+    const hoy    = new Date().toISOString().split('T')[0];
+    const vencida = estado === 'vencida';
+
+    // Días restantes o vencida hace N días
+    let vigenciaLabel = '';
+    if (p.vencimiento) {
+      const diffMs   = new Date(p.vencimiento) - new Date();
+      const diffDias = Math.ceil(diffMs / (1000*60*60*24));
+      if (diffDias > 0)      vigenciaLabel = `⏳ Vence en ${diffDias} día${diffDias!==1?'s':''}`;
+      else if (diffDias === 0) vigenciaLabel = '⚠️ Vence hoy';
+      else                   vigenciaLabel = `⛔ Venció hace ${Math.abs(diffDias)} día${Math.abs(diffDias)!==1?'s':''}`;
+    }
+
+    return `<div class="plantilla-card" style="${vencida?'opacity:0.65;':''}">
       <div class="plantilla-icon">${icon}</div>
       <div class="plantilla-info">
         <div class="plantilla-nombre">${p.nombre||'Sin nombre'}</div>
@@ -3214,16 +3255,18 @@ function renderPlantillas() {
           ${p.lugar?`<span>📍 ${p.lugar}</span>`:''}
           ${p.meta?`<span>🎯 Meta: ${p.meta}</span>`:''}
         </div>
-        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:4px;">
           <span class="plantilla-ciudad">🏙️ ${p.ciudad||'–'}</span>
-          <span class="plantilla-badge-estado ${estadoCls}">${estadoLabel}</span>
+          <span class="plantilla-badge-estado ${badge.cls}">${badge.label}</span>
+          ${vigenciaLabel ? `<span style="font-size:11px;font-weight:600;color:${estado==='vencida'?'var(--danger)':estado==='por-vencer'?'var(--warning)':'var(--text-muted)'};">${vigenciaLabel}</span>` : ''}
         </div>
         ${p.descripcion?`<div style="font-size:12px;color:var(--text-muted);margin-top:6px;line-height:1.4;">${p.descripcion.slice(0,100)}${p.descripcion.length>100?'...':''}</div>`:''}
       </div>
       <div style="display:flex;flex-direction:column;gap:6px;flex-shrink:0;">
         <button class="btn btn-teal btn-sm" onclick="verReportesPlantilla('${p.id}')">📋 Reportes</button>
         <button class="btn btn-outline btn-sm" onclick="editarPlantilla('${p.id}')">✏️ Editar</button>
-        <button class="btn btn-sm ${p.estado==='activa'?'btn-outline':'btn-teal'}" onclick="toggleEstadoPlantilla('${p.id}','${p.estado||'activa'}')">
+        <button class="btn btn-sm ${estado==='activa'||estado==='por-vencer'?'btn-outline':'btn-teal'}"
+          onclick="toggleEstadoPlantilla('${p.id}','${p.estado||'activa'}')">
           ${p.estado==='activa'?'Desactivar':'Activar'}
         </button>
       </div>
@@ -3234,7 +3277,7 @@ function renderPlantillas() {
 window.abrirModalPlantilla = function() {
   window._editPlantillaId = null;
   document.getElementById('modal-plantilla-titulo').textContent = 'Nueva actividad';
-  ['pl-nombre','pl-lugar','pl-ciudad','pl-descripcion'].forEach(id=>document.getElementById(id).value='');
+  ['pl-nombre','pl-lugar','pl-ciudad','pl-descripcion','pl-vencimiento'].forEach(id=>document.getElementById(id).value='');
   document.getElementById('pl-tipo').value='';
   document.getElementById('pl-fecha').value=new Date().toISOString().split('T')[0];
   document.getElementById('pl-estado').value='activa';
@@ -3255,6 +3298,7 @@ window.editarPlantilla = function(id) {
   document.getElementById('pl-descripcion').value = p.descripcion||'';
   document.getElementById('pl-estado').value      = p.estado||'activa';
   document.getElementById('pl-meta').value        = p.meta||'';
+  document.getElementById('pl-vencimiento').value = p.vencimiento||'';
   document.getElementById('modal-plantilla').classList.add('open');
 };
 
@@ -3265,6 +3309,7 @@ window.guardarPlantilla = async function() {
   const ciudad  = document.getElementById('pl-ciudad').value.trim();
   if (!nombre||!tipo||!fecha||!ciudad) { showToast('Completa los campos obligatorios','error'); return; }
 
+  const vencimiento = document.getElementById('pl-vencimiento').value || null;
   const data = {
     nombre, tipo, fecha,
     lugar:       document.getElementById('pl-lugar').value.trim(),
@@ -3272,6 +3317,7 @@ window.guardarPlantilla = async function() {
     descripcion: document.getElementById('pl-descripcion').value.trim(),
     estado:      document.getElementById('pl-estado').value,
     meta:        parseInt(document.getElementById('pl-meta').value)||0,
+    vencimiento,
     actualizadoEn: serverTimestamp()
   };
 
