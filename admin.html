@@ -339,6 +339,8 @@ tr:hover td { background: rgba(42,191,192,0.04); }
 .lightbox img { max-width:90vw; max-height:90vh; border-radius:12px; box-shadow:0 20px 60px rgba(0,0,0,0.5); }
 .lightbox-close { position:absolute; top:20px; right:20px; background:rgba(255,255,255,0.1); color:white; border:none; border-radius:50%; width:42px; height:42px; font-size:20px; cursor:pointer; }
 
+@keyframes spin { to { transform: rotate(360deg); } }
+
 /* ── SCROLLBAR ── */
 ::-webkit-scrollbar { width:6px; height:6px; }
 ::-webkit-scrollbar-track { background:transparent; }
@@ -991,11 +993,51 @@ tr:hover td { background: rgba(42,191,192,0.04); }
 <!-- TOAST -->
 <div class="toast" id="toast"></div>
 
+<!-- MODAL INFORME LISTO -->
+<div class="modal-bg" id="modal-informe-listo">
+  <div class="modal" style="max-width:480px;">
+    <div class="modal-header">
+      <div class="modal-title" id="informe-listo-titulo">✅ Informe generado</div>
+      <button class="modal-close" onclick="cerrarModal('modal-informe-listo')">×</button>
+    </div>
+    <div style="text-align:center;padding:8px 0 20px;">
+      <div id="informe-listo-icon" style="font-size:52px;margin-bottom:12px;">📄</div>
+      <div id="informe-listo-nombre" style="font-size:14px;font-weight:700;color:var(--navy);margin-bottom:6px;"></div>
+      <div id="informe-listo-estado" style="font-size:13px;color:var(--text-muted);"></div>
+    </div>
+
+    <!-- Link copiable -->
+    <div id="informe-link-wrap" style="display:none;margin-bottom:16px;">
+      <div style="font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px;">🔗 Link para compartir</div>
+      <div style="display:flex;gap:8px;align-items:center;">
+        <div style="flex:1;background:var(--bg);box-shadow:var(--neo-in);border-radius:10px;padding:10px 14px;font-size:12px;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-family:monospace;" id="informe-link-text"></div>
+        <button class="btn btn-teal btn-sm" onclick="copiarLink()" id="btn-copiar-link">📋 Copiar</button>
+      </div>
+    </div>
+
+    <!-- Acciones -->
+    <div style="display:flex;flex-direction:column;gap:10px;">
+      <button class="btn btn-navy" style="width:100%;justify-content:center;" id="btn-informe-descargar">⬇️ Descargar archivo</button>
+      <button class="btn btn-teal" style="width:100%;justify-content:center;" id="btn-informe-whatsapp" onclick="compartirWhatsApp()">💬 Compartir por WhatsApp</button>
+      <button class="btn btn-outline" style="width:100%;justify-content:center;" onclick="cerrarModal('modal-informe-listo')">Cerrar</button>
+    </div>
+
+    <!-- Subiendo -->
+    <div id="informe-subiendo" style="display:none;text-align:center;padding:16px 0;">
+      <div style="font-size:24px;margin-bottom:8px;animation:spin 1s linear infinite;display:inline-block;">⏳</div>
+      <div style="font-size:13px;color:var(--text-muted);" id="informe-subiendo-texto">Subiendo a la nube...</div>
+    </div>
+  </div>
+</div>
+
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
 import {
   getFirestore, collection, onSnapshot, addDoc, updateDoc, doc, query, orderBy, serverTimestamp
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+import {
+  getStorage, ref as storageRef, uploadBytes, getDownloadURL
+} from "https://www.gstatic.com/firebasejs/10.12.0/firebase-storage.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyCAw2oS4K-V1qb_0X91F69Uo9KWNzssa2g",
@@ -1008,6 +1050,90 @@ const firebaseConfig = {
 
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
+const storage = getStorage(app);
+
+// ── ESTADO INFORME ──
+window._informeActual = { blob: null, url: null, nombre: null, tipo: null };
+
+// ── SISTEMA DE COMPARTIR INFORMES ──
+
+async function subirInformeAStorage(blob, nombre, tipo) {
+  const carpeta = tipo === 'xlsx' ? 'informes/excel' : tipo === 'pptx' ? 'informes/pptx' : 'informes/pdf';
+  const ruta = `${carpeta}/${Date.now()}_${nombre}`;
+  const fileRef = storageRef(storage, ruta);
+  await uploadBytes(fileRef, blob, { contentType: tipo === 'pdf' ? 'application/pdf' : tipo === 'xlsx' ? 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' : 'application/vnd.openxmlformats-officedocument.presentationml.presentation' });
+  return await getDownloadURL(fileRef);
+}
+
+async function mostrarModalInforme(blob, nombre, tipo, icono) {
+  const s = window._informeActual;
+  s.blob = blob; s.nombre = nombre; s.tipo = tipo;
+  s.url = null;
+
+  // Preparar modal
+  document.getElementById('informe-listo-titulo').textContent = '✅ Informe generado';
+  document.getElementById('informe-listo-icon').textContent = icono || (tipo === 'pdf' ? '📄' : tipo === 'pptx' ? '📊' : '📈');
+  document.getElementById('informe-listo-nombre').textContent = nombre;
+  document.getElementById('informe-listo-estado').textContent = 'Subiendo a la nube para compartir...';
+  document.getElementById('informe-link-wrap').style.display = 'none';
+  document.getElementById('informe-subiendo').style.display = 'block';
+  document.getElementById('btn-informe-descargar').style.display = 'none';
+  document.getElementById('btn-informe-whatsapp').style.display = 'none';
+
+  // Descarga local inmediata mientras sube
+  const localUrl = URL.createObjectURL(blob);
+  document.getElementById('btn-informe-descargar').onclick = () => {
+    const a = document.createElement('a'); a.href = localUrl; a.download = nombre; a.click();
+  };
+
+  document.getElementById('modal-informe-listo').classList.add('open');
+
+  try {
+    const urlNube = await subirInformeAStorage(blob, nombre, tipo);
+    s.url = urlNube;
+
+    document.getElementById('informe-link-text').textContent = urlNube;
+    document.getElementById('informe-link-wrap').style.display = 'block';
+    document.getElementById('informe-listo-estado').textContent = '¡Listo para compartir!';
+    document.getElementById('informe-subiendo').style.display = 'none';
+    document.getElementById('btn-informe-descargar').style.display = 'flex';
+    document.getElementById('btn-informe-whatsapp').style.display = 'flex';
+  } catch(e) {
+    console.error('Error subiendo informe:', e);
+    document.getElementById('informe-listo-estado').textContent = 'No se pudo subir a la nube. Solo descarga local disponible.';
+    document.getElementById('informe-subiendo').style.display = 'none';
+    document.getElementById('btn-informe-descargar').style.display = 'flex';
+  }
+}
+
+window.copiarLink = function() {
+  const url = window._informeActual.url;
+  if (!url) return;
+  navigator.clipboard.writeText(url).then(() => {
+    const btn = document.getElementById('btn-copiar-link');
+    btn.textContent = '✅ Copiado';
+    setTimeout(() => btn.textContent = '📋 Copiar', 2000);
+  }).catch(() => {
+    // Fallback para móviles
+    const el = document.createElement('textarea');
+    el.value = url; document.body.appendChild(el); el.select();
+    document.execCommand('copy'); document.body.removeChild(el);
+    showToast('Link copiado', 'success');
+  });
+};
+
+window.compartirWhatsApp = function() {
+  const url = window._informeActual.url;
+  const nombre = window._informeActual.nombre;
+  if (!url) return;
+  const msg = encodeURIComponent(`📊 *Informe HelCapture*\n${nombre}\n\n🔗 ${url}`);
+  window.open(`https://wa.me/?text=${msg}`, '_blank');
+};
+
+// Helper: jsPDF blob en lugar de save()
+function pdfToBlob(doc) {
+  return doc.output('blob');
+}
 
 // ── ESTADO ──
 window._actividades = [];
@@ -1258,7 +1384,7 @@ function getActividadesFiltradas() {
   });
 }
 
-window.exportarExcel = function() {
+window.exportarExcel = async function() {
   const acts = getActividadesFiltradas();
   if (!acts.length) { showToast('No hay datos para exportar','error'); return; }
 
@@ -1315,11 +1441,12 @@ window.exportarExcel = function() {
   });
   if (rowsGastos.length) XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(rowsGastos), 'Gastos');
 
-  XLSX.writeFile(wb, `HelCapture_Informe_${new Date().toISOString().split('T')[0]}.xlsx`);
-  showToast('Excel generado ✓', 'success');
+  const nombre = `HelCapture_Informe_${new Date().toISOString().split('T')[0]}.xlsx`;
+  const wbBlob = new Blob([XLSX.write(wb, { bookType:'xlsx', type:'array' })], { type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+  await mostrarModalInforme(wbBlob, nombre, 'xlsx', '📈');
 };
 
-window.generarLegalizacion = function() {
+window.generarLegalizacion = async function() {
   const acts = getActividadesFiltradas();
   const rows = [];
   acts.forEach(a => {
@@ -1331,11 +1458,12 @@ window.generarLegalizacion = function() {
   const wb = XLSX.utils.book_new();
   const ws = XLSX.utils.json_to_sheet(rows);
   XLSX.utils.book_append_sheet(wb, ws, 'Legalización');
-  XLSX.writeFile(wb, `HelCapture_Legalizacion_${new Date().toISOString().split('T')[0]}.xlsx`);
-  showToast('Formato legalización generado ✓', 'success');
+  const nombre = `HelCapture_Legalizacion_${new Date().toISOString().split('T')[0]}.xlsx`;
+  const wbBlob = new Blob([XLSX.write(wb, { bookType:'xlsx', type:'array' })], { type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+  await mostrarModalInforme(wbBlob, nombre, 'xlsx', '💵');
 };
 
-window.generarVentas = function() {
+window.generarVentas = async function() {
   const acts = getActividadesFiltradas().filter(a=>a.ventas?.activo);
   if (!acts.length) { showToast('No hay actividades con ventas','error'); return; }
   const rows = [];
@@ -1346,21 +1474,23 @@ window.generarVentas = function() {
   });
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(rows), 'Ventas');
-  XLSX.writeFile(wb, `HelCapture_Ventas_${new Date().toISOString().split('T')[0]}.xlsx`);
-  showToast('Informe de ventas generado ✓', 'success');
+  const nombre = `HelCapture_Ventas_${new Date().toISOString().split('T')[0]}.xlsx`;
+  const wbBlob = new Blob([XLSX.write(wb, { bookType:'xlsx', type:'array' })], { type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+  await mostrarModalInforme(wbBlob, nombre, 'xlsx', '💰');
 };
 
-window.generarMuestreo = function() {
+window.generarMuestreo = async function() {
   const acts = getActividadesFiltradas().filter(a=>a.muestreo?.activo);
   if (!acts.length) { showToast('No hay actividades con muestreo','error'); return; }
   const rows = acts.map(a => ({ 'Evento': a.evento?.nombre, 'Fecha': a.evento?.fecha, 'Lugar': a.evento?.lugar, 'Asistentes': a.evento?.asistentes, 'Descripción': a.muestreo.descripcion, 'Observaciones': a.muestreo.observaciones }));
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(rows), 'Muestreo');
-  XLSX.writeFile(wb, `HelCapture_Muestreo_${new Date().toISOString().split('T')[0]}.xlsx`);
-  showToast('Informe de muestreo generado ✓', 'success');
+  const nombre = `HelCapture_Muestreo_${new Date().toISOString().split('T')[0]}.xlsx`;
+  const wbBlob = new Blob([XLSX.write(wb, { bookType:'xlsx', type:'array' })], { type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+  await mostrarModalInforme(wbBlob, nombre, 'xlsx', '🧪');
 };
 
-window.generarPDF = function() {
+window.generarPDF = async function() {
   const { jsPDF } = window.jspdf;
   const acts = getActividadesFiltradas();
   if (!acts.length) { showToast('No hay datos para el PDF','error'); return; }
@@ -1411,11 +1541,12 @@ window.generarPDF = function() {
     }
   });
 
-  doc.save(`HelCapture_Informe_${new Date().toISOString().split('T')[0]}.pdf`);
-  showToast('PDF generado ✓', 'success');
+  const nombre = `HelCapture_Informe_${new Date().toISOString().split('T')[0]}.pdf`;
+  const blob = pdfToBlob(doc);
+  await mostrarModalInforme(blob, nombre, 'pdf', '📄');
 };
 
-window.generarPPTX = function() {
+window.generarPPTX = async function() {
   const acts = getActividadesFiltradas();
   if (!acts.length) { showToast('No hay datos para la presentación','error'); return; }
 
@@ -1473,8 +1604,9 @@ window.generarPPTX = function() {
     }
   });
 
-  pptx.writeFile({ fileName: `HelCapture_Presentacion_${new Date().toISOString().split('T')[0]}.pptx` });
-  showToast('Presentación generada ✓', 'success');
+  const nombre = `HelCapture_Presentacion_${new Date().toISOString().split('T')[0]}.pptx`;
+  const pptxBlob = await pptx.write({ outputType: 'blob' });
+  await mostrarModalInforme(pptxBlob, nombre, 'pptx', '📊');
 };
 
 // ── USUARIOS ──
@@ -1901,7 +2033,7 @@ window.dropSec = function(e, targetIdx) {
 };
 
 // ── EXPORTAR PDF DESDE CONSTRUCTOR ──
-window.exportarConstructorPDF = function() {
+window.exportarConstructorPDF = async function() {
   const s = window._constructorState;
   if (!s.actividadId) { showToast('Selecciona una actividad primero','error'); return; }
   const a = window._actividades.find(x => x.id === s.actividadId);
@@ -2038,8 +2170,9 @@ window.exportarConstructorPDF = function() {
     doc.line(14,289,196,289);
   }
 
-  doc.save(`${titulo.replace(/\s+/g,'_')}_${fecha||'informe'}.pdf`);
-  showToast('PDF generado ✓','success');
+  const nombre = `${titulo.replace(/\s+/g,'_')}_${fecha||'informe'}.pdf`;
+  const blob = pdfToBlob(doc);
+  await mostrarModalInforme(blob, nombre, 'pdf', '📄');
 };
 
 function agregarFotosEnPDF(doc, fotos, y, colorRGB) {
@@ -2066,7 +2199,7 @@ function hexToRgb(hex) {
 }
 
 // ── EXPORTAR PPTX DESDE CONSTRUCTOR ──
-window.exportarConstructorPPTX = function() {
+window.exportarConstructorPPTX = async function() {
   const s = window._constructorState;
   if (!s.actividadId) { showToast('Selecciona una actividad primero','error'); return; }
   const a = window._actividades.find(x => x.id === s.actividadId);
@@ -2178,8 +2311,9 @@ window.exportarConstructorPPTX = function() {
     }
   });
 
-  pptx.writeFile({ fileName:`${titulo.replace(/\s+/g,'_')}_${fecha||'informe'}.pptx` });
-  showToast('Presentación generada ✓','success');
+  const nombre = `${titulo.replace(/\s+/g,'_')}_${fecha||'informe'}.pptx`;
+  const pptxBlob = await pptx.write({ outputType: 'blob' });
+  await mostrarModalInforme(pptxBlob, nombre, 'pptx', '📊');
 };
 </script>
 </body>
