@@ -343,6 +343,261 @@ tr:hover td { background: rgba(42,191,192,0.04); }
 ::-webkit-scrollbar-track { background:transparent; }
 ::-webkit-scrollbar-thumb { background:rgba(42,191,192,0.25); border-radius:3px; }
 ::-webkit-scrollbar-thumb:hover { background:rgba(42,191,192,0.45); }
+
+/* ── CONSTRUCTOR ── */
+.constructor-layout {
+  display: grid;
+  grid-template-columns: 320px 1fr;
+  gap: 24px;
+  height: calc(100vh - 64px - 56px);
+}
+.constructor-panel {
+  background: var(--bg);
+  border-radius: 18px;
+  box-shadow: var(--neo-out);
+  overflow-y: auto;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.constructor-panel-section {
+  background: var(--bg);
+  box-shadow: var(--neo-in);
+  border-radius: 14px;
+  padding: 14px;
+}
+.constructor-panel-section-title {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--teal-dark);
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  margin-bottom: 12px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.constructor-preview {
+  background: white;
+  border-radius: 18px;
+  box-shadow: var(--neo-out);
+  overflow-y: auto;
+}
+.preview-page {
+  width: 100%;
+  max-width: 760px;
+  margin: 0 auto;
+  padding: 40px;
+  font-family: 'Segoe UI', system-ui, sans-serif;
+}
+
+/* Portada preview */
+.preview-cover {
+  background: linear-gradient(135deg, #1B2A4A 0%, #2C3E6B 100%);
+  border-radius: 16px;
+  padding: 48px 40px;
+  margin-bottom: 32px;
+  color: white;
+  position: relative;
+  overflow: hidden;
+}
+.preview-cover::before {
+  content: '';
+  position: absolute;
+  top: -40px; right: -40px;
+  width: 200px; height: 200px;
+  border-radius: 50%;
+  background: rgba(42,191,192,0.12);
+}
+.preview-cover::after {
+  content: '';
+  position: absolute;
+  bottom: -60px; left: -30px;
+  width: 250px; height: 250px;
+  border-radius: 50%;
+  background: rgba(42,191,192,0.07);
+}
+.preview-cover-logo { margin-bottom: 24px; }
+.preview-cover-logo img { max-height: 48px; max-width: 160px; object-fit: contain; filter: brightness(0) invert(1); }
+.preview-cover-title { font-size: 28px; font-weight: 900; margin-bottom: 8px; line-height: 1.2; }
+.preview-cover-sub { font-size: 14px; opacity: 0.7; margin-bottom: 24px; }
+.preview-cover-meta {
+  display: flex; gap: 20px; flex-wrap: wrap;
+}
+.preview-cover-meta-item {
+  background: rgba(255,255,255,0.1);
+  border-radius: 10px;
+  padding: 8px 14px;
+  font-size: 12px;
+  font-weight: 600;
+}
+.preview-cover-meta-item span { opacity: 0.6; display: block; font-size: 10px; font-weight: 400; margin-bottom: 2px; }
+
+/* Secciones preview */
+.preview-section {
+  border-radius: 14px;
+  padding: 24px;
+  margin-bottom: 20px;
+  background: #F8FAFC;
+  border-left: 4px solid var(--teal);
+  position: relative;
+}
+.preview-section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 14px;
+}
+.preview-section-title {
+  font-size: 16px;
+  font-weight: 800;
+  color: var(--navy);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.preview-section-drag {
+  cursor: grab;
+  color: var(--text-muted);
+  font-size: 18px;
+  user-select: none;
+  padding: 4px;
+}
+.preview-section-drag:active { cursor: grabbing; }
+.preview-section.dragging { opacity: 0.4; box-shadow: var(--neo-teal); }
+.preview-section.drag-over { border-color: var(--teal); background: rgba(42,191,192,0.06); }
+.preview-comment {
+  width: 100%;
+  border: none;
+  background: white;
+  box-shadow: var(--neo-in);
+  border-radius: 10px;
+  padding: 10px 14px;
+  font-size: 13px;
+  font-family: inherit;
+  color: var(--text);
+  outline: none;
+  resize: vertical;
+  min-height: 56px;
+  margin-bottom: 12px;
+}
+.preview-comment:focus { box-shadow: var(--neo-in), 0 0 0 2px rgba(42,191,192,0.2); }
+.preview-foto-grid { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 10px; }
+.preview-foto-item {
+  position: relative;
+  width: 110px; height: 110px;
+  border-radius: 10px;
+  overflow: hidden;
+  box-shadow: var(--neo-sm);
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.preview-foto-item img { width: 100%; height: 100%; object-fit: cover; }
+.preview-foto-item.excluded { opacity: 0.3; filter: grayscale(1); }
+.preview-foto-item.excluded::after {
+  content: '✕';
+  position: absolute; inset: 0;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 28px; color: white;
+  background: rgba(239,68,68,0.5);
+}
+.preview-foto-item:hover::before {
+  content: attr(data-tip);
+  position: absolute; bottom: 0; left: 0; right: 0;
+  background: rgba(0,0,0,0.6); color: white; font-size: 10px;
+  text-align: center; padding: 4px;
+}
+
+/* Stats strip */
+.preview-stats-strip {
+  display: flex; gap: 12px; margin-bottom: 20px; flex-wrap: wrap;
+}
+.preview-stat-chip {
+  background: white;
+  border-radius: 12px;
+  padding: 12px 18px;
+  box-shadow: var(--neo-sm);
+  text-align: center;
+  min-width: 90px;
+}
+.preview-stat-chip .val { font-size: 22px; font-weight: 900; color: var(--teal-dark); }
+.preview-stat-chip .lbl { font-size: 10px; color: var(--text-muted); font-weight: 600; text-transform: uppercase; }
+
+/* Ref table preview */
+.preview-ref-table { width: 100%; border-collapse: collapse; font-size: 13px; margin-top: 10px; }
+.preview-ref-table th { background: #1B2A4A; color: white; padding: 8px 12px; text-align: left; font-size: 11px; font-weight: 700; text-transform: uppercase; }
+.preview-ref-table td { padding: 8px 12px; border-bottom: 1px solid #EEF2F7; }
+.preview-ref-table tr:last-child td { border-bottom: none; }
+.preview-ref-table tr:nth-child(even) td { background: #F8FAFC; }
+
+/* Color picker */
+.color-swatches { display: flex; gap: 8px; flex-wrap: wrap; }
+.color-swatch {
+  width: 28px; height: 28px; border-radius: 8px;
+  cursor: pointer; border: 3px solid transparent;
+  transition: all 0.15s;
+}
+.color-swatch.active { border-color: var(--navy); transform: scale(1.15); }
+
+/* Section toggle */
+.section-toggle {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 8px 0; border-bottom: 1px solid rgba(0,0,0,0.05);
+  font-size: 13px; font-weight: 600; color: var(--text);
+}
+.section-toggle:last-child { border-bottom: none; }
+.toggle-switch {
+  width: 36px; height: 20px;
+  background: var(--bg-dark);
+  box-shadow: var(--neo-in);
+  border-radius: 10px;
+  position: relative;
+  cursor: pointer;
+  transition: background 0.2s;
+  flex-shrink: 0;
+}
+.toggle-switch.on { background: var(--teal); box-shadow: none; }
+.toggle-switch::after {
+  content: '';
+  position: absolute;
+  width: 14px; height: 14px;
+  border-radius: 50%;
+  background: white;
+  top: 3px; left: 3px;
+  transition: left 0.2s;
+  box-shadow: 1px 1px 4px rgba(0,0,0,0.2);
+}
+.toggle-switch.on::after { left: 19px; }
+
+/* Constructor topbar */
+.constructor-topbar {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 20px; flex-wrap: wrap; gap: 12px;
+}
+.constructor-topbar-left { display: flex; align-items: center; gap: 12px; }
+.activity-pill {
+  background: var(--bg);
+  box-shadow: var(--neo-sm);
+  border-radius: 10px;
+  padding: 6px 14px;
+  font-size: 13px; font-weight: 600;
+  color: var(--navy);
+}
+
+/* Logo upload */
+.logo-upload-area {
+  border: 2px dashed rgba(42,191,192,0.3);
+  border-radius: 12px;
+  padding: 16px;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.15s;
+  font-size: 12px;
+  color: var(--text-muted);
+}
+.logo-upload-area:hover { border-color: var(--teal); color: var(--teal); }
+.logo-preview-mini { max-height: 40px; max-width: 120px; object-fit: contain; margin: 0 auto 8px; display: block; }
 </style>
 </head>
 <body>
@@ -368,6 +623,9 @@ tr:hover td { background: rgba(42,191,192,0.04); }
     <div class="nav-section">Informes</div>
     <div class="nav-item" onclick="navigate('informes')">
       <span class="nav-icon">📄</span> Generar informes
+    </div>
+    <div class="nav-item" onclick="navigate('constructor')">
+      <span class="nav-icon">🎨</span> Constructor
     </div>
 
     <div class="nav-section">Gestión</div>
@@ -441,6 +699,7 @@ tr:hover td { background: rgba(42,191,192,0.04); }
                 <th>Asistentes</th>
                 <th>Secciones</th>
                 <th>Acciones</th>
+                <th>Informe</th>
               </tr>
             </thead>
             <tbody id="tabla-actividades"></tbody>
@@ -485,7 +744,7 @@ tr:hover td { background: rgba(42,191,192,0.04); }
             <thead>
               <tr>
                 <th>Evento</th><th>Tipo</th><th>Fecha</th><th>Lugar</th>
-                <th>Asistentes</th><th>Muestreo</th><th>Ventas</th><th>Obsequios</th><th>Gastos</th><th>GPS</th><th>Ver</th>
+                <th>Asistentes</th><th>Muestreo</th><th>Ventas</th><th>Obsequios</th><th>Gastos</th><th>GPS</th><th>Ver</th><th>Informe</th>
               </tr>
             </thead>
             <tbody id="tabla-all"></tbody>
@@ -572,6 +831,93 @@ tr:hover td { background: rgba(42,191,192,0.04); }
       </div>
       <div class="users-grid" id="users-grid">
         <div class="empty-state"><div class="icon">👥</div><p>Cargando usuarios...</p></div>
+      </div>
+    </div>
+
+    <!-- ══ CONSTRUCTOR ══ -->
+    <div class="view" id="view-constructor">
+      <div class="constructor-topbar">
+        <div class="constructor-topbar-left">
+          <button class="btn btn-outline btn-sm" onclick="navigate('actividades')">← Volver</button>
+          <div class="activity-pill" id="constructor-activity-name">Selecciona una actividad</div>
+        </div>
+        <div style="display:flex;gap:10px;">
+          <button class="btn btn-outline btn-sm" onclick="exportarConstructorPDF()">📄 Exportar PDF</button>
+          <button class="btn btn-teal btn-sm" onclick="exportarConstructorPPTX()">📊 Exportar PPTX</button>
+        </div>
+      </div>
+
+      <div class="constructor-layout">
+        <!-- Panel izquierdo -->
+        <div class="constructor-panel">
+
+          <!-- Portada -->
+          <div class="constructor-panel-section">
+            <div class="constructor-panel-section-title">🎨 Portada</div>
+            <div class="form-field" style="margin-bottom:10px;">
+              <label>Título del informe</label>
+              <input type="text" id="cfg-titulo" placeholder="Informe de actividad" oninput="actualizarPreview()">
+            </div>
+            <div class="form-field" style="margin-bottom:10px;">
+              <label>Subtítulo</label>
+              <input type="text" id="cfg-subtitulo" placeholder="By Grupo Helse" oninput="actualizarPreview()">
+            </div>
+            <div class="form-field" style="margin-bottom:10px;">
+              <label>Fecha del informe</label>
+              <input type="date" id="cfg-fecha" oninput="actualizarPreview()">
+            </div>
+          </div>
+
+          <!-- Logo -->
+          <div class="constructor-panel-section">
+            <div class="constructor-panel-section-title">🖼️ Logo</div>
+            <div id="logo-preview-wrap" style="display:none;margin-bottom:8px;">
+              <img id="logo-preview-mini" class="logo-preview-mini" src="" alt="logo">
+            </div>
+            <div class="logo-upload-area" onclick="document.getElementById('logo-input').click()">
+              <div>📁 Haz clic para subir logo</div>
+              <div style="font-size:10px;margin-top:4px;">PNG, JPG — recomendado fondo transparente</div>
+            </div>
+            <input type="file" id="logo-input" accept="image/*" style="display:none" onchange="cargarLogo(this)">
+            <button class="btn btn-outline btn-sm" style="margin-top:8px;width:100%;" onclick="quitarLogo()">Quitar logo</button>
+          </div>
+
+          <!-- Colores -->
+          <div class="constructor-panel-section">
+            <div class="constructor-panel-section-title">🎨 Color principal</div>
+            <div class="color-swatches" id="color-swatches">
+              <div class="color-swatch active" data-color="#2ABFC0" style="background:#2ABFC0;" onclick="setColor('#2ABFC0',this)"></div>
+              <div class="color-swatch" data-color="#1B2A4A" style="background:#1B2A4A;" onclick="setColor('#1B2A4A',this)"></div>
+              <div class="color-swatch" data-color="#7C3AED" style="background:#7C3AED;" onclick="setColor('#7C3AED',this)"></div>
+              <div class="color-swatch" data-color="#059669" style="background:#059669;" onclick="setColor('#059669',this)"></div>
+              <div class="color-swatch" data-color="#DC2626" style="background:#DC2626;" onclick="setColor('#DC2626',this)"></div>
+              <div class="color-swatch" data-color="#D97706" style="background:#D97706;" onclick="setColor('#D97706',this)"></div>
+              <div class="color-swatch" data-color="#0EA5E9" style="background:#0EA5E9;" onclick="setColor('#0EA5E9',this)"></div>
+              <div class="color-swatch" data-color="#BE185D" style="background:#BE185D;" onclick="setColor('#BE185D',this)"></div>
+            </div>
+            <div style="display:flex;align-items:center;gap:8px;margin-top:10px;">
+              <label style="font-size:11px;color:var(--text-muted);font-weight:600;">Personalizado:</label>
+              <input type="color" id="color-custom" value="#2ABFC0" oninput="setColor(this.value,null)" style="width:36px;height:28px;border:none;border-radius:6px;cursor:pointer;background:none;">
+            </div>
+          </div>
+
+          <!-- Secciones activas -->
+          <div class="constructor-panel-section">
+            <div class="constructor-panel-section-title">📋 Secciones visibles</div>
+            <div id="section-toggles"></div>
+          </div>
+
+        </div>
+
+        <!-- Preview derecho -->
+        <div class="constructor-preview" id="constructor-preview">
+          <div class="preview-page" id="preview-page">
+            <div style="text-align:center;color:var(--text-muted);padding:80px 20px;">
+              <div style="font-size:48px;margin-bottom:16px;opacity:0.3;">🎨</div>
+              <p style="font-size:15px;">Selecciona una actividad para comenzar a construir el informe</p>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
 
@@ -711,6 +1057,7 @@ function renderTabla(data) {
       <td style="text-align:center;">${a.evento?.asistentes||0}</td>
       <td>${seccionesBadges(a)}</td>
       <td><button class="btn btn-outline btn-sm" onclick="verDetalle('${a.id}')">Ver</button></td>
+      <td><button class="btn btn-teal btn-sm" onclick="abrirConstructor('${a.id}')">🎨 Construir</button></td>
     </tr>
   `).join('');
 }
@@ -735,6 +1082,7 @@ window.renderTablaAll = function(data) {
       <td style="text-align:center;">${(a.gastos?.items||[]).length > 0 ? '✅' : '–'}</td>
       <td style="text-align:center;">${a.ubicacion ? `<a href="https://maps.google.com/?q=${a.ubicacion.lat},${a.ubicacion.lng}" target="_blank" class="map-link">📍</a>` : '–'}</td>
       <td><button class="btn btn-outline btn-sm" onclick="verDetalle('${a.id}')">Ver</button></td>
+      <td><button class="btn btn-teal btn-sm" onclick="abrirConstructor('${a.id}')">🎨 Construir</button></td>
     </tr>
   `).join('');
 };
@@ -1181,11 +1529,11 @@ window.navigate = function(view) {
   document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
   document.getElementById('view-'+view).classList.add('active');
   document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
-  const titles = { dashboard:'Dashboard', actividades:'Actividades', informes:'Generar informes', usuarios:'Usuarios' };
+  const titles = { dashboard:'Dashboard', actividades:'Actividades', informes:'Generar informes', constructor:'Constructor de informe', usuarios:'Usuarios' };
   document.getElementById('topbar-title').textContent = titles[view]||view;
-  const navMap = { dashboard:0, actividades:1, informes:2, usuarios:3 };
+  const navMap = { dashboard:0, actividades:1, informes:2, constructor:3, usuarios:4 };
   const navItems = document.querySelectorAll('.nav-item');
-  if (navItems[navMap[view]]) navItems[navMap[view]].classList.add('active');
+  if (navItems[navMap[view]] !== undefined) navItems[navMap[view]].classList.add('active');
 };
 
 window.cerrarModal = function(id) { document.getElementById(id).classList.remove('open'); };
@@ -1219,6 +1567,589 @@ function seccionesBadges(a) {
   if ((a.gastos?.items||[]).filter(Boolean).length) parts.push('<span class="badge navy" style="font-size:10px;">Gastos</span>');
   return parts.join(' ') || '<span style="color:var(--gray-400);font-size:13px;">–</span>';
 }
+
+// ══════════════════════════════════════════
+// CONSTRUCTOR DE INFORMES
+// ══════════════════════════════════════════
+window._constructorState = {
+  actividadId: null,
+  color: '#2ABFC0',
+  logoDataUrl: null,
+  secciones: [],        // orden y visibilidad
+  fotosExcluidas: {},   // { seccion_idx: Set de índices excluidos }
+  comentarios: {},      // { seccion_key: texto }
+};
+
+const SECCIONES_DEF = [
+  { key:'general',   label:'Datos del evento',     icon:'📋', always: true },
+  { key:'fotos',     label:'Fotos del evento',      icon:'📸' },
+  { key:'muestreo',  label:'Muestreo',              icon:'🧪' },
+  { key:'ventas',    label:'Ventas',                icon:'💰' },
+  { key:'obsequios', label:'Obsequios',             icon:'🎁' },
+  { key:'gastos',    label:'Gastos legalizados',    icon:'💵' },
+  { key:'cierre',    label:'Detalle e impacto',     icon:'🎯' },
+  { key:'ubicacion', label:'Ubicación GPS',         icon:'📍' },
+];
+
+window.abrirConstructor = function(id) {
+  const a = window._actividades.find(x => x.id === id);
+  if (!a) return;
+
+  const s = window._constructorState;
+  s.actividadId = id;
+  s.fotosExcluidas = {};
+  s.comentarios = {};
+
+  // Construir secciones disponibles para esta actividad
+  s.secciones = SECCIONES_DEF
+    .filter(def => {
+      if (def.key === 'general') return true;
+      if (def.key === 'fotos') return (a.fotosGenerales||[]).length > 0;
+      if (def.key === 'muestreo') return !!a.muestreo?.activo;
+      if (def.key === 'ventas') return !!a.ventas?.activo;
+      if (def.key === 'obsequios') return !!a.obsequios?.activo;
+      if (def.key === 'gastos') return (a.gastos?.items||[]).filter(Boolean).length > 0;
+      if (def.key === 'cierre') return !!(a.cierre?.descripcion || a.cierre?.impacto);
+      if (def.key === 'ubicacion') return !!a.ubicacion;
+      return false;
+    })
+    .map(def => ({ ...def, visible: true }));
+
+  // Defaults portada
+  document.getElementById('cfg-titulo').value = a.evento?.nombre || 'Informe de actividad';
+  document.getElementById('cfg-subtitulo').value = 'By Grupo Helse';
+  document.getElementById('cfg-fecha').value = a.evento?.fecha || new Date().toISOString().split('T')[0];
+  document.getElementById('constructor-activity-name').textContent = a.evento?.nombre || 'Actividad';
+
+  renderSectionToggles();
+  actualizarPreview();
+  navigate('constructor');
+};
+
+function renderSectionToggles() {
+  const s = window._constructorState;
+  const wrap = document.getElementById('section-toggles');
+  wrap.innerHTML = s.secciones.map((sec, i) => `
+    <div class="section-toggle">
+      <span>${sec.icon} ${sec.label}</span>
+      ${sec.always ? '<span style="font-size:11px;color:var(--teal-dark);font-weight:600;">Siempre</span>'
+        : `<div class="toggle-switch ${sec.visible ? 'on' : ''}" onclick="toggleSeccion(${i})"></div>`}
+    </div>
+  `).join('');
+}
+
+window.toggleSeccion = function(i) {
+  const s = window._constructorState;
+  s.secciones[i].visible = !s.secciones[i].visible;
+  renderSectionToggles();
+  actualizarPreview();
+};
+
+window.setColor = function(color, el) {
+  window._constructorState.color = color;
+  document.querySelectorAll('.color-swatch').forEach(s => s.classList.remove('active'));
+  if (el) el.classList.add('active');
+  document.getElementById('color-custom').value = color;
+  actualizarPreview();
+};
+
+window.cargarLogo = function(input) {
+  const file = input.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    window._constructorState.logoDataUrl = e.target.result;
+    document.getElementById('logo-preview-mini').src = e.target.result;
+    document.getElementById('logo-preview-wrap').style.display = 'block';
+    actualizarPreview();
+  };
+  reader.readAsDataURL(file);
+};
+
+window.quitarLogo = function() {
+  window._constructorState.logoDataUrl = null;
+  document.getElementById('logo-preview-mini').src = '';
+  document.getElementById('logo-preview-wrap').style.display = 'none';
+  document.getElementById('logo-input').value = '';
+  actualizarPreview();
+};
+
+window.toggleFoto = function(secKey, idx) {
+  const s = window._constructorState;
+  if (!s.fotosExcluidas[secKey]) s.fotosExcluidas[secKey] = new Set();
+  if (s.fotosExcluidas[secKey].has(idx)) {
+    s.fotosExcluidas[secKey].delete(idx);
+  } else {
+    s.fotosExcluidas[secKey].add(idx);
+  }
+  // Actualizar solo el elemento visual sin re-renderizar todo
+  const el = document.getElementById(`foto-${secKey}-${idx}`);
+  if (el) el.classList.toggle('excluded', s.fotosExcluidas[secKey].has(idx));
+};
+
+window.actualizarPreview = function() {
+  const s = window._constructorState;
+  if (!s.actividadId) return;
+  const a = window._actividades.find(x => x.id === s.actividadId);
+  if (!a) return;
+
+  const titulo = document.getElementById('cfg-titulo').value || a.evento?.nombre || 'Informe';
+  const subtitulo = document.getElementById('cfg-subtitulo').value || 'By Grupo Helse';
+  const fecha = document.getElementById('cfg-fecha').value || a.evento?.fecha || '';
+  const color = s.color;
+  const colorHex = color;
+
+  let html = '';
+
+  // ── PORTADA ──
+  html += `<div class="preview-cover" style="background:linear-gradient(135deg,${colorHex}dd 0%,${colorHex}99 100%);">
+    ${s.logoDataUrl ? `<div class="preview-cover-logo"><img src="${s.logoDataUrl}" style="max-height:48px;max-width:160px;object-fit:contain;"></div>` : ''}
+    <div class="preview-cover-title">${titulo}</div>
+    <div class="preview-cover-sub">${subtitulo}</div>
+    <div class="preview-cover-meta">
+      ${a.evento?.tipo ? `<div class="preview-cover-meta-item"><span>Tipo</span>${a.evento.tipo}</div>` : ''}
+      ${fecha ? `<div class="preview-cover-meta-item"><span>Fecha</span>${fmtFecha(fecha)}</div>` : ''}
+      ${a.evento?.lugar ? `<div class="preview-cover-meta-item"><span>Lugar</span>${a.evento.lugar}</div>` : ''}
+      ${a.evento?.asistentes ? `<div class="preview-cover-meta-item"><span>Asistentes</span>${a.evento.asistentes}</div>` : ''}
+    </div>
+  </div>`;
+
+  // ── CHIPS RESUMEN ──
+  const totalGastos = (a.gastos?.items||[]).filter(Boolean).reduce((sum,g)=>sum+(parseFloat(g.valor)||0),0);
+  html += `<div class="preview-stats-strip">
+    <div class="preview-stat-chip"><div class="val" style="color:${colorHex};">${a.evento?.asistentes||0}</div><div class="lbl">Asistentes</div></div>
+    ${a.ventas?.activo ? `<div class="preview-stat-chip"><div class="val" style="color:${colorHex};">${(a.ventas.referencias||[]).filter(Boolean).reduce((s,r)=>s+(parseInt(r.cantidad)||0),0)}</div><div class="lbl">Uds vendidas</div></div>` : ''}
+    ${a.muestreo?.activo ? `<div class="preview-stat-chip"><div class="val" style="color:${colorHex};">✓</div><div class="lbl">Muestreo</div></div>` : ''}
+    ${totalGastos>0 ? `<div class="preview-stat-chip"><div class="val" style="color:${colorHex};font-size:16px;">$${totalGastos.toLocaleString('es-CO')}</div><div class="lbl">Gastos</div></div>` : ''}
+  </div>`;
+
+  // ── SECCIONES ──
+  s.secciones.filter(sec => sec.visible).forEach((sec, secIdx) => {
+    const comentario = s.comentarios[sec.key] || '';
+
+    html += `<div class="preview-section" style="border-left-color:${colorHex};" 
+      draggable="true"
+      ondragstart="dragStart(event,${secIdx})"
+      ondragover="dragOver(event)"
+      ondrop="dropSec(event,${secIdx})"
+      ondragleave="dragLeave(event)">
+      <div class="preview-section-header">
+        <div class="preview-section-title" style="color:${colorHex};">${sec.icon} ${sec.label}</div>
+        <div class="preview-section-drag" title="Arrastrar para reordenar">⠿</div>
+      </div>
+      <textarea class="preview-comment" placeholder="Agrega un comentario para esta sección..." 
+        onchange="guardarComentario('${sec.key}',this.value)">${comentario}</textarea>`;
+
+    // Contenido por sección
+    if (sec.key === 'general') {
+      html += `<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;font-size:13px;">
+        <div><div style="font-size:10px;font-weight:700;color:#94A3B8;text-transform:uppercase;margin-bottom:3px;">Tipo de evento</div><div style="font-weight:600;">${a.evento?.tipo||'–'}</div></div>
+        <div><div style="font-size:10px;font-weight:700;color:#94A3B8;text-transform:uppercase;margin-bottom:3px;">Fecha</div><div style="font-weight:600;">${fmtFecha(a.evento?.fecha)}</div></div>
+        <div><div style="font-size:10px;font-weight:700;color:#94A3B8;text-transform:uppercase;margin-bottom:3px;">Lugar</div><div style="font-weight:600;">${a.evento?.lugar||'–'}</div></div>
+        <div><div style="font-size:10px;font-weight:700;color:#94A3B8;text-transform:uppercase;margin-bottom:3px;">Asistentes</div><div style="font-weight:600;">${a.evento?.asistentes||0}</div></div>
+      </div>`;
+    }
+
+    else if (sec.key === 'fotos') {
+      const fotos = (a.fotosGenerales||[]);
+      html += `<div class="preview-foto-grid">` +
+        fotos.map((f,i) => {
+          const src = f.url||f.dataUrl||'';
+          const excluded = (s.fotosExcluidas['fotos']||new Set()).has(i);
+          return `<div class="preview-foto-item${excluded?' excluded':''}" id="foto-fotos-${i}" onclick="toggleFoto('fotos',${i})" data-tip="${excluded?'Clic para incluir':'Clic para excluir'}">
+            <img src="${src}" alt="foto ${i+1}" loading="lazy">
+          </div>`;
+        }).join('') + `</div>
+        <div style="font-size:11px;color:#94A3B8;margin-top:8px;">Clic sobre una foto para incluirla/excluirla del informe</div>`;
+    }
+
+    else if (sec.key === 'muestreo') {
+      const fotos = (a.muestreo?.fotos||[]);
+      html += `${a.muestreo?.descripcion ? `<p style="font-size:13px;margin-bottom:8px;">${a.muestreo.descripcion}</p>` : ''}
+        ${a.muestreo?.observaciones ? `<p style="font-size:12px;color:#64748B;">${a.muestreo.observaciones}</p>` : ''}
+        ${fotos.length ? `<div class="preview-foto-grid">` + fotos.map((f,i) => {
+          const src = f.dataUrl||f.url||'';
+          const excluded = (s.fotosExcluidas['muestreo']||new Set()).has(i);
+          return `<div class="preview-foto-item${excluded?' excluded':''}" id="foto-muestreo-${i}" onclick="toggleFoto('muestreo',${i})"><img src="${src}" loading="lazy"></div>`;
+        }).join('') + `</div>` : ''}`;
+    }
+
+    else if (sec.key === 'ventas') {
+      const refs = (a.ventas?.referencias||[]).filter(Boolean);
+      const fotos = (a.ventas?.fotos||[]);
+      html += refs.length ? `<table class="preview-ref-table" style="--accent:${colorHex};">
+        <thead><tr><th>Referencia</th><th>Cantidad</th></tr></thead>
+        <tbody>${refs.map(r=>`<tr><td>${r.referencia}</td><td><strong>${r.cantidad}</strong></td></tr>`).join('')}</tbody>
+      </table>` : '';
+      html += `${a.ventas?.observaciones ? `<p style="font-size:12px;color:#64748B;margin-top:8px;">${a.ventas.observaciones}</p>` : ''}
+        ${fotos.length ? `<div class="preview-foto-grid">` + fotos.map((f,i) => {
+          const src = f.dataUrl||f.url||'';
+          const excluded = (s.fotosExcluidas['ventas']||new Set()).has(i);
+          return `<div class="preview-foto-item${excluded?' excluded':''}" id="foto-ventas-${i}" onclick="toggleFoto('ventas',${i})"><img src="${src}" loading="lazy"></div>`;
+        }).join('') + `</div>` : ''}`;
+    }
+
+    else if (sec.key === 'obsequios') {
+      const refs = (a.obsequios?.referencias||[]).filter(Boolean);
+      const fotos = (a.obsequios?.fotos||[]);
+      html += refs.length ? `<table class="preview-ref-table">
+        <thead><tr><th>Referencia</th><th>Cantidad</th></tr></thead>
+        <tbody>${refs.map(r=>`<tr><td>${r.referencia}</td><td><strong>${r.cantidad}</strong></td></tr>`).join('')}</tbody>
+      </table>` : '';
+      html += `${a.obsequios?.observaciones ? `<p style="font-size:12px;color:#64748B;margin-top:8px;">${a.obsequios.observaciones}</p>` : ''}
+        ${fotos.length ? `<div class="preview-foto-grid">` + fotos.map((f,i) => {
+          const src = f.dataUrl||f.url||'';
+          const excluded = (s.fotosExcluidas['obsequios']||new Set()).has(i);
+          return `<div class="preview-foto-item${excluded?' excluded':''}" id="foto-obsequios-${i}" onclick="toggleFoto('obsequios',${i})"><img src="${src}" loading="lazy"></div>`;
+        }).join('') + `</div>` : ''}`;
+    }
+
+    else if (sec.key === 'gastos') {
+      const items = (a.gastos?.items||[]).filter(Boolean);
+      const total = items.reduce((sum,g)=>sum+(parseFloat(g.valor)||0),0);
+      html += `<table class="preview-ref-table">
+        <thead><tr><th>Concepto</th><th>Valor</th></tr></thead>
+        <tbody>
+          ${items.map(g=>`<tr><td>${g.concepto}</td><td>$${parseFloat(g.valor).toLocaleString('es-CO')}</td></tr>`).join('')}
+          <tr><td><strong>Total</strong></td><td><strong style="color:${colorHex};">$${total.toLocaleString('es-CO')}</strong></td></tr>
+        </tbody>
+      </table>`;
+    }
+
+    else if (sec.key === 'cierre') {
+      html += `${a.cierre?.descripcion ? `<p style="font-size:13px;margin-bottom:10px;"><strong>Descripción:</strong> ${a.cierre.descripcion}</p>` : ''}
+        ${a.cierre?.impacto ? `<p style="font-size:13px;margin-bottom:8px;"><strong>Impacto:</strong> ${a.cierre.impacto}</p>` : ''}
+        ${a.cierre?.observaciones ? `<p style="font-size:12px;color:#64748B;">${a.cierre.observaciones}</p>` : ''}`;
+    }
+
+    else if (sec.key === 'ubicacion') {
+      html += `<a href="https://maps.google.com/?q=${a.ubicacion.lat},${a.ubicacion.lng}" target="_blank" 
+        style="display:inline-flex;align-items:center;gap:6px;color:${colorHex};font-size:13px;font-weight:600;text-decoration:none;">
+        📍 Ver en Google Maps · ${a.ubicacion.lat?.toFixed(5)}, ${a.ubicacion.lng?.toFixed(5)} · ±${Math.round(a.ubicacion.accuracy||0)}m
+      </a>`;
+    }
+
+    html += `</div>`; // cierre preview-section
+  });
+
+  document.getElementById('preview-page').innerHTML = html;
+};
+
+window.guardarComentario = function(key, val) {
+  window._constructorState.comentarios[key] = val;
+};
+
+// ── DRAG & DROP para reordenar secciones ──
+let _dragIdx = null;
+window.dragStart = function(e, idx) {
+  _dragIdx = idx;
+  e.target.closest('.preview-section').classList.add('dragging');
+  e.dataTransfer.effectAllowed = 'move';
+};
+window.dragOver = function(e) {
+  e.preventDefault();
+  e.target.closest('.preview-section')?.classList.add('drag-over');
+};
+window.dragLeave = function(e) {
+  e.target.closest('.preview-section')?.classList.remove('drag-over');
+};
+window.dropSec = function(e, targetIdx) {
+  e.preventDefault();
+  const s = window._constructorState;
+  const secs = s.secciones.filter(x=>x.visible);
+  const visible = [...secs];
+  const moved = visible.splice(_dragIdx,1)[0];
+  visible.splice(targetIdx,0,moved);
+  // Reconstruir array completo manteniendo invisibles
+  const invisibles = s.secciones.filter(x=>!x.visible);
+  s.secciones = [...visible, ...invisibles];
+  _dragIdx = null;
+  document.querySelectorAll('.preview-section').forEach(el=>el.classList.remove('dragging','drag-over'));
+  renderSectionToggles();
+  actualizarPreview();
+};
+
+// ── EXPORTAR PDF DESDE CONSTRUCTOR ──
+window.exportarConstructorPDF = function() {
+  const s = window._constructorState;
+  if (!s.actividadId) { showToast('Selecciona una actividad primero','error'); return; }
+  const a = window._actividades.find(x => x.id === s.actividadId);
+  if (!a) return;
+
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF();
+  const titulo = document.getElementById('cfg-titulo').value || a.evento?.nombre || 'Informe';
+  const subtitulo = document.getElementById('cfg-subtitulo').value || 'By Grupo Helse';
+  const fecha = document.getElementById('cfg-fecha').value || a.evento?.fecha || '';
+  const colorHex = s.color.replace('#','');
+  const colorRGB = hexToRgb(s.color);
+
+  // ── PORTADA ──
+  doc.setFillColor(...colorRGB);
+  doc.rect(0,0,210,297,'F');
+
+  // Círculos decorativos
+  doc.setFillColor(255,255,255,20);
+  doc.circle(180,50,60,'F');
+  doc.circle(20,260,80,'F');
+
+  if (s.logoDataUrl) {
+    try { doc.addImage(s.logoDataUrl,'PNG',14,18,50,18,'','FAST'); } catch(e){}
+  }
+
+  doc.setTextColor(255,255,255);
+  doc.setFont('helvetica','bold');
+  doc.setFontSize(32);
+  doc.text(titulo, 14, 130);
+  doc.setFontSize(14); doc.setFont('helvetica','normal');
+  doc.text(subtitulo, 14, 143);
+
+  // Meta chips
+  let mx = 14;
+  const metas = [
+    a.evento?.tipo && { l:'Tipo', v: a.evento.tipo },
+    fecha && { l:'Fecha', v: fmtFecha(fecha) },
+    a.evento?.lugar && { l:'Lugar', v: a.evento.lugar },
+    a.evento?.asistentes && { l:'Asistentes', v: String(a.evento.asistentes) },
+  ].filter(Boolean);
+  doc.setFontSize(9);
+  metas.forEach(m => {
+    const w = Math.max(30, doc.getTextWidth(m.v)+16);
+    doc.setFillColor(255,255,255,40);
+    doc.roundedRect(mx,155,w,16,3,3,'F');
+    doc.setTextColor(180,240,240); doc.text(m.l, mx+5, 161);
+    doc.setTextColor(255,255,255); doc.setFont('helvetica','bold');
+    doc.text(m.v, mx+5, 167);
+    doc.setFont('helvetica','normal');
+    mx += w + 6;
+  });
+
+  // Página de contenido
+  const secsVisible = s.secciones.filter(x=>x.visible);
+  secsVisible.forEach(sec => {
+    doc.addPage();
+    // Header de sección
+    doc.setFillColor(...colorRGB);
+    doc.rect(0,0,210,22,'F');
+    doc.setTextColor(255,255,255); doc.setFontSize(14); doc.setFont('helvetica','bold');
+    doc.text(`${sec.icon} ${sec.label}`, 14, 14);
+    doc.setTextColor(0,0,0); doc.setFont('helvetica','normal'); doc.setFontSize(9);
+    let y = 32;
+
+    const comentario = s.comentarios[sec.key];
+    if (comentario) {
+      doc.setFillColor(248,250,252);
+      const lines = doc.splitTextToSize(comentario,182);
+      doc.rect(12,y-4,186,lines.length*4.5+6,'F');
+      doc.setTextColor(71,85,105); doc.text(lines,14,y); y+= lines.length*4.5+10;
+    }
+    doc.setTextColor(0,0,0);
+
+    if (sec.key==='general') {
+      const rows = [
+        ['Tipo', a.evento?.tipo||'–'],
+        ['Fecha', fmtFecha(a.evento?.fecha)],
+        ['Lugar', a.evento?.lugar||'–'],
+        ['Asistentes', String(a.evento?.asistentes||0)],
+      ];
+      doc.autoTable({ startY:y, body:rows, styles:{fontSize:10}, columnStyles:{0:{fontStyle:'bold',textColor:[...colorRGB]}}, margin:{left:14,right:14} });
+    }
+
+    else if (sec.key==='fotos') {
+      const fotos = (a.fotosGenerales||[]).filter((_,i)=>!(s.fotosExcluidas['fotos']||new Set()).has(i));
+      y = agregarFotosEnPDF(doc, fotos, y, colorRGB);
+    }
+
+    else if (sec.key==='muestreo') {
+      if (a.muestreo?.descripcion) { const l=doc.splitTextToSize(a.muestreo.descripcion,182); doc.text(l,14,y); y+=l.length*4.5+6; }
+      const fotos = (a.muestreo?.fotos||[]).filter((_,i)=>!(s.fotosExcluidas['muestreo']||new Set()).has(i));
+      y = agregarFotosEnPDF(doc, fotos, y, colorRGB);
+    }
+
+    else if (sec.key==='ventas') {
+      const refs = (a.ventas?.referencias||[]).filter(Boolean);
+      if (refs.length) { doc.autoTable({ startY:y, head:[['Referencia','Cantidad']], body:refs.map(r=>[r.referencia,r.cantidad]), headStyles:{fillColor:colorRGB}, styles:{fontSize:9}, margin:{left:14,right:14} }); y=doc.lastAutoTable.finalY+8; }
+      const fotos = (a.ventas?.fotos||[]).filter((_,i)=>!(s.fotosExcluidas['ventas']||new Set()).has(i));
+      y = agregarFotosEnPDF(doc, fotos, y, colorRGB);
+    }
+
+    else if (sec.key==='obsequios') {
+      const refs = (a.obsequios?.referencias||[]).filter(Boolean);
+      if (refs.length) { doc.autoTable({ startY:y, head:[['Referencia','Cantidad']], body:refs.map(r=>[r.referencia,r.cantidad]), headStyles:{fillColor:colorRGB}, styles:{fontSize:9}, margin:{left:14,right:14} }); y=doc.lastAutoTable.finalY+8; }
+      const fotos = (a.obsequios?.fotos||[]).filter((_,i)=>!(s.fotosExcluidas['obsequios']||new Set()).has(i));
+      y = agregarFotosEnPDF(doc, fotos, y, colorRGB);
+    }
+
+    else if (sec.key==='gastos') {
+      const items = (a.gastos?.items||[]).filter(Boolean);
+      const total = items.reduce((sum,g)=>sum+(parseFloat(g.valor)||0),0);
+      doc.autoTable({ startY:y, head:[['Concepto','Valor']], body:[...items.map(g=>[g.concepto,`$${parseFloat(g.valor).toLocaleString('es-CO')}`]),['Total',`$${total.toLocaleString('es-CO')}`]], headStyles:{fillColor:colorRGB}, styles:{fontSize:9}, margin:{left:14,right:14} });
+    }
+
+    else if (sec.key==='cierre') {
+      if (a.cierre?.descripcion) { doc.setFont('helvetica','bold'); doc.text('Descripción:',14,y); y+=5; doc.setFont('helvetica','normal'); const l=doc.splitTextToSize(a.cierre.descripcion,182); doc.text(l,14,y); y+=l.length*4.5+8; }
+      if (a.cierre?.impacto) { doc.setFont('helvetica','bold'); doc.text('Impacto:',14,y); y+=5; doc.setFont('helvetica','normal'); const l=doc.splitTextToSize(a.cierre.impacto,182); doc.text(l,14,y); y+=l.length*4.5+8; }
+    }
+
+    else if (sec.key==='ubicacion') {
+      doc.setTextColor(...colorRGB);
+      doc.text(`GPS: ${a.ubicacion.lat?.toFixed(5)}, ${a.ubicacion.lng?.toFixed(5)} (±${Math.round(a.ubicacion.accuracy||0)}m)`,14,y);
+    }
+  });
+
+  // Footer en cada página
+  const totalPages = doc.internal.getNumberOfPages();
+  for (let i=1;i<=totalPages;i++) {
+    doc.setPage(i);
+    doc.setFontSize(8); doc.setTextColor(150,150,150); doc.setFont('helvetica','normal');
+    doc.text(`${titulo} · ${subtitulo} · Pág ${i} de ${totalPages}`, 14, 292);
+    doc.setDrawColor(...colorRGB); doc.setLineWidth(0.5);
+    doc.line(14,289,196,289);
+  }
+
+  doc.save(`${titulo.replace(/\s+/g,'_')}_${fecha||'informe'}.pdf`);
+  showToast('PDF generado ✓','success');
+};
+
+function agregarFotosEnPDF(doc, fotos, y, colorRGB) {
+  if (!fotos.length) return y;
+  const W=55, H=42, GAP=5, MARGL=14, MAXW=196;
+  let x=MARGL;
+  fotos.forEach((f,i) => {
+    const src = f.dataUrl||f.url||'';
+    if (!src) return;
+    if (y+H > 280) { doc.addPage(); y=20; x=MARGL; }
+    if (x+W > MAXW) { x=MARGL; y+=H+GAP; }
+    try { doc.addImage(src,'JPEG',x,y,W,H,'','FAST'); } catch(e){}
+    x+=W+GAP;
+    if ((i+1)%3===0) { x=MARGL; y+=H+GAP; }
+  });
+  return y+H+GAP+4;
+}
+
+function hexToRgb(hex) {
+  const r = parseInt(hex.slice(1,3),16);
+  const g = parseInt(hex.slice(3,5),16);
+  const b = parseInt(hex.slice(5,7),16);
+  return [r,g,b];
+}
+
+// ── EXPORTAR PPTX DESDE CONSTRUCTOR ──
+window.exportarConstructorPPTX = function() {
+  const s = window._constructorState;
+  if (!s.actividadId) { showToast('Selecciona una actividad primero','error'); return; }
+  const a = window._actividades.find(x => x.id === s.actividadId);
+  if (!a) return;
+
+  const pptx = new PptxGenJS();
+  pptx.layout = 'LAYOUT_WIDE';
+  const titulo = document.getElementById('cfg-titulo').value || a.evento?.nombre || 'Informe';
+  const subtitulo = document.getElementById('cfg-subtitulo').value || 'By Grupo Helse';
+  const fecha = document.getElementById('cfg-fecha').value || a.evento?.fecha || '';
+  const colorHex = s.color.replace('#','');
+
+  // ── PORTADA ──
+  const cover = pptx.addSlide();
+  cover.background = { color: colorHex };
+  cover.addShape(pptx.ShapeType.ellipse, { x:9.5, y:-0.8, w:5, h:5, fill:{color:'FFFFFF', transparency:90} });
+  cover.addShape(pptx.ShapeType.ellipse, { x:-1.5, y:4.5, w:5, h:5, fill:{color:'FFFFFF', transparency:90} });
+  if (s.logoDataUrl) {
+    try { cover.addImage({ data:s.logoDataUrl, x:0.5, y:0.3, w:2.2, h:0.7 }); } catch(e){}
+  }
+  cover.addText(titulo, { x:0.5, y:1.4, w:12, h:1.4, fontSize:44, bold:true, color:'FFFFFF', fontFace:'Segoe UI' });
+  cover.addText(subtitulo, { x:0.5, y:2.9, w:12, h:0.6, fontSize:18, color:'FFFFFF', fontFace:'Segoe UI', transparency:30 });
+  const metaStr = [a.evento?.tipo, fmtFecha(fecha), a.evento?.lugar, a.evento?.asistentes ? `${a.evento.asistentes} asistentes` : ''].filter(Boolean).join('  ·  ');
+  cover.addText(metaStr, { x:0.5, y:3.6, w:12, h:0.5, fontSize:12, color:'FFFFFF', fontFace:'Segoe UI', transparency:40 });
+
+  // ── SLIDE RESUMEN STATS ──
+  const stats = pptx.addSlide();
+  stats.background = { color: 'F8FAFC' };
+  stats.addShape(pptx.ShapeType.rect, { x:0, y:0, w:13.33, h:0.8, fill:{color:colorHex} });
+  stats.addText('Resumen ejecutivo', { x:0.3, y:0.12, w:12, h:0.55, fontSize:18, bold:true, color:'FFFFFF' });
+  const chips = [
+    { l:'Asistentes', v: String(a.evento?.asistentes||0) },
+    a.ventas?.activo && { l:'Uds vendidas', v: String((a.ventas.referencias||[]).filter(Boolean).reduce((s,r)=>s+(parseInt(r.cantidad)||0),0)) },
+    a.muestreo?.activo && { l:'Muestreo', v:'✓' },
+    (a.gastos?.items||[]).filter(Boolean).length > 0 && { l:'Gastos', v:`$${(a.gastos.items||[]).filter(Boolean).reduce((s,g)=>s+(parseFloat(g.valor)||0),0).toLocaleString('es-CO')}` },
+  ].filter(Boolean);
+  chips.forEach((c,i) => {
+    const x = 0.5 + i*3.2;
+    stats.addShape(pptx.ShapeType.roundRect, { x, y:1.1, w:2.9, h:2.1, fill:{color:colorHex}, line:{color:'FFFFFF',pt:0} });
+    stats.addText(c.v, { x, y:1.3, w:2.9, h:1.1, fontSize:34, bold:true, color:'FFFFFF', align:'center' });
+    stats.addText(c.l, { x, y:2.5, w:2.9, h:0.5, fontSize:12, color:'FFFFFF', align:'center', transparency:20 });
+  });
+
+  // ── SLIDES POR SECCIÓN ──
+  const secsVisible = s.secciones.filter(x=>x.visible);
+  secsVisible.forEach(sec => {
+    if (sec.key==='general') return; // ya está en portada
+
+    const slide = pptx.addSlide();
+    slide.background = { color:'FFFFFF' };
+    slide.addShape(pptx.ShapeType.rect, { x:0, y:0, w:13.33, h:0.8, fill:{color:colorHex} });
+    slide.addText(`${sec.icon}  ${sec.label}`, { x:0.3, y:0.12, w:12, h:0.55, fontSize:18, bold:true, color:'FFFFFF' });
+    let y = 1.1;
+
+    const comentario = s.comentarios[sec.key];
+    if (comentario) {
+      slide.addText(comentario, { x:0.4, y, w:12.5, h:0.6, fontSize:11, color:'475569', italic:true, wrap:true });
+      y += 0.7;
+    }
+
+    if (sec.key==='ventas' || sec.key==='obsequios') {
+      const src = sec.key==='ventas' ? a.ventas : a.obsequios;
+      const refs = (src?.referencias||[]).filter(Boolean);
+      if (refs.length) {
+        const rows = refs.map(r=>[{text:r.referencia},{text:String(r.cantidad),options:{bold:true}}]);
+        slide.addTable([[{text:'Referencia',options:{bold:true,color:'FFFFFF',fill:colorHex}},{text:'Cantidad',options:{bold:true,color:'FFFFFF',fill:colorHex}}],...rows],
+          { x:0.4, y, w:6, colW:[4,2], fontSize:11, border:{pt:1,color:'E2E8F0'} });
+      }
+      const fotos = (src?.fotos||[]).filter((_,i)=>!(s.fotosExcluidas[sec.key]||new Set()).has(i)).slice(0,4);
+      fotos.forEach((f,i) => {
+        const src2 = f.dataUrl||f.url||'';
+        if (src2) { try { slide.addImage({ data:src2, x:6.8+(i%2)*3.2, y:y+(Math.floor(i/2)*2.2), w:3, h:2 }); } catch(e){} }
+      });
+    }
+
+    else if (sec.key==='fotos') {
+      const fotos = (a.fotosGenerales||[]).filter((_,i)=>!(s.fotosExcluidas['fotos']||new Set()).has(i)).slice(0,6);
+      fotos.forEach((f,i) => {
+        const src2 = f.url||f.dataUrl||'';
+        if (src2) { try { slide.addImage({ data:src2, x:0.4+(i%3)*4.3, y:y+(Math.floor(i/3)*2.3), w:4, h:2.1 }); } catch(e){} }
+      });
+    }
+
+    else if (sec.key==='muestreo') {
+      if (a.muestreo?.descripcion) slide.addText(a.muestreo.descripcion, {x:0.4,y,w:12.5,h:0.8,fontSize:12,color:'334155',wrap:true}); y+=0.9;
+      const fotos = (a.muestreo?.fotos||[]).filter((_,i)=>!(s.fotosExcluidas['muestreo']||new Set()).has(i)).slice(0,4);
+      fotos.forEach((f,i) => {
+        const src2 = f.dataUrl||f.url||'';
+        if (src2) { try { slide.addImage({ data:src2, x:0.4+(i%4)*3.2, y, w:3, h:2.2 }); } catch(e){} }
+      });
+    }
+
+    else if (sec.key==='gastos') {
+      const items = (a.gastos?.items||[]).filter(Boolean);
+      const total = items.reduce((sum,g)=>sum+(parseFloat(g.valor)||0),0);
+      const rows = [...items.map(g=>[{text:g.concepto},{text:`$${parseFloat(g.valor).toLocaleString('es-CO')}`,options:{align:'right'}}]),
+        [{text:'Total',options:{bold:true}},{text:`$${total.toLocaleString('es-CO')}`,options:{bold:true,color:colorHex,align:'right'}}]];
+      slide.addTable([[{text:'Concepto',options:{bold:true,color:'FFFFFF',fill:colorHex}},{text:'Valor',options:{bold:true,color:'FFFFFF',fill:colorHex}}],...rows],
+        { x:0.4, y, w:8, colW:[6,2], fontSize:11, border:{pt:1,color:'E2E8F0'} });
+    }
+
+    else if (sec.key==='cierre') {
+      if (a.cierre?.descripcion) { slide.addText('Descripción', {x:0.4,y,w:12.5,h:0.35,fontSize:11,bold:true,color:colorHex}); y+=0.4; slide.addText(a.cierre.descripcion,{x:0.4,y,w:12.5,h:1,fontSize:11,color:'334155',wrap:true}); y+=1.1; }
+      if (a.cierre?.impacto) { slide.addText('Impacto', {x:0.4,y,w:12.5,h:0.35,fontSize:11,bold:true,color:colorHex}); y+=0.4; slide.addText(a.cierre.impacto,{x:0.4,y,w:12.5,h:1,fontSize:11,color:'334155',wrap:true}); }
+    }
+
+    else if (sec.key==='ubicacion') {
+      slide.addText(`📍 GPS: ${a.ubicacion.lat?.toFixed(5)}, ${a.ubicacion.lng?.toFixed(5)}`, {x:0.4,y,w:12,h:0.5,fontSize:13,bold:true,color:colorHex});
+    }
+  });
+
+  pptx.writeFile({ fileName:`${titulo.replace(/\s+/g,'_')}_${fecha||'informe'}.pptx` });
+  showToast('Presentación generada ✓','success');
+};
 </script>
 </body>
 </html>
