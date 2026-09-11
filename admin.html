@@ -1058,8 +1058,6 @@ window._informeActual = { blob: null, url: null, nombre: null, tipo: null };
 
 // ── SISTEMA DE COMPARTIR INFORMES ──
 
-window._storage = null; // se asigna abajo al inicializar storage
-
 window.subirInformeAStorage = async function(blob, nombre, tipo) {
   const carpeta = tipo === 'xlsx' ? 'informes/excel' : tipo === 'pptx' ? 'informes/pptx' : 'informes/pdf';
   const ruta = `${carpeta}/${Date.now()}_${nombre}`;
