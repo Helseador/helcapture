@@ -1143,6 +1143,12 @@ tr:hover td { background: rgba(42,191,192,0.04); }
       <span class="val" id="balance-gastos-leg-val">$0</span>
     </div>
 
+    <!-- Facturas adjuntas -->
+    <div id="balance-facturas-wrap" style="display:none;margin-bottom:16px;">
+      <div style="font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px;">🧾 Facturas adjuntas por el impulsor</div>
+      <div id="balance-facturas-list" style="display:flex;flex-direction:column;gap:6px;"></div>
+    </div>
+
     <div class="balance-cols">
 
       <!-- INGRESOS -->
@@ -2778,6 +2784,30 @@ window.abrirBalance = function(id) {
   window._balanceGastosLeg = gastosLeg;
   window._balancePersonas  = parseInt(a.cierre?.personasImpactadas)||parseInt(a.evento?.asistentes)||0;
 
+  // Mostrar facturas adjuntas
+  const facturas = (a.facturas||[]).filter(Boolean);
+  const facWrap = document.getElementById('balance-facturas-wrap');
+  const facList = document.getElementById('balance-facturas-list');
+  if (facturas.length) {
+    facWrap.style.display = 'block';
+    facList.innerHTML = facturas.map(f => {
+      const icon = f.tipo === 'pdf' ? '📄' : '🖼️';
+      const kb   = f.size ? (f.size/1024).toFixed(0)+' KB' : '';
+      const ext  = (f.tipo||'').toUpperCase();
+      return `<div style="display:flex;align-items:center;gap:10px;background:var(--bg);box-shadow:var(--neo-sm);border-radius:10px;padding:9px 13px;">
+        <span style="font-size:18px;flex-shrink:0;">${icon}</span>
+        <div style="flex:1;min-width:0;">
+          <div style="font-size:13px;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${f.nombre||'Archivo'}</div>
+          ${kb ? `<div style="font-size:11px;color:var(--text-muted);">${ext} · ${kb}</div>` : ''}
+        </div>
+        <a href="${f.url}" target="_blank" class="btn btn-outline btn-sm" style="flex-shrink:0;">Ver</a>
+      </div>`;
+    }).join('');
+  } else {
+    facWrap.style.display = 'none';
+    facList.innerHTML = '';
+  }
+
   renderBalanceLines();
   recalcBalance();
   document.getElementById('modal-balance').classList.add('open');
@@ -2896,17 +2926,19 @@ window.renderRentabilidad = function() {
     const roiCls = r.roi !== null ? (r.roi >= 0 ? 'positive' : 'negative') : 'neutral';
     const cppStr = r.cpp !== null ? fmtCOP(r.cpp) : '–';
 
-    const linesIng = (a.rentabilidad?.lineasIngresos||[]).filter(Boolean);
-    const linesCos = (a.rentabilidad?.lineasCostos||[]).filter(Boolean);
+    const linesIng  = (a.rentabilidad?.lineasIngresos||[]).filter(Boolean);
+    const linesCos  = (a.rentabilidad?.lineasCostos||[]).filter(Boolean);
+    const facturas  = (a.facturas||[]).filter(Boolean);
     const tieneBalance = linesIng.length>0||linesCos.length>0;
 
     return `<tr>
       <td>
         <strong>${a.evento?.nombre||'–'}</strong>
-        ${tieneBalance ? `<div style="margin-top:4px;font-size:11px;color:var(--text-muted);">
-          ${linesIng.map(l=>`<span style="color:var(--success);">+${l.concepto}</span>`).join(' · ')}
-          ${linesCos.map(l=>`<span style="color:var(--danger);">-${l.concepto}</span>`).join(' · ')}
-        </div>` : ''}
+        <div style="margin-top:5px;display:flex;flex-wrap:wrap;gap:4px;align-items:center;">
+          ${facturas.length ? `<span style="display:inline-flex;align-items:center;gap:3px;background:rgba(27,42,74,0.08);border-radius:20px;padding:2px 8px;font-size:11px;font-weight:700;color:var(--navy);">🧾 ${facturas.length} factura${facturas.length>1?'s':''}</span>` : ''}
+          ${tieneBalance ? linesIng.map(l=>`<span style="background:rgba(16,185,129,0.1);border-radius:20px;padding:2px 7px;font-size:10px;font-weight:600;color:var(--success);">+${l.concepto}</span>`).join('') : ''}
+          ${tieneBalance ? linesCos.map(l=>`<span style="background:rgba(239,68,68,0.1);border-radius:20px;padding:2px 7px;font-size:10px;font-weight:600;color:var(--danger);">-${l.concepto}</span>`).join('') : ''}
+        </div>
       </td>
       <td>${fmtFecha(a.evento?.fecha)}</td>
       <td style="text-align:center;">${r.personas||'–'}</td>
