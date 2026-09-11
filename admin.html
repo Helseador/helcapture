@@ -382,6 +382,53 @@ tr:hover td { background: rgba(42,191,192,0.04); }
 .rent-resultado-row .r-label { font-weight:600; color:var(--text-muted); }
 .rent-resultado-row .r-val { font-weight:800; font-size:15px; }
 
+/* Modal balance discriminado */
+.balance-modal { max-width:780px; }
+.balance-cols { display:grid; grid-template-columns:1fr 1fr; gap:20px; margin-bottom:20px; }
+.balance-col-title {
+  font-size:12px; font-weight:700; text-transform:uppercase; letter-spacing:0.6px;
+  padding:10px 14px; border-radius:10px 10px 0 0; color:white; margin-bottom:0;
+  display:flex; align-items:center; justify-content:space-between;
+}
+.balance-col-title.ingresos-hdr { background:var(--success); }
+.balance-col-title.costos-hdr   { background:var(--danger); }
+.balance-line-list { display:flex; flex-direction:column; gap:6px; padding:12px; background:var(--bg-light); border-radius:0 0 10px 10px; min-height:120px; }
+.balance-line {
+  display:grid; grid-template-columns:1fr 130px 32px; gap:6px; align-items:center;
+}
+.balance-line input[type=text] {
+  border:none; background:var(--bg); box-shadow:var(--neo-in); border-radius:8px;
+  padding:8px 11px; font-size:13px; font-family:inherit; color:var(--text); outline:none;
+}
+.balance-line input[type=number] {
+  border:none; background:var(--bg); box-shadow:var(--neo-in); border-radius:8px;
+  padding:8px 11px; font-size:13px; font-family:inherit; color:var(--text); outline:none;
+  text-align:right;
+}
+.balance-line input:focus { box-shadow:var(--neo-in), 0 0 0 2px rgba(42,191,192,0.2); }
+.balance-line .btn-rm { background:none; border:1.5px solid var(--bg-dark); border-radius:7px; width:32px; height:36px; cursor:pointer; font-size:14px; color:var(--danger); display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+.balance-line .btn-rm:hover { background:rgba(239,68,68,0.08); }
+.balance-add-btn { display:flex; align-items:center; justify-content:center; gap:6px; border:1.5px dashed rgba(0,0,0,0.15); border-radius:9px; padding:8px; font-size:12px; font-weight:600; cursor:pointer; background:transparent; margin-top:6px; color:var(--text-muted); transition:all 0.15s; }
+.balance-add-btn:hover { border-color:var(--teal); color:var(--teal); }
+.balance-subtotal { display:flex; justify-content:space-between; align-items:center; padding:10px 14px; border-radius:9px; font-size:13px; font-weight:700; margin-top:8px; }
+.balance-subtotal.ing { background:rgba(16,185,129,0.1); color:var(--success); }
+.balance-subtotal.cos { background:rgba(239,68,68,0.1); color:var(--danger); }
+.balance-result-box {
+  background:var(--bg); box-shadow:var(--neo-out); border-radius:16px;
+  padding:20px 24px; display:flex; flex-direction:column; gap:10px;
+}
+.balance-result-row { display:flex; align-items:center; justify-content:space-between; padding:8px 0; border-bottom:1px solid rgba(0,0,0,0.05); }
+.balance-result-row:last-child { border-bottom:none; padding-bottom:0; }
+.balance-result-row .lbl { font-size:13px; color:var(--text-muted); font-weight:600; }
+.balance-result-row .val { font-size:15px; font-weight:800; }
+.balance-final { font-size:24px !important; }
+.balance-ganancia { color:var(--success); }
+.balance-perdida  { color:var(--danger); }
+.balance-neutral  { color:var(--text-muted); }
+.balance-gastos-leg { background:rgba(27,42,74,0.06); border-radius:10px; padding:10px 14px; margin-bottom:14px; display:flex; justify-content:space-between; align-items:center; font-size:13px; }
+.balance-gastos-leg .lbl { color:var(--text-muted); font-weight:600; }
+.balance-gastos-leg .val { font-weight:800; color:var(--navy); }
+
 /* ── CONSTRUCTOR ── */
 .constructor-layout {
   display: grid;
@@ -1082,6 +1129,91 @@ tr:hover td { background: rgba(42,191,192,0.04); }
   </div>
 </div>
 
+<!-- MODAL BALANCE DISCRIMINADO -->
+<div class="modal-bg" id="modal-balance">
+  <div class="modal balance-modal">
+    <div class="modal-header">
+      <div class="modal-title" id="balance-titulo">Balance del evento</div>
+      <button class="modal-close" onclick="cerrarModal('modal-balance')">×</button>
+    </div>
+
+    <!-- Gastos legalizados automáticos -->
+    <div class="balance-gastos-leg">
+      <span class="lbl">💵 Gastos ya legalizados (automático)</span>
+      <span class="val" id="balance-gastos-leg-val">$0</span>
+    </div>
+
+    <div class="balance-cols">
+
+      <!-- INGRESOS -->
+      <div>
+        <div class="balance-col-title ingresos-hdr">
+          <span>📈 Ingresos</span>
+          <span id="balance-total-ing-hdr">$0</span>
+        </div>
+        <div class="balance-line-list" id="balance-ing-list"></div>
+        <button class="balance-add-btn" onclick="addBalanceLine('ing')">+ Agregar concepto de ingreso</button>
+        <div class="balance-subtotal ing">
+          <span>Total ingresos</span>
+          <span id="balance-total-ing">$0</span>
+        </div>
+      </div>
+
+      <!-- COSTOS -->
+      <div>
+        <div class="balance-col-title costos-hdr">
+          <span>📉 Costos adicionales</span>
+          <span id="balance-total-cos-hdr">$0</span>
+        </div>
+        <div class="balance-line-list" id="balance-cos-list"></div>
+        <button class="balance-add-btn" onclick="addBalanceLine('cos')">+ Agregar concepto de costo</button>
+        <div class="balance-subtotal cos">
+          <span>Total costos adicionales</span>
+          <span id="balance-total-cos">$0</span>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- RESULTADO -->
+    <div class="balance-result-box">
+      <div class="balance-result-row">
+        <span class="lbl">Total ingresos</span>
+        <span class="val" id="br-ingresos" style="color:var(--success);">$0</span>
+      </div>
+      <div class="balance-result-row">
+        <span class="lbl">Gastos legalizados</span>
+        <span class="val" id="br-gastos-leg" style="color:var(--navy);">$0</span>
+      </div>
+      <div class="balance-result-row">
+        <span class="lbl">Costos adicionales</span>
+        <span class="val" id="br-costos-ad" style="color:var(--danger);">$0</span>
+      </div>
+      <div class="balance-result-row">
+        <span class="lbl">Total costos</span>
+        <span class="val" id="br-total-costos" style="color:var(--navy);">$0</span>
+      </div>
+      <div class="balance-result-row">
+        <span class="lbl">ROI</span>
+        <span class="val" id="br-roi" style="color:var(--teal-dark);">–</span>
+      </div>
+      <div class="balance-result-row">
+        <span class="lbl">Costo por persona impactada</span>
+        <span class="val" id="br-cpp" style="color:var(--text-muted);">–</span>
+      </div>
+      <div class="balance-result-row" style="border-top:2px solid rgba(0,0,0,0.08);margin-top:4px;padding-top:12px;">
+        <span class="lbl" style="font-size:16px;color:var(--navy);">RESULTADO FINAL</span>
+        <span class="val balance-final" id="br-resultado">$0</span>
+      </div>
+    </div>
+
+    <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:16px;">
+      <button class="btn btn-outline" onclick="cerrarModal('modal-balance')">Cancelar</button>
+      <button class="btn btn-teal" onclick="guardarBalance()">💾 Guardar balance</button>
+    </div>
+  </div>
+</div>
+
 <!-- LIGHTBOX -->
 <div class="lightbox" id="lightbox" onclick="cerrarLightbox()">
   <button class="lightbox-close" onclick="cerrarLightbox()">×</button>
@@ -1457,33 +1589,30 @@ window.verDetalle = function(id) {
 
   // ── RENTABILIDAD en modal ──
   const gastosTotalModal = (a.gastos?.items||[]).filter(Boolean).reduce((s,g)=>s+(parseFloat(g.valor)||0),0);
-  const rentData = a.rentabilidad || {};
-  const costosAd = parseFloat(rentData.costosAdicionales)||0;
-  const ingresos = parseFloat(rentData.ingresos)||0;
-  const totalCostos = gastosTotalModal + costosAd;
-  const ganancia = ingresos - totalCostos;
-  const roi = totalCostos > 0 ? ((ganancia / totalCostos)*100).toFixed(1) : '–';
-  const personas = parseInt(a.cierre?.personasImpactadas)||parseInt(a.evento?.asistentes)||0;
-  const cpp = personas > 0 && totalCostos > 0 ? (totalCostos/personas).toLocaleString('es-CO',{maximumFractionDigits:0}) : '–';
+  const r = calcRent(a);
+  const gananciaModal = r.ganancia;
+  const ganCls = gananciaModal > 0 ? 'balance-ganancia' : gananciaModal < 0 ? 'balance-perdida' : 'balance-neutral';
+  const ganLabel = gananciaModal > 0 ? '✅ Ganancia' : gananciaModal < 0 ? '🔴 Pérdida' : '➖ Neutro';
 
   html += `<div class="section-block">
-    <div class="section-block-title">💹 Rentabilidad del evento</div>
-    <div class="rent-modal-grid">
-      <div class="rent-modal-field">
-        <label>Costos adicionales ($)</label>
-        <input type="number" id="rm-costos-ad" value="${rentData.costosAdicionales||''}" placeholder="0" min="0" oninput="recalcModal('${a.id}')">
+    <div class="section-block-title">💹 Balance del evento</div>
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:14px;">
+      <div style="background:rgba(16,185,129,0.08);border-radius:10px;padding:12px;text-align:center;">
+        <div style="font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;margin-bottom:4px;">Ingresos</div>
+        <div style="font-size:16px;font-weight:900;color:var(--success);">${fmtCOP(r.ingresos)}</div>
       </div>
-      <div class="rent-modal-field">
-        <label>Ingresos totales ($)</label>
-        <input type="number" id="rm-ingresos" value="${rentData.ingresos||''}" placeholder="0" min="0" oninput="recalcModal('${a.id}')">
+      <div style="background:rgba(239,68,68,0.08);border-radius:10px;padding:12px;text-align:center;">
+        <div style="font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;margin-bottom:4px;">Total costos</div>
+        <div style="font-size:16px;font-weight:900;color:var(--danger);">${fmtCOP(r.totalCostos)}</div>
+      </div>
+      <div style="background:${gananciaModal>=0?'rgba(16,185,129,0.08)':'rgba(239,68,68,0.08)'};border-radius:10px;padding:12px;text-align:center;">
+        <div style="font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;margin-bottom:4px;">${ganLabel}</div>
+        <div style="font-size:16px;font-weight:900;" class="${ganCls}">${fmtCOP(gananciaModal)}</div>
       </div>
     </div>
-    <div id="rent-modal-resultados">
-      ${renderResultadosModal(gastosTotalModal, costosAd, ingresos, personas)}
-    </div>
-    <div style="display:flex;justify-content:flex-end;margin-top:10px;">
-      <button class="btn btn-teal btn-sm" onclick="guardarRentabilidad('${a.id}')">💾 Guardar</button>
-    </div>
+    <button class="btn btn-navy" style="width:100%;justify-content:center;" onclick="abrirBalance('${a.id}')">
+      📊 Ver / editar balance discriminado
+    </button>
   </div>`;
 
   document.getElementById('modal-body').innerHTML = html;
@@ -2577,8 +2706,11 @@ function fmtCOP(n) {
 
 function calcRent(a) {
   const gastosLeg = (a.gastos?.items||[]).filter(Boolean).reduce((s,g)=>s+(parseFloat(g.valor)||0),0);
-  const costosAd  = parseFloat(a.rentabilidad?.costosAdicionales)||0;
-  const ingresos  = parseFloat(a.rentabilidad?.ingresos)||0;
+  // Sumar arrays discriminados
+  const linesIng  = (a.rentabilidad?.lineasIngresos||[]).filter(Boolean);
+  const linesCos  = (a.rentabilidad?.lineasCostos||[]).filter(Boolean);
+  const ingresos  = linesIng.reduce((s,l)=>s+(parseFloat(l.valor)||0),0);
+  const costosAd  = linesCos.reduce((s,l)=>s+(parseFloat(l.valor)||0),0);
   const totalCostos = gastosLeg + costosAd;
   const ganancia  = ingresos - totalCostos;
   const roi       = totalCostos > 0 ? (ganancia/totalCostos)*100 : null;
@@ -2622,27 +2754,115 @@ function renderResultadosModal(gastosLeg, costosAd, ingresos, personas) {
     </div>`;
 }
 
-window.recalcModal = function(id) {
+// ── BALANCE DISCRIMINADO ──
+window._balanceActualId = null;
+window._balanceIng = [];  // [{concepto, valor}]
+window._balanceCos = [];  // [{concepto, valor}]
+
+window.abrirBalance = function(id) {
   const a = window._actividades.find(x=>x.id===id);
   if (!a) return;
+  window._balanceActualId = id;
+
+  // Cargar datos existentes o defaults vacíos
+  window._balanceIng = JSON.parse(JSON.stringify((a.rentabilidad?.lineasIngresos||[]).filter(Boolean)));
+  window._balanceCos = JSON.parse(JSON.stringify((a.rentabilidad?.lineasCostos||[]).filter(Boolean)));
+
+  // Si no hay líneas, agregar una vacía de cada tipo
+  if (!window._balanceIng.length) window._balanceIng.push({ concepto:'', valor:'' });
+  if (!window._balanceCos.length) window._balanceCos.push({ concepto:'', valor:'' });
+
   const gastosLeg = (a.gastos?.items||[]).filter(Boolean).reduce((s,g)=>s+(parseFloat(g.valor)||0),0);
-  const costosAd  = parseFloat(document.getElementById('rm-costos-ad')?.value)||0;
-  const ingresos  = parseFloat(document.getElementById('rm-ingresos')?.value)||0;
-  const personas  = parseInt(a.cierre?.personasImpactadas)||parseInt(a.evento?.asistentes)||0;
-  const el = document.getElementById('rent-modal-resultados');
-  if (el) el.innerHTML = renderResultadosModal(gastosLeg, costosAd, ingresos, personas);
+  document.getElementById('balance-titulo').textContent = `Balance — ${a.evento?.nombre||'Actividad'}`;
+  document.getElementById('balance-gastos-leg-val').textContent = fmtCOP(gastosLeg);
+  window._balanceGastosLeg = gastosLeg;
+  window._balancePersonas  = parseInt(a.cierre?.personasImpactadas)||parseInt(a.evento?.asistentes)||0;
+
+  renderBalanceLines();
+  recalcBalance();
+  document.getElementById('modal-balance').classList.add('open');
 };
 
-window.guardarRentabilidad = async function(id) {
-  const costosAd = parseFloat(document.getElementById('rm-costos-ad')?.value)||0;
-  const ingresos = parseFloat(document.getElementById('rm-ingresos')?.value)||0;
+function renderBalanceLines() {
+  // Ingresos
+  const ingList = document.getElementById('balance-ing-list');
+  ingList.innerHTML = window._balanceIng.map((l,i) => `
+    <div class="balance-line" id="bling-${i}">
+      <input type="text" placeholder="Concepto (ej. Ventas producto A)" value="${l.concepto||''}"
+        oninput="window._balanceIng[${i}].concepto=this.value">
+      <input type="number" placeholder="$ valor" value="${l.valor||''}" min="0"
+        oninput="window._balanceIng[${i}].valor=this.value;recalcBalance()">
+      <button class="btn-rm" onclick="removeBalanceLine('ing',${i})">×</button>
+    </div>`).join('');
+
+  // Costos
+  const cosList = document.getElementById('balance-cos-list');
+  cosList.innerHTML = window._balanceCos.map((l,i) => `
+    <div class="balance-line" id="blcos-${i}">
+      <input type="text" placeholder="Concepto (ej. Transporte)" value="${l.concepto||''}"
+        oninput="window._balanceCos[${i}].concepto=this.value">
+      <input type="number" placeholder="$ valor" value="${l.valor||''}" min="0"
+        oninput="window._balanceCos[${i}].valor=this.value;recalcBalance()">
+      <button class="btn-rm" onclick="removeBalanceLine('cos',${i})">×</button>
+    </div>`).join('');
+}
+
+function recalcBalance() {
+  const totalIng  = window._balanceIng.reduce((s,l)=>s+(parseFloat(l.valor)||0),0);
+  const totalCosAd= window._balanceCos.reduce((s,l)=>s+(parseFloat(l.valor)||0),0);
+  const gastosLeg = window._balanceGastosLeg||0;
+  const totalCos  = gastosLeg + totalCosAd;
+  const resultado = totalIng - totalCos;
+  const roi       = totalCos > 0 ? ((resultado/totalCos)*100).toFixed(1) : null;
+  const personas  = window._balancePersonas||0;
+  const cpp       = (personas>0 && totalCos>0) ? totalCos/personas : null;
+
+  const fmt = fmtCOP;
+  // Headers de columna
+  document.getElementById('balance-total-ing-hdr').textContent = fmt(totalIng);
+  document.getElementById('balance-total-cos-hdr').textContent = fmt(totalCosAd);
+  // Subtotales
+  document.getElementById('balance-total-ing').textContent = fmt(totalIng);
+  document.getElementById('balance-total-cos').textContent = fmt(totalCosAd);
+  // Resultado box
+  document.getElementById('br-ingresos').textContent    = fmt(totalIng);
+  document.getElementById('br-gastos-leg').textContent  = fmt(gastosLeg);
+  document.getElementById('br-costos-ad').textContent   = fmt(totalCosAd);
+  document.getElementById('br-total-costos').textContent= fmt(totalCos);
+  document.getElementById('br-roi').textContent         = roi !== null ? roi+'%' : '–';
+  document.getElementById('br-cpp').textContent         = cpp !== null ? fmt(cpp) : '–';
+  const elRes = document.getElementById('br-resultado');
+  elRes.textContent = fmt(resultado);
+  elRes.className = 'val balance-final ' + (resultado>0?'balance-ganancia':resultado<0?'balance-perdida':'balance-neutral');
+}
+
+window.addBalanceLine = function(tipo) {
+  if (tipo==='ing') { window._balanceIng.push({concepto:'',valor:''}); }
+  else              { window._balanceCos.push({concepto:'',valor:''}); }
+  renderBalanceLines();
+  recalcBalance();
+};
+
+window.removeBalanceLine = function(tipo, idx) {
+  if (tipo==='ing') window._balanceIng.splice(idx,1);
+  else              window._balanceCos.splice(idx,1);
+  renderBalanceLines();
+  recalcBalance();
+};
+
+window.guardarBalance = async function() {
+  const id = window._balanceActualId;
+  if (!id) return;
+  const linesIng = window._balanceIng.filter(l=>l.concepto||l.valor).map(l=>({concepto:l.concepto||'',valor:parseFloat(l.valor)||0}));
+  const linesCos = window._balanceCos.filter(l=>l.concepto||l.valor).map(l=>({concepto:l.concepto||'',valor:parseFloat(l.valor)||0}));
   try {
     await updateDoc(doc(db,'actividades',id), {
-      'rentabilidad.costosAdicionales': costosAd,
-      'rentabilidad.ingresos': ingresos,
-      'rentabilidad.actualizadoEn': serverTimestamp()
+      'rentabilidad.lineasIngresos': linesIng,
+      'rentabilidad.lineasCostos':   linesCos,
+      'rentabilidad.actualizadoEn':  serverTimestamp()
     });
-    showToast('Rentabilidad guardada ✓','success');
+    showToast('Balance guardado ✓','success');
+    cerrarModal('modal-balance');
   } catch(e) { showToast('Error al guardar','error'); console.error(e); }
 };
 
@@ -2676,24 +2896,31 @@ window.renderRentabilidad = function() {
     const roiCls = r.roi !== null ? (r.roi >= 0 ? 'positive' : 'negative') : 'neutral';
     const cppStr = r.cpp !== null ? fmtCOP(r.cpp) : '–';
 
+    const linesIng = (a.rentabilidad?.lineasIngresos||[]).filter(Boolean);
+    const linesCos = (a.rentabilidad?.lineasCostos||[]).filter(Boolean);
+    const tieneBalance = linesIng.length>0||linesCos.length>0;
+
     return `<tr>
-      <td><strong>${a.evento?.nombre||'–'}</strong></td>
+      <td>
+        <strong>${a.evento?.nombre||'–'}</strong>
+        ${tieneBalance ? `<div style="margin-top:4px;font-size:11px;color:var(--text-muted);">
+          ${linesIng.map(l=>`<span style="color:var(--success);">+${l.concepto}</span>`).join(' · ')}
+          ${linesCos.map(l=>`<span style="color:var(--danger);">-${l.concepto}</span>`).join(' · ')}
+        </div>` : ''}
+      </td>
       <td>${fmtFecha(a.evento?.fecha)}</td>
       <td style="text-align:center;">${r.personas||'–'}</td>
       <td style="text-align:right;">${fmtCOP(r.gastosLeg)}</td>
-      <td style="text-align:right;">
-        <input class="rent-input" type="number" value="${a.rentabilidad?.costosAdicionales||''}" placeholder="0"
-          onchange="guardarCampoRent('${a.id}','costosAdicionales',this.value)" min="0">
-      </td>
+      <td style="text-align:right;">${fmtCOP(r.costosAd)}</td>
       <td style="text-align:right;font-weight:700;">${fmtCOP(r.totalCostos)}</td>
-      <td style="text-align:right;">
-        <input class="rent-input" type="number" value="${a.rentabilidad?.ingresos||''}" placeholder="0"
-          onchange="guardarCampoRent('${a.id}','ingresos',this.value)" min="0">
-      </td>
-      <td class="${ganCls}" style="text-align:right;">${fmtCOP(r.ganancia)}</td>
+      <td style="text-align:right;">${fmtCOP(r.ingresos)}</td>
+      <td class="${ganCls}" style="text-align:right;font-size:15px;">${fmtCOP(r.ganancia)}</td>
       <td class="${roiCls}" style="text-align:right;">${roiStr}</td>
       <td class="neutral" style="text-align:right;">${cppStr}</td>
-      <td><button class="btn btn-outline btn-sm" onclick="verDetalle('${a.id}')">Ver</button></td>
+      <td style="white-space:nowrap;">
+        <button class="btn btn-teal btn-sm" onclick="abrirBalance('${a.id}')" style="margin-bottom:4px;">📊 Balance</button>
+        <button class="btn btn-outline btn-sm" onclick="verDetalle('${a.id}')">Ver</button>
+      </td>
     </tr>`;
   }).join('');
 
@@ -2715,14 +2942,7 @@ function resetSummary() {
   });
 }
 
-window.guardarCampoRent = async function(id, campo, valor) {
-  try {
-    await updateDoc(doc(db,'actividades',id), {
-      [`rentabilidad.${campo}`]: parseFloat(valor)||0,
-      'rentabilidad.actualizadoEn': serverTimestamp()
-    });
-  } catch(e) { showToast('Error al guardar','error'); console.error(e); }
-};
+// guardarCampoRent reemplazado por guardarBalance con arrays discriminados
 
 window.limpiarFiltrosRent = function() {
   ['rent-desde','rent-hasta','rent-tipo'].forEach(id => {
@@ -2734,25 +2954,49 @@ window.limpiarFiltrosRent = function() {
 window.exportarRentabilidadExcel = async function() {
   const acts = window._actividades;
   if (!acts.length) { showToast('No hay datos','error'); return; }
-  const rows = acts.map(a => {
+  const wb = XLSX.utils.book_new();
+
+  // Hoja 1: Resumen
+  const rowsRes = acts.map(a => {
     const r = calcRent(a);
     return {
-      'Actividad':         a.evento?.nombre||'',
-      'Tipo':              a.evento?.tipo||'',
-      'Fecha':             a.evento?.fecha||'',
-      'Lugar':             a.evento?.lugar||'',
-      'Personas':          r.personas||0,
-      'Gastos legalizados':r.gastosLeg,
-      'Costos adicionales':r.costosAd,
-      'Total costos':      r.totalCostos,
-      'Ingresos':          r.ingresos,
-      'Ganancia neta':     r.ganancia,
-      'ROI (%)':           r.roi !== null ? parseFloat(r.roi.toFixed(1)) : '',
-      'Costo/persona':     r.cpp !== null ? parseFloat(r.cpp.toFixed(0)) : '',
+      'Actividad': a.evento?.nombre||'', 'Tipo': a.evento?.tipo||'',
+      'Fecha': a.evento?.fecha||'', 'Lugar': a.evento?.lugar||'',
+      'Personas': r.personas||0,
+      'Gastos legalizados': r.gastosLeg,
+      'Costos adicionales': r.costosAd,
+      'Total costos': r.totalCostos,
+      'Ingresos': r.ingresos,
+      'Ganancia/Pérdida': r.ganancia,
+      'ROI (%)': r.roi !== null ? parseFloat(r.roi.toFixed(1)) : '',
+      'Costo/persona': r.cpp !== null ? parseFloat(r.cpp.toFixed(0)) : '',
     };
   });
-  const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(rows), 'Rentabilidad');
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(rowsRes), 'Resumen');
+
+  // Hoja 2: Ingresos discriminados
+  const rowsIng = [];
+  acts.forEach(a => {
+    (a.rentabilidad?.lineasIngresos||[]).filter(Boolean).forEach(l => {
+      rowsIng.push({ 'Actividad': a.evento?.nombre||'', 'Fecha': a.evento?.fecha||'', 'Concepto ingreso': l.concepto||'', 'Valor': parseFloat(l.valor)||0 });
+    });
+  });
+  if (rowsIng.length) XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(rowsIng), 'Ingresos');
+
+  // Hoja 3: Costos discriminados
+  const rowsCos = [];
+  acts.forEach(a => {
+    // Gastos legalizados
+    (a.gastos?.items||[]).filter(Boolean).forEach(g => {
+      rowsCos.push({ 'Actividad': a.evento?.nombre||'', 'Fecha': a.evento?.fecha||'', 'Tipo': 'Gasto legalizado', 'Concepto': g.concepto||'', 'Valor': parseFloat(g.valor)||0 });
+    });
+    // Costos adicionales
+    (a.rentabilidad?.lineasCostos||[]).filter(Boolean).forEach(l => {
+      rowsCos.push({ 'Actividad': a.evento?.nombre||'', 'Fecha': a.evento?.fecha||'', 'Tipo': 'Costo adicional', 'Concepto': l.concepto||'', 'Valor': parseFloat(l.valor)||0 });
+    });
+  });
+  if (rowsCos.length) XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(rowsCos), 'Costos');
+
   const nombre = `HelCapture_Rentabilidad_${new Date().toISOString().split('T')[0]}.xlsx`;
   const blob = new Blob([XLSX.write(wb,{bookType:'xlsx',type:'array'})],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
   await window.mostrarModalInforme(blob, nombre, 'xlsx', '💹');
