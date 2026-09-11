@@ -429,6 +429,49 @@ tr:hover td { background: rgba(42,191,192,0.04); }
 .balance-gastos-leg .lbl { color:var(--text-muted); font-weight:600; }
 .balance-gastos-leg .val { font-weight:800; color:var(--navy); }
 
+/* ── PLANTILLAS ── */
+.plantilla-card {
+  background:var(--bg); border-radius:16px; box-shadow:var(--neo-out);
+  padding:20px; display:flex; align-items:center; gap:16px;
+  transition:box-shadow 0.2s;
+}
+.plantilla-card:hover { box-shadow:var(--neo-sm); }
+.plantilla-badge-estado {
+  display:inline-flex; align-items:center; gap:5px;
+  padding:3px 10px; border-radius:20px; font-size:11px; font-weight:700;
+}
+.plantilla-badge-estado.activa  { background:rgba(16,185,129,0.12); color:#065F46; }
+.plantilla-badge-estado.inactiva{ background:rgba(0,0,0,0.07); color:var(--text-muted); }
+.plantilla-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(320px,1fr)); gap:16px; }
+.plantilla-icon { font-size:32px; width:52px; height:52px; border-radius:14px; background:var(--bg); box-shadow:var(--neo-sm); display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+.plantilla-info { flex:1; min-width:0; }
+.plantilla-nombre { font-size:15px; font-weight:700; color:var(--navy); margin-bottom:4px; }
+.plantilla-meta { font-size:12px; color:var(--text-muted); display:flex; flex-wrap:wrap; gap:8px; margin-bottom:8px; }
+.plantilla-ciudad { font-size:12px; font-weight:700; color:var(--teal-dark); background:var(--teal-light); padding:2px 8px; border-radius:20px; }
+.plantilla-actions { display:flex; gap:6px; flex-wrap:wrap; }
+.plantilla-reportes-wrap { margin-top:16px; }
+.reporte-card {
+  background:var(--bg); border-radius:12px; box-shadow:var(--neo-sm);
+  padding:14px 16px; margin-bottom:10px;
+  border-left:3px solid var(--teal);
+}
+.reporte-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:8px; }
+.reporte-impulsor { font-size:14px; font-weight:700; color:var(--navy); }
+.reporte-cedula { font-size:12px; color:var(--text-muted); }
+.reporte-stats { display:flex; gap:10px; flex-wrap:wrap; }
+.reporte-stat { background:var(--bg-light); border-radius:8px; padding:4px 10px; font-size:12px; font-weight:600; color:var(--text); }
+
+/* Autocompletado ciudad */
+.ciudad-wrap { position:relative; }
+.ciudad-dropdown {
+  position:absolute; top:100%; left:0; right:0; background:white;
+  border-radius:0 0 10px 10px; box-shadow:0 8px 24px rgba(0,0,0,0.12);
+  z-index:100; max-height:200px; overflow-y:auto; display:none;
+}
+.ciudad-dropdown.open { display:block; }
+.ciudad-option { padding:9px 14px; font-size:13px; cursor:pointer; color:var(--text); }
+.ciudad-option:hover { background:var(--teal-light); color:var(--teal-dark); }
+
 /* ── CONSTRUCTOR ── */
 .constructor-layout {
   display: grid;
@@ -719,6 +762,9 @@ tr:hover td { background: rgba(42,191,192,0.04); }
     </div>
 
     <div class="nav-section">Gestión</div>
+    <div class="nav-item" onclick="navigate('plantillas')">
+      <span class="nav-icon">📌</span> Actividades
+    </div>
     <div class="nav-item" onclick="navigate('usuarios')">
       <span class="nav-icon">👥</span> Usuarios
     </div>
@@ -987,6 +1033,17 @@ tr:hover td { background: rgba(42,191,192,0.04); }
       </div>
     </div>
 
+    <!-- ══ PLANTILLAS DE ACTIVIDADES ══ -->
+    <div class="view" id="view-plantillas">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:12px;">
+        <div style="font-size:14px;color:var(--text-muted);">Crea actividades para que los impulsores las seleccionen al ingresar</div>
+        <button class="btn btn-teal" onclick="abrirModalPlantilla()">+ Nueva actividad</button>
+      </div>
+      <div class="plantilla-grid" id="plantillas-grid">
+        <div class="empty-state"><div class="icon">📌</div><p>No hay actividades creadas aún</p></div>
+      </div>
+    </div>
+
     <!-- ══ CONSTRUCTOR ══ -->
     <div class="view" id="view-constructor">
       <div class="constructor-topbar">
@@ -1216,6 +1273,85 @@ tr:hover td { background: rgba(42,191,192,0.04); }
     <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:16px;">
       <button class="btn btn-outline" onclick="cerrarModal('modal-balance')">Cancelar</button>
       <button class="btn btn-teal" onclick="guardarBalance()">💾 Guardar balance</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL PLANTILLA -->
+<div class="modal-bg" id="modal-plantilla">
+  <div class="modal" style="max-width:560px;">
+    <div class="modal-header">
+      <div class="modal-title" id="modal-plantilla-titulo">Nueva actividad</div>
+      <button class="modal-close" onclick="cerrarModal('modal-plantilla')">×</button>
+    </div>
+    <div class="form-row">
+      <div class="form-field" style="grid-column:span 2;">
+        <label>Nombre de la actividad *</label>
+        <input type="text" id="pl-nombre" placeholder="Ej. Volanteo Homecenter Bogotá">
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-field">
+        <label>Tipo *</label>
+        <select id="pl-tipo">
+          <option value="">Selecciona...</option>
+          <option>Feria</option><option>Charla</option><option>Capacitación</option>
+          <option>Evento presencial</option><option>Volanteo</option><option>Otro</option>
+        </select>
+      </div>
+      <div class="form-field">
+        <label>Fecha *</label>
+        <input type="date" id="pl-fecha">
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-field">
+        <label>Lugar / Sede</label>
+        <input type="text" id="pl-lugar" placeholder="Ej. Homecenter Calle 80">
+      </div>
+      <div class="form-field">
+        <label>Ciudad *</label>
+        <div class="ciudad-wrap">
+          <input type="text" id="pl-ciudad" placeholder="Ej. Bogotá" autocomplete="off" oninput="filtrarCiudades(this.value)" onfocus="filtrarCiudades(this.value)">
+          <div class="ciudad-dropdown" id="ciudad-dropdown"></div>
+        </div>
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-field" style="grid-column:span 2;">
+        <label>Descripción / instrucciones para el impulsor</label>
+        <textarea id="pl-descripcion" rows="3" placeholder="Qué debe hacer el impulsor, materiales disponibles, objetivos..."></textarea>
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-field">
+        <label>Estado</label>
+        <select id="pl-estado">
+          <option value="activa">Activa (visible para impulsores)</option>
+          <option value="inactiva">Inactiva (oculta)</option>
+        </select>
+      </div>
+      <div class="form-field">
+        <label>Meta de asistentes</label>
+        <input type="number" id="pl-meta" placeholder="Ej. 100" min="0">
+      </div>
+    </div>
+    <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:8px;">
+      <button class="btn btn-outline" onclick="cerrarModal('modal-plantilla')">Cancelar</button>
+      <button class="btn btn-teal" onclick="guardarPlantilla()">Guardar actividad</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL REPORTES DE PLANTILLA -->
+<div class="modal-bg" id="modal-reportes-plantilla">
+  <div class="modal" style="max-width:720px;">
+    <div class="modal-header">
+      <div class="modal-title" id="modal-reportes-titulo">Reportes de actividad</div>
+      <button class="modal-close" onclick="cerrarModal('modal-reportes-plantilla')">×</button>
+    </div>
+    <div id="modal-reportes-body">
+      <div class="empty-state"><div class="icon">📋</div><p>Cargando reportes...</p></div>
     </div>
   </div>
 </div>
@@ -2076,9 +2212,9 @@ window.navigate = function(view) {
   document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
   document.getElementById('view-'+view).classList.add('active');
   document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
-  const titles = { dashboard:'Dashboard', actividades:'Actividades', informes:'Generar informes', constructor:'Constructor de informe', rentabilidad:'Rentabilidad', usuarios:'Usuarios' };
+  const titles = { dashboard:'Dashboard', actividades:'Actividades', informes:'Generar informes', constructor:'Constructor de informe', rentabilidad:'Rentabilidad', plantillas:'Actividades (Plantillas)', usuarios:'Usuarios' };
   document.getElementById('topbar-title').textContent = titles[view]||view;
-  const navMap = { dashboard:0, actividades:1, informes:2, constructor:3, rentabilidad:4, usuarios:5 };
+  const navMap = { dashboard:0, actividades:1, informes:2, constructor:3, rentabilidad:4, plantillas:5, usuarios:6 };
   const navItems = document.querySelectorAll('.nav-item');
   if (navItems[navMap[view]] !== undefined) navItems[navMap[view]].classList.add('active');
   if (view === 'rentabilidad') renderRentabilidad();
@@ -3032,6 +3168,224 @@ window.exportarRentabilidadExcel = async function() {
   const nombre = `HelCapture_Rentabilidad_${new Date().toISOString().split('T')[0]}.xlsx`;
   const blob = new Blob([XLSX.write(wb,{bookType:'xlsx',type:'array'})],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
   await window.mostrarModalInforme(blob, nombre, 'xlsx', '💹');
+};
+
+// ══════════════════════════════════════════
+// PLANTILLAS DE ACTIVIDADES
+// ══════════════════════════════════════════
+
+const CIUDADES_CO = [
+  'Bogotá','Medellín','Cali','Barranquilla','Cartagena','Cúcuta','Bucaramanga',
+  'Pereira','Santa Marta','Ibagué','Pasto','Manizales','Neiva','Villavicencio',
+  'Armenia','Popayán','Valledupar','Montería','Sincelejo','Tunja','Florencia',
+  'Riohacha','Quibdó','Yopal','Mocoa','Leticia','Puerto Carreño','Inírida','Mitú',
+  'Bello','Soacha','Soledad','Itagüí','Envigado','Dosquebradas','Floridablanca',
+  'Palmira','Buenaventura','Barrancabermeja','Girardot'
+];
+
+window._plantillas = [];
+window._editPlantillaId = null;
+
+// Escucha en tiempo real la colección plantillas
+import('https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js').then(({ onSnapshot: _on, collection: _col, query: _q, orderBy: _ob }) => {
+  _on(_q(_col(db,'plantillas'),_ob('creadoEn','desc')), snap => {
+    window._plantillas = snap.docs.map(d=>({id:d.id,...d.data()}));
+    if (document.getElementById('view-plantillas').classList.contains('active')) renderPlantillas();
+  });
+});
+
+function renderPlantillas() {
+  const grid = document.getElementById('plantillas-grid');
+  if (!window._plantillas.length) {
+    grid.innerHTML='<div class="empty-state"><div class="icon">📌</div><p>No hay actividades creadas aún</p></div>'; return;
+  }
+  const iconoTipo = { 'Feria':'🏪','Charla':'🎤','Capacitación':'📚','Evento presencial':'📅','Volanteo':'📢','Otro':'📌' };
+  grid.innerHTML = window._plantillas.map(p => {
+    const icon = iconoTipo[p.tipo]||'📌';
+    const estadoCls = p.estado==='activa' ? 'activa' : 'inactiva';
+    const estadoLabel = p.estado==='activa' ? '● Activa' : '○ Inactiva';
+    return `<div class="plantilla-card">
+      <div class="plantilla-icon">${icon}</div>
+      <div class="plantilla-info">
+        <div class="plantilla-nombre">${p.nombre||'Sin nombre'}</div>
+        <div class="plantilla-meta">
+          <span>${p.tipo||''}</span>
+          <span>📅 ${fmtFecha(p.fecha)}</span>
+          ${p.lugar?`<span>📍 ${p.lugar}</span>`:''}
+          ${p.meta?`<span>🎯 Meta: ${p.meta}</span>`:''}
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+          <span class="plantilla-ciudad">🏙️ ${p.ciudad||'–'}</span>
+          <span class="plantilla-badge-estado ${estadoCls}">${estadoLabel}</span>
+        </div>
+        ${p.descripcion?`<div style="font-size:12px;color:var(--text-muted);margin-top:6px;line-height:1.4;">${p.descripcion.slice(0,100)}${p.descripcion.length>100?'...':''}</div>`:''}
+      </div>
+      <div style="display:flex;flex-direction:column;gap:6px;flex-shrink:0;">
+        <button class="btn btn-teal btn-sm" onclick="verReportesPlantilla('${p.id}')">📋 Reportes</button>
+        <button class="btn btn-outline btn-sm" onclick="editarPlantilla('${p.id}')">✏️ Editar</button>
+        <button class="btn btn-sm ${p.estado==='activa'?'btn-outline':'btn-teal'}" onclick="toggleEstadoPlantilla('${p.id}','${p.estado||'activa'}')">
+          ${p.estado==='activa'?'Desactivar':'Activar'}
+        </button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+window.abrirModalPlantilla = function() {
+  window._editPlantillaId = null;
+  document.getElementById('modal-plantilla-titulo').textContent = 'Nueva actividad';
+  ['pl-nombre','pl-lugar','pl-ciudad','pl-descripcion'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('pl-tipo').value='';
+  document.getElementById('pl-fecha').value=new Date().toISOString().split('T')[0];
+  document.getElementById('pl-estado').value='activa';
+  document.getElementById('pl-meta').value='';
+  document.getElementById('modal-plantilla').classList.add('open');
+};
+
+window.editarPlantilla = function(id) {
+  const p = window._plantillas.find(x=>x.id===id);
+  if (!p) return;
+  window._editPlantillaId = id;
+  document.getElementById('modal-plantilla-titulo').textContent = 'Editar actividad';
+  document.getElementById('pl-nombre').value      = p.nombre||'';
+  document.getElementById('pl-tipo').value        = p.tipo||'';
+  document.getElementById('pl-fecha').value       = p.fecha||'';
+  document.getElementById('pl-lugar').value       = p.lugar||'';
+  document.getElementById('pl-ciudad').value      = p.ciudad||'';
+  document.getElementById('pl-descripcion').value = p.descripcion||'';
+  document.getElementById('pl-estado').value      = p.estado||'activa';
+  document.getElementById('pl-meta').value        = p.meta||'';
+  document.getElementById('modal-plantilla').classList.add('open');
+};
+
+window.guardarPlantilla = async function() {
+  const nombre  = document.getElementById('pl-nombre').value.trim();
+  const tipo    = document.getElementById('pl-tipo').value;
+  const fecha   = document.getElementById('pl-fecha').value;
+  const ciudad  = document.getElementById('pl-ciudad').value.trim();
+  if (!nombre||!tipo||!fecha||!ciudad) { showToast('Completa los campos obligatorios','error'); return; }
+
+  const data = {
+    nombre, tipo, fecha,
+    lugar:       document.getElementById('pl-lugar').value.trim(),
+    ciudad,
+    descripcion: document.getElementById('pl-descripcion').value.trim(),
+    estado:      document.getElementById('pl-estado').value,
+    meta:        parseInt(document.getElementById('pl-meta').value)||0,
+    actualizadoEn: serverTimestamp()
+  };
+
+  try {
+    if (window._editPlantillaId) {
+      await updateDoc(doc(db,'plantillas',window._editPlantillaId), data);
+    } else {
+      await addDoc(collection(db,'plantillas'), { ...data, creadoEn: serverTimestamp() });
+    }
+    cerrarModal('modal-plantilla');
+    showToast('Actividad guardada ✓','success');
+  } catch(e) { showToast('Error al guardar','error'); console.error(e); }
+};
+
+window.toggleEstadoPlantilla = async function(id, estadoActual) {
+  const nuevo = estadoActual==='activa' ? 'inactiva' : 'activa';
+  try {
+    await updateDoc(doc(db,'plantillas',id), { estado: nuevo, actualizadoEn: serverTimestamp() });
+    showToast(`Actividad ${nuevo} ✓`,'success');
+  } catch(e) { showToast('Error','error'); }
+};
+
+// Ver reportes de una plantilla (subcolección reportes)
+window.verReportesPlantilla = async function(plantillaId) {
+  const p = window._plantillas.find(x=>x.id===plantillaId);
+  document.getElementById('modal-reportes-titulo').textContent = `Reportes — ${p?.nombre||'Actividad'}`;
+  document.getElementById('modal-reportes-body').innerHTML = '<div class="empty-state"><div class="icon">⏳</div><p>Cargando...</p></div>';
+  document.getElementById('modal-reportes-plantilla').classList.add('open');
+
+  try {
+    const { getDocs, collection: _col, query: _q, orderBy: _ob } = await import('https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js');
+    const snap = await getDocs(_q(_col(db,'plantillas',plantillaId,'reportes'),_ob('creadoEn','desc')));
+    const reportes = snap.docs.map(d=>({id:d.id,...d.data()}));
+
+    if (!reportes.length) {
+      document.getElementById('modal-reportes-body').innerHTML = '<div class="empty-state"><div class="icon">📭</div><p>Aún no hay reportes para esta actividad</p></div>'; return;
+    }
+
+    const totalAsist = reportes.reduce((s,r)=>s+(parseInt(r.evento?.asistentes)||0),0);
+    let html = `<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:20px;">
+      <div style="background:var(--bg);box-shadow:var(--neo-sm);border-radius:12px;padding:14px;text-align:center;">
+        <div style="font-size:22px;font-weight:900;color:var(--teal-dark);">${reportes.length}</div>
+        <div style="font-size:11px;color:var(--text-muted);font-weight:700;text-transform:uppercase;">Impulsores</div>
+      </div>
+      <div style="background:var(--bg);box-shadow:var(--neo-sm);border-radius:12px;padding:14px;text-align:center;">
+        <div style="font-size:22px;font-weight:900;color:var(--teal-dark);">${totalAsist.toLocaleString('es-CO')}</div>
+        <div style="font-size:11px;color:var(--text-muted);font-weight:700;text-transform:uppercase;">Total asistentes</div>
+      </div>
+      <div style="background:var(--bg);box-shadow:var(--neo-sm);border-radius:12px;padding:14px;text-align:center;">
+        <div style="font-size:22px;font-weight:900;color:var(--teal-dark);">${reportes.filter(r=>r.fotosGenerales?.length>0).length}</div>
+        <div style="font-size:11px;color:var(--text-muted);font-weight:700;text-transform:uppercase;">Con fotos</div>
+      </div>
+    </div>`;
+
+    html += reportes.map(r => {
+      const fotos = (r.fotosGenerales||[]);
+      const ventas = r.ventas?.activo ? (r.ventas.referencias||[]).filter(Boolean).reduce((s,ref)=>s+(parseInt(ref.cantidad)||0),0) : null;
+      return `<div class="reporte-card">
+        <div class="reporte-header">
+          <div>
+            <div class="reporte-impulsor">👤 ${r.impulsor?.nombre||'Impulsor'}</div>
+            <div class="reporte-cedula">CC ${r.impulsor?.cedula||'–'} · ${fmtFecha(r.evento?.fecha||'')} · ${r.evento?.lugar||''}</div>
+          </div>
+          <span class="badge teal" style="font-size:10px;">Entregado</span>
+        </div>
+        <div class="reporte-stats">
+          <span class="reporte-stat">👥 ${r.evento?.asistentes||0} asistentes</span>
+          ${fotos.length?`<span class="reporte-stat">📸 ${fotos.length} fotos</span>`:''}
+          ${r.muestreo?.activo?'<span class="reporte-stat">🧪 Muestreo</span>':''}
+          ${ventas!==null?`<span class="reporte-stat">💰 ${ventas} uds</span>`:''}
+          ${r.obsequios?.activo?'<span class="reporte-stat">🎁 Obsequios</span>':''}
+        </div>
+        ${r.cierre?.impacto?`<p style="font-size:12px;color:var(--text-muted);margin-top:8px;line-height:1.4;">${r.cierre.impacto.slice(0,200)}</p>`:''}
+        ${fotos.length?`<div style="display:flex;gap:6px;margin-top:10px;flex-wrap:wrap;">
+          ${fotos.slice(0,5).map(f=>`<img src="${f.url||f.dataUrl}" style="width:60px;height:60px;border-radius:8px;object-fit:cover;cursor:pointer;" onclick="verFoto('${f.url||f.dataUrl}')">`).join('')}
+          ${fotos.length>5?`<div style="width:60px;height:60px;border-radius:8px;background:var(--bg-dark);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:var(--text-muted);">+${fotos.length-5}</div>`:''}
+        </div>`:''}
+      </div>`;
+    }).join('');
+
+    document.getElementById('modal-reportes-body').innerHTML = html;
+  } catch(e) {
+    console.error(e);
+    document.getElementById('modal-reportes-body').innerHTML = '<div class="empty-state"><div class="icon">❌</div><p>Error al cargar reportes</p></div>';
+  }
+};
+
+// Autocompletado de ciudades
+window.filtrarCiudades = function(val) {
+  const dd = document.getElementById('ciudad-dropdown');
+  if (!val || val.length < 1) { dd.classList.remove('open'); return; }
+  const matches = CIUDADES_CO.filter(c => c.toLowerCase().includes(val.toLowerCase())).slice(0,8);
+  if (!matches.length) { dd.classList.remove('open'); return; }
+  dd.innerHTML = matches.map(c=>`<div class="ciudad-option" onclick="seleccionarCiudad('${c}')">${c}</div>`).join('');
+  dd.classList.add('open');
+};
+
+window.seleccionarCiudad = function(ciudad) {
+  document.getElementById('pl-ciudad').value = ciudad;
+  document.getElementById('ciudad-dropdown').classList.remove('open');
+};
+
+// Cerrar dropdown al hacer click afuera
+document.addEventListener('click', e => {
+  if (!e.target.closest('.ciudad-wrap')) {
+    document.getElementById('ciudad-dropdown')?.classList.remove('open');
+  }
+});
+
+// navigate actualizado
+const _navigateOrig = window.navigate;
+window.navigate = function(view) {
+  _navigateOrig(view);
+  if (view==='plantillas') renderPlantillas();
 };
 </script>
 </body>
