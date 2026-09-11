@@ -347,6 +347,41 @@ tr:hover td { background: rgba(42,191,192,0.04); }
 ::-webkit-scrollbar-thumb { background:rgba(42,191,192,0.25); border-radius:3px; }
 ::-webkit-scrollbar-thumb:hover { background:rgba(42,191,192,0.45); }
 
+/* ── RENTABILIDAD ── */
+.rent-tabla { width:100%; border-collapse:collapse; font-size:13px; }
+.rent-tabla th { background:var(--navy); color:white; padding:10px 14px; text-align:left; font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:0.4px; white-space:nowrap; }
+.rent-tabla td { padding:11px 14px; border-bottom:1px solid rgba(0,0,0,0.05); vertical-align:middle; }
+.rent-tabla tr:last-child td { border-bottom:none; }
+.rent-tabla tr:hover td { background:rgba(42,191,192,0.04); }
+.rent-tabla td.positive { color:var(--success); font-weight:700; }
+.rent-tabla td.negative { color:var(--danger); font-weight:700; }
+.rent-tabla td.neutral  { color:var(--text-muted); }
+.rent-input { border:none; background:transparent; font-size:13px; color:var(--text); width:100%; font-family:inherit; text-align:right; padding:2px 4px; border-radius:6px; }
+.rent-input:focus { outline:none; background:var(--bg-light); box-shadow:var(--neo-in); }
+.rent-summary-bar {
+  display:grid; grid-template-columns:repeat(5,1fr); gap:16px; margin-bottom:24px;
+}
+.rent-chip {
+  background:var(--bg); border-radius:16px; box-shadow:var(--neo-out);
+  padding:18px 16px; text-align:center;
+}
+.rent-chip .val { font-size:22px; font-weight:900; line-height:1.1; margin-bottom:4px; }
+.rent-chip .lbl { font-size:10px; font-weight:700; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.5px; }
+.rent-chip.pos .val { color:var(--success); }
+.rent-chip.neg .val { color:var(--danger); }
+.rent-chip.teal .val { color:var(--teal-dark); }
+.rent-chip.navy .val { color:var(--navy); }
+
+/* Bloque en modal detalle */
+.rent-modal-grid { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:14px; }
+.rent-modal-field { display:flex; flex-direction:column; gap:4px; }
+.rent-modal-field label { font-size:11px; font-weight:700; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.4px; }
+.rent-modal-field input { border:none; background:var(--bg); box-shadow:var(--neo-in); border-radius:10px; padding:9px 13px; font-size:14px; font-family:inherit; color:var(--text); outline:none; }
+.rent-modal-field input:focus { box-shadow:var(--neo-in), 0 0 0 2px rgba(42,191,192,0.2); }
+.rent-resultado-row { display:flex; align-items:center; justify-content:space-between; padding:8px 12px; border-radius:10px; background:var(--bg); box-shadow:var(--neo-in); margin-bottom:8px; font-size:13px; }
+.rent-resultado-row .r-label { font-weight:600; color:var(--text-muted); }
+.rent-resultado-row .r-val { font-weight:800; font-size:15px; }
+
 /* ── CONSTRUCTOR ── */
 .constructor-layout {
   display: grid;
@@ -631,6 +666,11 @@ tr:hover td { background: rgba(42,191,192,0.04); }
       <span class="nav-icon">🎨</span> Constructor
     </div>
 
+    <div class="nav-section">Análisis</div>
+    <div class="nav-item" onclick="navigate('rentabilidad')">
+      <span class="nav-icon">💹</span> Rentabilidad
+    </div>
+
     <div class="nav-section">Gestión</div>
     <div class="nav-item" onclick="navigate('usuarios')">
       <span class="nav-icon">👥</span> Usuarios
@@ -839,6 +879,64 @@ tr:hover td { background: rgba(42,191,192,0.04); }
       </div>
       <div class="users-grid" id="users-grid">
         <div class="empty-state"><div class="icon">👥</div><p>Cargando usuarios...</p></div>
+      </div>
+    </div>
+
+    <!-- ══ RENTABILIDAD ══ -->
+    <div class="view" id="view-rentabilidad">
+
+      <!-- Chips resumen global -->
+      <div class="rent-summary-bar" id="rent-summary-bar">
+        <div class="rent-chip teal"><div class="val" id="rs-ingresos">–</div><div class="lbl">Total ingresos</div></div>
+        <div class="rent-chip navy"><div class="val" id="rs-costos">–</div><div class="lbl">Total costos</div></div>
+        <div class="rent-chip pos" id="rs-chip-ganancia"><div class="val" id="rs-ganancia">–</div><div class="lbl">Ganancia neta</div></div>
+        <div class="rent-chip teal"><div class="val" id="rs-roi">–</div><div class="lbl">ROI promedio</div></div>
+        <div class="rent-chip navy"><div class="val" id="rs-cpp">–</div><div class="lbl">Costo/persona prom.</div></div>
+      </div>
+
+      <!-- Filtros -->
+      <div class="filter-bar" style="margin-bottom:20px;">
+        <input type="date" class="filter-select" id="rent-desde" onchange="renderRentabilidad()">
+        <input type="date" class="filter-select" id="rent-hasta" onchange="renderRentabilidad()">
+        <select class="filter-select" id="rent-tipo" onchange="renderRentabilidad()">
+          <option value="">Todos los tipos</option>
+          <option>Feria</option><option>Charla</option><option>Capacitación</option>
+          <option>Evento presencial</option><option>Volanteo</option>
+        </select>
+        <button class="btn btn-outline btn-sm" onclick="limpiarFiltrosRent()">✕ Limpiar</button>
+        <button class="btn btn-teal btn-sm" onclick="exportarRentabilidadExcel()">📊 Exportar Excel</button>
+      </div>
+
+      <!-- Tabla -->
+      <div class="table-card">
+        <div class="table-toolbar">
+          <div class="table-toolbar-title">Comparativa por actividad</div>
+          <div style="font-size:12px;color:var(--text-muted);">Haz clic en los campos de Ingresos o Costos adicionales para editarlos</div>
+        </div>
+        <div style="overflow-x:auto;">
+          <table class="rent-tabla">
+            <thead>
+              <tr>
+                <th>Actividad</th>
+                <th>Fecha</th>
+                <th>Personas</th>
+                <th style="text-align:right;">Gastos legalizados</th>
+                <th style="text-align:right;">Costos adicionales</th>
+                <th style="text-align:right;">Total costos</th>
+                <th style="text-align:right;">Ingresos</th>
+                <th style="text-align:right;">Ganancia neta</th>
+                <th style="text-align:right;">ROI</th>
+                <th style="text-align:right;">Costo/persona</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody id="rent-tbody"></tbody>
+          </table>
+        </div>
+        <div class="empty-state" id="rent-empty" style="display:none;">
+          <div class="icon">💹</div>
+          <p>No hay actividades para mostrar</p>
+        </div>
       </div>
     </div>
 
@@ -1357,6 +1455,37 @@ window.verDetalle = function(id) {
     </div>`;
   }
 
+  // ── RENTABILIDAD en modal ──
+  const gastosTotalModal = (a.gastos?.items||[]).filter(Boolean).reduce((s,g)=>s+(parseFloat(g.valor)||0),0);
+  const rentData = a.rentabilidad || {};
+  const costosAd = parseFloat(rentData.costosAdicionales)||0;
+  const ingresos = parseFloat(rentData.ingresos)||0;
+  const totalCostos = gastosTotalModal + costosAd;
+  const ganancia = ingresos - totalCostos;
+  const roi = totalCostos > 0 ? ((ganancia / totalCostos)*100).toFixed(1) : '–';
+  const personas = parseInt(a.cierre?.personasImpactadas)||parseInt(a.evento?.asistentes)||0;
+  const cpp = personas > 0 && totalCostos > 0 ? (totalCostos/personas).toLocaleString('es-CO',{maximumFractionDigits:0}) : '–';
+
+  html += `<div class="section-block">
+    <div class="section-block-title">💹 Rentabilidad del evento</div>
+    <div class="rent-modal-grid">
+      <div class="rent-modal-field">
+        <label>Costos adicionales ($)</label>
+        <input type="number" id="rm-costos-ad" value="${rentData.costosAdicionales||''}" placeholder="0" min="0" oninput="recalcModal('${a.id}')">
+      </div>
+      <div class="rent-modal-field">
+        <label>Ingresos totales ($)</label>
+        <input type="number" id="rm-ingresos" value="${rentData.ingresos||''}" placeholder="0" min="0" oninput="recalcModal('${a.id}')">
+      </div>
+    </div>
+    <div id="rent-modal-resultados">
+      ${renderResultadosModal(gastosTotalModal, costosAd, ingresos, personas)}
+    </div>
+    <div style="display:flex;justify-content:flex-end;margin-top:10px;">
+      <button class="btn btn-teal btn-sm" onclick="guardarRentabilidad('${a.id}')">💾 Guardar</button>
+    </div>
+  </div>`;
+
   document.getElementById('modal-body').innerHTML = html;
   document.getElementById('modal-detalle').classList.add('open');
 };
@@ -1812,11 +1941,12 @@ window.navigate = function(view) {
   document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
   document.getElementById('view-'+view).classList.add('active');
   document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
-  const titles = { dashboard:'Dashboard', actividades:'Actividades', informes:'Generar informes', constructor:'Constructor de informe', usuarios:'Usuarios' };
+  const titles = { dashboard:'Dashboard', actividades:'Actividades', informes:'Generar informes', constructor:'Constructor de informe', rentabilidad:'Rentabilidad', usuarios:'Usuarios' };
   document.getElementById('topbar-title').textContent = titles[view]||view;
-  const navMap = { dashboard:0, actividades:1, informes:2, constructor:3, usuarios:4 };
+  const navMap = { dashboard:0, actividades:1, informes:2, constructor:3, rentabilidad:4, usuarios:5 };
   const navItems = document.querySelectorAll('.nav-item');
   if (navItems[navMap[view]] !== undefined) navItems[navMap[view]].classList.add('active');
+  if (view === 'rentabilidad') renderRentabilidad();
 };
 
 window.cerrarModal = function(id) { document.getElementById(id).classList.remove('open'); };
@@ -2434,6 +2564,198 @@ window.exportarConstructorPPTX = async function() {
   const nombre = `${titulo.replace(/\s+/g,'_')}_${fecha||'informe'}.pptx`;
   const pptxBlob = await pptx.write({ outputType: 'blob' });
   await window.mostrarModalInforme(pptxBlob, nombre, 'pptx', '📊');
+};
+
+// ══════════════════════════════════════════
+// RENTABILIDAD
+// ══════════════════════════════════════════
+
+function fmtCOP(n) {
+  if (n === null || n === undefined || isNaN(n)) return '–';
+  return '$' + Math.round(n).toLocaleString('es-CO');
+}
+
+function calcRent(a) {
+  const gastosLeg = (a.gastos?.items||[]).filter(Boolean).reduce((s,g)=>s+(parseFloat(g.valor)||0),0);
+  const costosAd  = parseFloat(a.rentabilidad?.costosAdicionales)||0;
+  const ingresos  = parseFloat(a.rentabilidad?.ingresos)||0;
+  const totalCostos = gastosLeg + costosAd;
+  const ganancia  = ingresos - totalCostos;
+  const roi       = totalCostos > 0 ? (ganancia/totalCostos)*100 : null;
+  const personas  = parseInt(a.cierre?.personasImpactadas)||parseInt(a.evento?.asistentes)||0;
+  const cpp       = (personas > 0 && totalCostos > 0) ? totalCostos/personas : null;
+  return { gastosLeg, costosAd, totalCostos, ingresos, ganancia, roi, personas, cpp };
+}
+
+function renderResultadosModal(gastosLeg, costosAd, ingresos, personas) {
+  const totalCostos = gastosLeg + costosAd;
+  const ganancia    = ingresos - totalCostos;
+  const roi         = totalCostos > 0 ? ((ganancia/totalCostos)*100).toFixed(1) : null;
+  const cpp         = (personas > 0 && totalCostos > 0) ? totalCostos/personas : null;
+  const gColor      = ganancia >= 0 ? 'var(--success)' : 'var(--danger)';
+  const roiColor    = roi !== null ? (parseFloat(roi) >= 0 ? 'var(--success)' : 'var(--danger)') : 'var(--text-muted)';
+
+  return `
+    <div class="rent-resultado-row">
+      <span class="r-label">Gastos legalizados</span>
+      <span class="r-val" style="color:var(--navy);">${fmtCOP(gastosLeg)}</span>
+    </div>
+    <div class="rent-resultado-row">
+      <span class="r-label">Total costos</span>
+      <span class="r-val" style="color:var(--navy);">${fmtCOP(totalCostos)}</span>
+    </div>
+    <div class="rent-resultado-row">
+      <span class="r-label">Ingresos</span>
+      <span class="r-val" style="color:var(--teal-dark);">${fmtCOP(ingresos)}</span>
+    </div>
+    <div class="rent-resultado-row" style="background:${ganancia>=0?'rgba(16,185,129,0.07)':'rgba(239,68,68,0.07)'};">
+      <span class="r-label">Ganancia neta</span>
+      <span class="r-val" style="color:${gColor};font-size:17px;">${fmtCOP(ganancia)}</span>
+    </div>
+    <div class="rent-resultado-row">
+      <span class="r-label">ROI</span>
+      <span class="r-val" style="color:${roiColor};">${roi !== null ? roi+'%' : '–'}</span>
+    </div>
+    <div class="rent-resultado-row">
+      <span class="r-label">Costo por persona</span>
+      <span class="r-val" style="color:var(--text-muted);">${cpp !== null ? fmtCOP(cpp) : '–'}</span>
+    </div>`;
+}
+
+window.recalcModal = function(id) {
+  const a = window._actividades.find(x=>x.id===id);
+  if (!a) return;
+  const gastosLeg = (a.gastos?.items||[]).filter(Boolean).reduce((s,g)=>s+(parseFloat(g.valor)||0),0);
+  const costosAd  = parseFloat(document.getElementById('rm-costos-ad')?.value)||0;
+  const ingresos  = parseFloat(document.getElementById('rm-ingresos')?.value)||0;
+  const personas  = parseInt(a.cierre?.personasImpactadas)||parseInt(a.evento?.asistentes)||0;
+  const el = document.getElementById('rent-modal-resultados');
+  if (el) el.innerHTML = renderResultadosModal(gastosLeg, costosAd, ingresos, personas);
+};
+
+window.guardarRentabilidad = async function(id) {
+  const costosAd = parseFloat(document.getElementById('rm-costos-ad')?.value)||0;
+  const ingresos = parseFloat(document.getElementById('rm-ingresos')?.value)||0;
+  try {
+    await updateDoc(doc(db,'actividades',id), {
+      'rentabilidad.costosAdicionales': costosAd,
+      'rentabilidad.ingresos': ingresos,
+      'rentabilidad.actualizadoEn': serverTimestamp()
+    });
+    showToast('Rentabilidad guardada ✓','success');
+  } catch(e) { showToast('Error al guardar','error'); console.error(e); }
+};
+
+window.renderRentabilidad = function() {
+  const desde = document.getElementById('rent-desde')?.value;
+  const hasta  = document.getElementById('rent-hasta')?.value;
+  const tipo   = document.getElementById('rent-tipo')?.value;
+
+  let acts = window._actividades.filter(a => {
+    if (desde && a.evento?.fecha < desde) return false;
+    if (hasta  && a.evento?.fecha > hasta)  return false;
+    if (tipo   && a.evento?.tipo !== tipo)   return false;
+    return true;
+  });
+
+  const tbody  = document.getElementById('rent-tbody');
+  const empty  = document.getElementById('rent-empty');
+  if (!acts.length) { tbody.innerHTML=''; empty.style.display='block'; resetSummary(); return; }
+  empty.style.display = 'none';
+
+  let sumIngr=0, sumCost=0, sumGan=0, roisArr=[], cppsArr=[];
+
+  tbody.innerHTML = acts.map(a => {
+    const r = calcRent(a);
+    sumIngr += r.ingresos; sumCost += r.totalCostos; sumGan += r.ganancia;
+    if (r.roi !== null) roisArr.push(r.roi);
+    if (r.cpp !== null) cppsArr.push(r.cpp);
+
+    const ganCls = r.ganancia > 0 ? 'positive' : r.ganancia < 0 ? 'negative' : 'neutral';
+    const roiStr = r.roi !== null ? r.roi.toFixed(1)+'%' : '–';
+    const roiCls = r.roi !== null ? (r.roi >= 0 ? 'positive' : 'negative') : 'neutral';
+    const cppStr = r.cpp !== null ? fmtCOP(r.cpp) : '–';
+
+    return `<tr>
+      <td><strong>${a.evento?.nombre||'–'}</strong></td>
+      <td>${fmtFecha(a.evento?.fecha)}</td>
+      <td style="text-align:center;">${r.personas||'–'}</td>
+      <td style="text-align:right;">${fmtCOP(r.gastosLeg)}</td>
+      <td style="text-align:right;">
+        <input class="rent-input" type="number" value="${a.rentabilidad?.costosAdicionales||''}" placeholder="0"
+          onchange="guardarCampoRent('${a.id}','costosAdicionales',this.value)" min="0">
+      </td>
+      <td style="text-align:right;font-weight:700;">${fmtCOP(r.totalCostos)}</td>
+      <td style="text-align:right;">
+        <input class="rent-input" type="number" value="${a.rentabilidad?.ingresos||''}" placeholder="0"
+          onchange="guardarCampoRent('${a.id}','ingresos',this.value)" min="0">
+      </td>
+      <td class="${ganCls}" style="text-align:right;">${fmtCOP(r.ganancia)}</td>
+      <td class="${roiCls}" style="text-align:right;">${roiStr}</td>
+      <td class="neutral" style="text-align:right;">${cppStr}</td>
+      <td><button class="btn btn-outline btn-sm" onclick="verDetalle('${a.id}')">Ver</button></td>
+    </tr>`;
+  }).join('');
+
+  // Summary chips
+  const roiProm = roisArr.length ? (roisArr.reduce((s,v)=>s+v,0)/roisArr.length).toFixed(1)+'%' : '–';
+  const cppProm = cppsArr.length ? fmtCOP(cppsArr.reduce((s,v)=>s+v,0)/cppsArr.length) : '–';
+  document.getElementById('rs-ingresos').textContent = fmtCOP(sumIngr);
+  document.getElementById('rs-costos').textContent   = fmtCOP(sumCost);
+  document.getElementById('rs-ganancia').textContent = fmtCOP(sumGan);
+  document.getElementById('rs-roi').textContent      = roiProm;
+  document.getElementById('rs-cpp').textContent      = cppProm;
+  const chipGan = document.getElementById('rs-chip-ganancia');
+  chipGan.className = `rent-chip ${sumGan >= 0 ? 'pos' : 'neg'}`;
+};
+
+function resetSummary() {
+  ['rs-ingresos','rs-costos','rs-ganancia','rs-roi','rs-cpp'].forEach(id => {
+    const el = document.getElementById(id); if(el) el.textContent='–';
+  });
+}
+
+window.guardarCampoRent = async function(id, campo, valor) {
+  try {
+    await updateDoc(doc(db,'actividades',id), {
+      [`rentabilidad.${campo}`]: parseFloat(valor)||0,
+      'rentabilidad.actualizadoEn': serverTimestamp()
+    });
+  } catch(e) { showToast('Error al guardar','error'); console.error(e); }
+};
+
+window.limpiarFiltrosRent = function() {
+  ['rent-desde','rent-hasta','rent-tipo'].forEach(id => {
+    const el = document.getElementById(id); if(el) el.value='';
+  });
+  renderRentabilidad();
+};
+
+window.exportarRentabilidadExcel = async function() {
+  const acts = window._actividades;
+  if (!acts.length) { showToast('No hay datos','error'); return; }
+  const rows = acts.map(a => {
+    const r = calcRent(a);
+    return {
+      'Actividad':         a.evento?.nombre||'',
+      'Tipo':              a.evento?.tipo||'',
+      'Fecha':             a.evento?.fecha||'',
+      'Lugar':             a.evento?.lugar||'',
+      'Personas':          r.personas||0,
+      'Gastos legalizados':r.gastosLeg,
+      'Costos adicionales':r.costosAd,
+      'Total costos':      r.totalCostos,
+      'Ingresos':          r.ingresos,
+      'Ganancia neta':     r.ganancia,
+      'ROI (%)':           r.roi !== null ? parseFloat(r.roi.toFixed(1)) : '',
+      'Costo/persona':     r.cpp !== null ? parseFloat(r.cpp.toFixed(0)) : '',
+    };
+  });
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(rows), 'Rentabilidad');
+  const nombre = `HelCapture_Rentabilidad_${new Date().toISOString().split('T')[0]}.xlsx`;
+  const blob = new Blob([XLSX.write(wb,{bookType:'xlsx',type:'array'})],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
+  await window.mostrarModalInforme(blob, nombre, 'xlsx', '💹');
 };
 </script>
 </body>
