@@ -79,16 +79,27 @@ html,body{font-family:'Segoe UI',system-ui,-apple-system,sans-serif;background:v
 .login-sub{color:rgba(255,255,255,0.5);font-size:13px;margin-bottom:28px;line-height:1.6;}
 .login-field{display:flex;flex-direction:column;gap:6px;margin-bottom:16px;}
 .login-field label{font-size:11px;font-weight:700;color:rgba(255,255,255,0.55);text-transform:uppercase;letter-spacing:0.8px;}
-.login-field input{
-  background:rgba(255,255,255,0.08);
-  border:1.5px solid rgba(255,255,255,0.12);
+.login-field input,
+#screen-login input[type=text],
+#screen-login input[type=number]{
+  background:rgba(255,255,255,0.08) !important;
+  border:1.5px solid rgba(255,255,255,0.18) !important;
   border-radius:var(--radius-sm);
-  padding:14px 16px;font-size:15px;color:#fff;
+  padding:14px 16px;font-size:15px;color:#fff !important;
   font-family:inherit;outline:none;
-  transition:all 0.2s;
+  transition:all 0.2s;width:100%;
+  -webkit-text-fill-color:#fff;
 }
-.login-field input::placeholder{color:rgba(255,255,255,0.3);}
-.login-field input:focus{border-color:var(--teal);background:rgba(42,191,192,0.08);box-shadow:0 0 0 3px rgba(42,191,192,0.15);}
+.login-field input::placeholder,
+#screen-login input::placeholder{color:rgba(255,255,255,0.35) !important;}
+.login-field input:focus,
+#screen-login input:focus{
+  border-color:var(--teal) !important;
+  background:rgba(42,191,192,0.1) !important;
+  box-shadow:0 0 0 3px rgba(42,191,192,0.2) !important;
+  color:#fff !important;
+  -webkit-text-fill-color:#fff;
+}
 .login-error{color:#FCA5A5;font-size:12px;text-align:center;display:none;margin-bottom:12px;padding:8px;background:rgba(239,68,68,0.1);border-radius:8px;}
 .btn-login{
   width:100%;padding:16px;border:none;border-radius:var(--radius-sm);
