@@ -1117,7 +1117,7 @@ function seleccionarActividad(id) {
 // ── FOTOS: usar carpeta de plantilla para aislar ──
 async function subirFotos(seccion, reporteId){
   const arr=fotos[seccion]; const urls=[];
-  const base = `plantillas/${plantillaActual.id}/reportes/${reporteId}`;
+  const base = `actividades/${reporteId}`;
   for(let i=0;i<arr.length;i++){
     const f=arr[i];
     if(!f.file) continue;
@@ -1134,7 +1134,7 @@ async function subirFotos(seccion, reporteId){
 
 async function subirFacturas(reporteId){
   const urls = [];
-  const base = `plantillas/${plantillaActual.id}/reportes/${reporteId}`;
+  const base = `actividades/${reporteId}`;
   for(let i=0; i<facturas.length; i++){
     const f = facturas[i];
     if(!f.file) continue;
@@ -1159,40 +1159,61 @@ async function enviarActividad(){
 
   try{
     showOverlay('Creando registro...');
-    // Reporte dentro de la subcolección de la plantilla
-    const reporteRef = db.collection('plantillas').doc(plantillaActual.id).collection('reportes').doc();
-    await reporteRef.set({
+
+    // Datos base del reporte
+    const datosBase = {
       impulsor,
-      plantillaId: plantillaActual.id,
+      plantillaId:     plantillaActual.id,
       plantillaNombre: plantillaActual.nombre,
       evento:{ nombre:$('nombre-evento').value.trim(), tipo, fecha:$('fecha-evento').value, lugar:$('lugar-evento').value.trim(), asistentes:parseInt($('asistentes').value)||0 },
-      ubicacion:geo, creadoEn:firebase.firestore.FieldValue.serverTimestamp(), version:'2.0.0', _subiendo:true
-    });
+      ubicacion: geo,
+      creadoEn:  firebase.firestore.FieldValue.serverTimestamp(),
+      version:   '2.0.0',
+      _subiendo: true
+    };
 
-    const urlsGen=await subirFotos('generales',reporteRef.id);
-    const urlsMue=await subirFotos('muestreo',reporteRef.id);
-    const urlsVen=await subirFotos('ventas',reporteRef.id);
-    const urlsObs=await subirFotos('obsequios',reporteRef.id);
-    const urlsFac=await subirFacturas(reporteRef.id);
+    // 1️⃣ Crear en colección principal "actividades" (dashboard lo lee aquí)
+    const actRef = await db.collection('actividades').add(datosBase);
+
+    // 2️⃣ Crear en subcolección "reportes" de la plantilla (con el mismo ID)
+    await db.collection('plantillas').doc(plantillaActual.id)
+            .collection('reportes').doc(actRef.id).set({ ...datosBase, actividadId: actRef.id });
+
+    // Subir fotos y facturas (ruta compartida por ID)
+    const urlsGen = await subirFotos('generales', actRef.id);
+    const urlsMue = await subirFotos('muestreo',  actRef.id);
+    const urlsVen = await subirFotos('ventas',    actRef.id);
+    const urlsObs = await subirFotos('obsequios', actRef.id);
+    const urlsFac = await subirFacturas(actRef.id);
 
     showOverlay('Finalizando...');
-    await reporteRef.update({
-      fotosGenerales:urlsGen,
-      muestreo:$('chk-muestreo').checked?{activo:true,descripcion:$('muestreo-desc').value.trim(),observaciones:$('muestreo-obs').value.trim(),fotos:urlsMue}:{activo:false},
-      ventas:$('chk-ventas').checked?{activo:true,referencias:refs.ventas.filter(Boolean),observaciones:$('ventas-obs').value.trim(),fotos:urlsVen}:{activo:false},
-      obsequios:$('chk-obsequios').checked?{activo:true,referencias:refs.obsequios.filter(Boolean),observaciones:$('obsequios-obs').value.trim(),fotos:urlsObs}:{activo:false},
-      gastos:{items:gastos.filter(Boolean),observaciones:$('gastos-obs').value.trim()},
-      facturas: urlsFac,
-      cierre:{
-        descripcion: desc, impacto,
-        detalleImpacto: $('detalle-impacto').value.trim(),
-        personasImpactadas: $('personas-impactadas').value.trim(),
-        observaciones: $('obs-adicional').value.trim()
+
+    const datosCompletos = {
+      fotosGenerales: urlsGen,
+      muestreo:   $('chk-muestreo').checked  ? {activo:true, descripcion:$('muestreo-desc').value.trim(), observaciones:$('muestreo-obs').value.trim(), fotos:urlsMue}  : {activo:false},
+      ventas:     $('chk-ventas').checked    ? {activo:true, referencias:refs.ventas.filter(Boolean),    observaciones:$('ventas-obs').value.trim(),   fotos:urlsVen}  : {activo:false},
+      obsequios:  $('chk-obsequios').checked ? {activo:true, referencias:refs.obsequios.filter(Boolean), observaciones:$('obsequios-obs').value.trim(), fotos:urlsObs} : {activo:false},
+      gastos:     { items: gastos.filter(Boolean), observaciones: $('gastos-obs').value.trim() },
+      facturas:   urlsFac,
+      cierre: {
+        descripcion:       desc,
+        impacto,
+        detalleImpacto:    $('detalle-impacto').value.trim(),
+        personasImpactadas:$('personas-impactadas').value.trim(),
+        observaciones:     $('obs-adicional').value.trim()
       },
-      _subiendo:false
-    });
+      _subiendo: false
+    };
+
+    // 3️⃣ Actualizar en ambos lados simultáneamente
+    await Promise.all([
+      db.collection('actividades').doc(actRef.id).update(datosCompletos),
+      db.collection('plantillas').doc(plantillaActual.id)
+        .collection('reportes').doc(actRef.id).update(datosCompletos)
+    ]);
+
     hideOverlay();
-    $('success-id').textContent='Actividad: '+plantillaActual.nombre;
+    $('success-id').textContent = '✓ ' + plantillaActual.nombre;
     showScreen('screen-success');
   }catch(e){ hideOverlay(); console.error(e); toast('Error al guardar. Verifica tu conexión.','error'); }
 }
