@@ -1411,7 +1411,7 @@ tr:hover td { background: rgba(42,191,192,0.04); }
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
 import {
-  getFirestore, collection, onSnapshot, addDoc, updateDoc, doc, query, orderBy, serverTimestamp
+  getFirestore, collection, onSnapshot, getDocs, addDoc, updateDoc, doc, query, orderBy, serverTimestamp
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 import {
   getStorage, ref as storageRef, uploadBytes, getDownloadURL
@@ -3193,11 +3193,9 @@ window._plantillas = [];
 window._editPlantillaId = null;
 
 // Escucha en tiempo real la colección plantillas
-import('https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js').then(({ onSnapshot: _on, collection: _col, query: _q, orderBy: _ob }) => {
-  _on(_q(_col(db,'plantillas'),_ob('creadoEn','desc')), snap => {
-    window._plantillas = snap.docs.map(d=>({id:d.id,...d.data()}));
-    if (document.getElementById('view-plantillas').classList.contains('active')) renderPlantillas();
-  });
+onSnapshot(query(collection(db,'plantillas'), orderBy('creadoEn','desc')), snap => {
+  window._plantillas = snap.docs.map(d=>({id:d.id,...d.data()}));
+  if (document.getElementById('view-plantillas').classList.contains('active')) renderPlantillas();
 });
 
 function estadoRealPlantilla(p) {
@@ -3348,8 +3346,7 @@ window.verReportesPlantilla = async function(plantillaId) {
   document.getElementById('modal-reportes-plantilla').classList.add('open');
 
   try {
-    const { getDocs, collection: _col, query: _q, orderBy: _ob } = await import('https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js');
-    const snap = await getDocs(_q(_col(db,'plantillas',plantillaId,'reportes'),_ob('creadoEn','desc')));
+    const snap = await getDocs(query(collection(db,'plantillas',plantillaId,'reportes'), orderBy('creadoEn','desc')));
     const reportes = snap.docs.map(d=>({id:d.id,...d.data()}));
 
     if (!reportes.length) {
