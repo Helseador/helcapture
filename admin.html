@@ -1039,6 +1039,19 @@ tr:hover td { background: rgba(42,191,192,0.04); }
         <div style="font-size:14px;color:var(--text-muted);">Crea actividades para que los impulsores las seleccionen al ingresar</div>
         <button class="btn btn-teal" onclick="abrirModalPlantilla()">+ Nueva actividad</button>
       </div>
+
+      <!-- PANEL DE MIGRACIÓN -->
+      <div id="panel-migracion" style="background:var(--bg);box-shadow:var(--neo-out);border-radius:18px;padding:22px;margin-bottom:24px;border-left:4px solid var(--warning);">
+        <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:12px;">
+          <div>
+            <div style="font-size:14px;font-weight:700;color:var(--navy);margin-bottom:4px;">⚠️ Migración de registros anteriores</div>
+            <div style="font-size:13px;color:var(--text-muted);">Los reportes capturados antes del último update deben migrarse al Dashboard. Ejecútalo una sola vez.</div>
+          </div>
+          <button class="btn btn-navy" id="btn-migrar" onclick="ejecutarMigracion()">🔄 Ejecutar migración</button>
+        </div>
+        <div id="migrar-log" style="background:var(--navy);color:#e2e8f0;border-radius:10px;padding:14px;font-size:12px;font-family:monospace;max-height:200px;overflow-y:auto;white-space:pre-wrap;display:none;"></div>
+      </div>
+
       <div class="plantilla-grid" id="plantillas-grid">
         <div class="empty-state"><div class="icon">📌</div><p>No hay actividades creadas aún</p></div>
       </div>
@@ -1411,7 +1424,7 @@ tr:hover td { background: rgba(42,191,192,0.04); }
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
 import {
-  getFirestore, collection, onSnapshot, getDocs, addDoc, updateDoc, doc, query, orderBy, serverTimestamp
+  getFirestore, collection, onSnapshot, getDocs, getDoc, addDoc, setDoc, updateDoc, doc, query, orderBy, serverTimestamp
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 import {
   getStorage, ref as storageRef, uploadBytes, getDownloadURL
@@ -3484,6 +3497,92 @@ const _navigateOrig = window.navigate;
 window.navigate = function(view) {
   _navigateOrig(view);
   if (view==='plantillas') renderPlantillas();
+};
+
+// ══════════════════════════════════════════
+// MIGRACIÓN TEMPORAL: reportes → actividades
+// ══════════════════════════════════════════
+window.ejecutarMigracion = async function() {
+  const btn = document.getElementById('btn-migrar');
+  const log = document.getElementById('migrar-log');
+  btn.disabled = true;
+  btn.textContent = '⏳ Migrando...';
+  log.style.display = 'block';
+  log.innerHTML = '';
+
+  const append = (msg, color='') => {
+    const line = document.createElement('div');
+    line.style.color = color || 'inherit';
+    line.textContent = msg;
+    log.appendChild(line);
+    log.scrollTop = log.scrollHeight;
+  };
+
+  try {
+    append('🔍 Leyendo plantillas...');
+    const plantillasSnap = await getDocs(collection(db, 'plantillas'));
+    append(`   Encontradas: ${plantillasSnap.docs.length} plantillas`);
+
+    let migrados = 0, omitidos = 0, errores = 0;
+
+    for (const plantillaDoc of plantillasSnap.docs) {
+      const pd = plantillaDoc.data();
+      append(`\n📌 "${pd.nombre}" (${plantillaDoc.id})`);
+
+      const reportesSnap = await getDocs(
+        collection(db, 'plantillas', plantillaDoc.id, 'reportes')
+      );
+      append(`   Reportes: ${reportesSnap.docs.length}`);
+
+      for (const reporteDoc of reportesSnap.docs) {
+        const rd = reporteDoc.data();
+        const rid = reporteDoc.id;
+
+        // Verificar si ya existe en actividades/
+        const yaExiste = await getDoc(doc(db, 'actividades', rid));
+
+        if (yaExiste.exists()) {
+          append(`   ⏭  ${rid.slice(0,10)}... ya existe`, '#94A3B8');
+          omitidos++;
+          continue;
+        }
+
+        try {
+          // Usar setDoc con el mismo ID para mantener consistencia
+          await setDoc(doc(db, 'actividades', rid), {
+            ...rd,
+            actividadId:     rid,
+            plantillaId:     plantillaDoc.id,
+            plantillaNombre: pd.nombre,
+            _migrado:        true,
+          });
+          // Actualizar el reporte con actividadId
+          await updateDoc(doc(db, 'plantillas', plantillaDoc.id, 'reportes', rid), {
+            actividadId: rid
+          });
+          append(`   ✅ ${rid.slice(0,10)}... migrado`, '#10B981');
+          migrados++;
+        } catch(e) {
+          append(`   ❌ ${rid.slice(0,10)}... ERROR: ${e.message}`, '#EF4444');
+          errores++;
+        }
+      }
+    }
+
+    append(`\n══════════════════════`, '#2ABFC0');
+    append(`✅ Migrados:  ${migrados}`, '#10B981');
+    append(`⏭  Omitidos:  ${omitidos}`, '#94A3B8');
+    append(`❌ Errores:   ${errores}`, errores>0?'#EF4444':'inherit');
+    append(`══════════════════════`, '#2ABFC0');
+    append('¡Listo! Revisa el Dashboard.', '#2ABFC0');
+    btn.textContent = '✅ Migración completada';
+    showToast('Migración completada ✓', 'success');
+  } catch(e) {
+    append('Error fatal: ' + e.message, '#EF4444');
+    btn.disabled = false;
+    btn.textContent = '🔄 Reintentar migración';
+    console.error(e);
+  }
 };
 </script>
 </body>
