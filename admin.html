@@ -72,8 +72,8 @@
   --blur: blur(22px) saturate(170%);
 
   /* Ritmo de las transiciones de botones */
-  --t-btn:  .36s;
-  --t-btn-sm: .3s;
+  --t-btn:  .55s;
+  --t-btn-sm: .42s;
   --ease-btn: cubic-bezier(.22, .61, .36, 1);
 }
 
@@ -1761,10 +1761,13 @@ td strong, td b { color: var(--ink); font-weight: 700; }
 
 /* ── 29. ACCESIBILIDAD / MOVIMIENTO ────────────────────────────────── */
 @media (prefers-reduced-motion: reduce) {
+  /* Solo se detienen las animaciones decorativas (orbes, entradas, modales).
+     Las transiciones de color/realce se mantienen: no generan desplazamiento
+     y antes se anulaban aquí, lo que hacía que los botones respondieran
+     de golpe en equipos con "animaciones desactivadas" en Windows. */
   *, *::before, *::after {
     animation-duration: .001ms !important;
     animation-iteration-count: 1 !important;
-    transition-duration: .001ms !important;
   }
 }
 </style>
