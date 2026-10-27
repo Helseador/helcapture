@@ -4469,8 +4469,20 @@ window.verReportesPlantilla = async function(plantillaId) {
   document.getElementById('modal-reportes-plantilla').classList.add('open');
 
   try {
-    const snap = await getDocs(query(collection(db,'plantillas',plantillaId,'reportes'), orderBy('creadoEn','desc')));
-    const reportes = snap.docs.map(d=>({id:d.id,...d.data()}));
+    // Las reglas actuales permiten leer la subcolección pero deniegan las
+    // consultas ordenadas (runQuery) sobre ella. Se intenta con orderBy y, si
+    // las reglas la rechazan, se reintenta sin restricciones y se ordena aquí.
+    const col = collection(db,'plantillas',plantillaId,'reportes');
+    let snap;
+    try {
+      snap = await getDocs(query(col, orderBy('creadoEn','desc')));
+    } catch (errOrden) {
+      console.warn('Consulta ordenada de reportes rechazada; se reintenta sin orden:', errOrden?.code || errOrden);
+      snap = await getDocs(col);
+    }
+    const reportes = snap.docs
+      .map(d=>({id:d.id,...d.data()}))
+      .sort((a,b) => (msDe(b.creadoEn) - msDe(a.creadoEn)) || String(b.evento?.fecha||'').localeCompare(String(a.evento?.fecha||'')));
 
     if (!reportes.length) {
       document.getElementById('modal-reportes-body').innerHTML = '<div class="empty-state"><div class="icon">📭</div><p>Aún no hay reportes para esta actividad</p></div>'; return;
