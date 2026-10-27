@@ -1188,12 +1188,22 @@ async function enviarActividad(){
 
     showOverlay('Finalizando...');
 
+    // Se descartan las filas que el impulsor dejó abiertas pero vacías,
+    // y se guardan los tipos numéricos para que el admin no tenga que adivinarlos.
+    const refsLimpias = arr => (arr||[])
+      .filter(r => r && (String(r.referencia||'').trim() || String(r.cantidad||'').trim()))
+      .map(r => ({ referencia: String(r.referencia||'').trim(), cantidad: parseInt(r.cantidad,10)||0 }));
+
+    const gastosLimpios = (gastos||[])
+      .filter(g => g && (String(g.concepto||'').trim() || String(g.valor||'').trim()))
+      .map(g => ({ concepto: String(g.concepto||'').trim(), valor: parseFloat(g.valor)||0 }));
+
     const datosCompletos = {
       fotosGenerales: urlsGen,
       muestreo:   $('chk-muestreo').checked  ? {activo:true, descripcion:$('muestreo-desc').value.trim(), observaciones:$('muestreo-obs').value.trim(), fotos:urlsMue}  : {activo:false},
-      ventas:     $('chk-ventas').checked    ? {activo:true, referencias:refs.ventas.filter(Boolean),    observaciones:$('ventas-obs').value.trim(),   fotos:urlsVen}  : {activo:false},
-      obsequios:  $('chk-obsequios').checked ? {activo:true, referencias:refs.obsequios.filter(Boolean), observaciones:$('obsequios-obs').value.trim(), fotos:urlsObs} : {activo:false},
-      gastos:     { items: gastos.filter(Boolean), observaciones: $('gastos-obs').value.trim() },
+      ventas:     $('chk-ventas').checked    ? {activo:true, referencias:refsLimpias(refs.ventas),    observaciones:$('ventas-obs').value.trim(),   fotos:urlsVen}  : {activo:false},
+      obsequios:  $('chk-obsequios').checked ? {activo:true, referencias:refsLimpias(refs.obsequios), observaciones:$('obsequios-obs').value.trim(), fotos:urlsObs} : {activo:false},
+      gastos:     { items: gastosLimpios, observaciones: $('gastos-obs').value.trim() },
       facturas:   urlsFac,
       cierre: {
         descripcion:       desc,
