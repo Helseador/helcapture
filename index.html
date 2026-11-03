@@ -1029,21 +1029,7 @@ function addGasto(){
 }
 
 // ── ENVIAR ──
-async function subirFotos(seccion, docId){
-  const arr=fotos[seccion]; const urls=[];
-  for(let i=0;i<arr.length;i++){
-    const f=arr[i];
-    if(!f.file) continue;
-    try{
-      showOverlay(`Subiendo fotos ${i+1}/${arr.length}...`);
-      const storRef=stor.ref(`actividades/${docId}/${seccion}/${Date.now()}_${f.nombre}`);
-      const snap=await storRef.put(f.file);
-      const url=await snap.ref.getDownloadURL();
-      urls.push({url, nombre:f.nombre});
-    }catch(e){ console.error(e); }
-  }
-  return urls;
-}
+// (subirFotos/subirFacturas viven junto al formulario de captura, más abajo)
 
 // ── LOGIN ──
 async function hacerLogin() {
@@ -1212,11 +1198,17 @@ async function enviarActividad(){
     await db.collection('plantillas').doc(plantillaActual.id)
             .collection('reportes').doc(actRef.id).set({ ...datosBase, actividadId: actRef.id });
 
-    // Subir fotos y facturas (ruta compartida por ID)
+    // Subir fotos y facturas (ruta compartida por ID).
+    // Solo se suben las fotos de las secciones que el impulsor dejó activas:
+    // si abrió una sección, cargó fotos y luego la apagó, no se envían al aire.
+    const chkMuestreo  = $('chk-muestreo').checked;
+    const chkVentas    = $('chk-ventas').checked;
+    const chkObsequios = $('chk-obsequios').checked;
+
     const urlsGen = await subirFotos('generales', actRef.id);
-    const urlsMue = await subirFotos('muestreo',  actRef.id);
-    const urlsVen = await subirFotos('ventas',    actRef.id);
-    const urlsObs = await subirFotos('obsequios', actRef.id);
+    const urlsMue = chkMuestreo  ? await subirFotos('muestreo',  actRef.id) : [];
+    const urlsVen = chkVentas    ? await subirFotos('ventas',    actRef.id) : [];
+    const urlsObs = chkObsequios ? await subirFotos('obsequios', actRef.id) : [];
     const urlsFac = await subirFacturas(actRef.id);
 
     showOverlay('Finalizando...');
