@@ -830,6 +830,140 @@ const fotos = { generales:[], muestreo:[], ventas:[], obsequios:[] };
 const refs  = { ventas:[], obsequios:[] };
 let gastos  = [];
 let facturas = [];   // { nombre, tipo, size, file, preview? }
+let pasoActual = 1;
+
+// ── BORRADOR (localStorage) ──
+// Guarda el texto capturado para que un cierre del navegador o un corte de red
+// no obliguen a reescribir el reporte. Las fotos NO caben en localStorage:
+// se avisa al reanudar que hay que volver a tomarlas.
+const BORRADOR_KEY = 'hc_borrador_v1';
+const BORRADOR_DIAS = 7;
+let _tBorrador = null;
+let _enviado = false;   // tras cerrar la actividad no se vuelve a guardar borrador
+
+const CAMPOS_BORRADOR = [
+  'nombre-evento','tipo-evento','tipo-otro-texto','fecha-evento','lugar-evento','asistentes',
+  'muestreo-desc','muestreo-obs','ventas-obs','obsequios-obs','gastos-obs',
+  'desc-actividad','impacto','detalle-impacto','personas-impactadas','obs-adicional'
+];
+const CHECKS_BORRADOR = ['chk-muestreo','chk-ventas','chk-obsequios'];
+
+function leerBorrador(){
+  try{
+    const raw = localStorage.getItem(BORRADOR_KEY);
+    if(!raw) return null;
+    const d = JSON.parse(raw);
+    if(!d || !d.guardadoEn || !d.plantillaId) return null;
+    if(Date.now() - d.guardadoEn > BORRADOR_DIAS*24*60*60*1000){ localStorage.removeItem(BORRADOR_KEY); return null; }
+    return d;
+  }catch(e){ return null; }
+}
+
+function borrarBorrador(){
+  try{ localStorage.removeItem(BORRADOR_KEY); }catch(e){}
+}
+
+function programarGuardado(){
+  if(!plantillaActual || !impulsor) return;
+  clearTimeout(_tBorrador);
+  _tBorrador = setTimeout(guardarBorrador, 500);
+}
+
+function guardarBorrador(){
+  if(_enviado) return;
+  if(!plantillaActual || !impulsor) return;
+  try{
+    const campos = {};
+    CAMPOS_BORRADOR.forEach(id => { const el=$(id); if(el) campos[id]=el.value; });
+    const checks = {};
+    CHECKS_BORRADOR.forEach(id => { const el=$(id); if(el) checks[id]=!!el.checked; });
+
+    localStorage.setItem(BORRADOR_KEY, JSON.stringify({
+      guardadoEn:  Date.now(),
+      cedula:      impulsor.cedula,
+      plantillaId: plantillaActual.id,
+      paso:        pasoActual,
+      campos, checks,
+      refs:   { ventas: refs.ventas.filter(Boolean), obsequios: refs.obsequios.filter(Boolean) },
+      gastos: gastos.filter(Boolean),
+      geo
+    }));
+  }catch(e){ console.warn('No se pudo guardar el borrador:', e); }
+}
+
+// Reconstruye las filas de referencias y sus valores
+function restaurarRefs(seccion, lista){
+  refs[seccion] = [];
+  const cont = $('ref-list-'+seccion);
+  if(cont) cont.innerHTML = '';
+  (lista||[]).forEach(r => {
+    addRef(seccion);
+    const idx = refs[seccion].length - 1;
+    const row = $('ref-'+seccion+'-'+idx);
+    if(!row) return;
+    const inputs = row.querySelectorAll('input');
+    inputs[0].value = r.referencia || '';
+    inputs[1].value = r.cantidad ?? '';
+    refs[seccion][idx] = { referencia: inputs[0].value, cantidad: inputs[1].value };
+  });
+}
+
+function restaurarGastos(lista){
+  gastos = [];
+  const cont = $('ref-list-gastos');
+  if(cont) cont.innerHTML = '';
+  (lista||[]).forEach(g => {
+    addGasto();
+    const idx = gastos.length - 1;
+    const row = $('gasto-'+idx);
+    if(!row) return;
+    const inputs = row.querySelectorAll('input');
+    inputs[0].value = g.concepto || '';
+    inputs[1].value = g.valor ?? '';
+    gastos[idx] = { concepto: inputs[0].value, valor: inputs[1].value };
+  });
+}
+
+function restaurarBorrador(d){
+  const p = plantillasDisponibles.find(x => x.id === d.plantillaId);
+  if(!p) return false;
+
+  plantillaActual = p;
+  _enviado = false;
+  $('act-user-pill') && ($('act-user-pill').textContent = `👤 ${impulsor.nombre}`);
+
+  // Checkboxes y sus secciones
+  CHECKS_BORRADOR.forEach(id => {
+    const el = $(id); if(!el) return;
+    el.checked = !!d.checks?.[id];
+    toggleSeccion(id.replace('chk-',''), el.checked);
+  });
+
+  // Texto
+  CAMPOS_BORRADOR.forEach(id => {
+    const el = $(id); if(!el) return;
+    el.value = d.campos?.[id] ?? '';
+  });
+
+  // El selector de "Otro" muestra u oculta su campo de texto
+  $('field-tipo-otro').style.display = $('tipo-evento').value === 'Otro' ? 'flex' : 'none';
+
+  restaurarRefs('ventas',    d.refs?.ventas);
+  restaurarRefs('obsequios', d.refs?.obsequios);
+  restaurarGastos(d.gastos);
+
+  // El formulario arranca con una fila vacía en cada sección activa
+  if($('chk-ventas').checked    && refs.ventas.length===0)    addRef('ventas');
+  if($('chk-obsequios').checked && refs.obsequios.length===0) addRef('obsequios');
+
+  geo = d.geo || null;
+  renderFotos('generales');
+  showPaso(Math.min(Math.max(parseInt(d.paso)||1,1),4));
+  setStep(pasoActual);
+  solicitarGeo();
+  showScreen('screen-splash');
+  return true;
+}
 
 // ── UTILS ──
 function $(id){ return document.getElementById(id); }
@@ -877,8 +1011,10 @@ function setStep(n){
   for(let i=1;i<=3;i++) $('line'+i).classList.toggle('done',i<n);
 }
 function showPaso(n){
+  pasoActual = n;
   for(let i=1;i<=4;i++){ const el=$('paso'+i); if(el) el.style.display=i===n?'block':'none'; }
   window.scrollTo(0,0);
+  programarGuardado();
 }
 
 function irPaso1(){ showPaso(1); setStep(1); }
@@ -1055,6 +1191,24 @@ async function cargarActividadesImpulsor() {
     $('act-subtitle').textContent  = `${plantillasDisponibles.length} actividad(es) disponible(s)`;
     renderActividadesIndex(plantillasDisponibles);
     showScreen('screen-actividades');
+
+    // Si este impulsor dejó un borrador a medias, se ofrece reanudarlo.
+    const d = leerBorrador();
+    if(d && d.cedula === impulsor.cedula){
+      const p = plantillasDisponibles.find(x => x.id === d.plantillaId);
+      if(!p){
+        borrarBorrador();   // la actividad ya no está disponible
+      } else {
+        const cuando = new Date(d.guardadoEn).toLocaleString('es-CO', { day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit' });
+        const reanudar = confirm(
+          `Tienes un borrador sin enviar de "${p.nombre}" (${cuando}).\n\n` +
+          `¿Reanudarlo?\n\n` +
+          `Nota: las fotos no se guardan en el borrador, tendrás que volver a tomarlas.`
+        );
+        if(reanudar) restaurarBorrador(d);
+        else borrarBorrador();
+      }
+    }
   } catch(e) { hideOverlay(); console.error(e); toast('Error cargando actividades','error'); }
 }
 
@@ -1102,6 +1256,7 @@ function filtrarActividadesIndex() {
 function seleccionarActividad(id) {
   plantillaActual = plantillasDisponibles.find(p=>p.id===id);
   if (!plantillaActual) return;
+  _enviado = false;
   // Pre-llenar campos del formulario con datos de la plantilla
   $('nombre-evento').value = plantillaActual.nombre||'';
   $('tipo-evento').value   = plantillaActual.tipo||'';
@@ -1166,6 +1321,7 @@ async function enviarActividad(){
   const impacto=$('impacto').value.trim();
   if(!desc||!impacto){ toast('Completa la descripción e impacto','error'); return; }
   if(!plantillaActual){ toast('No hay actividad seleccionada','error'); return; }
+  if(fotos.generales.length===0){ toast('Agrega al menos 1 foto del evento','error'); return; }
 
   // Evita registros duplicados si se toca dos veces "Cerrar actividad".
   if(_enviando) return;
@@ -1265,6 +1421,8 @@ async function enviarActividad(){
       }
     }
     showScreen('screen-success');
+    _enviado = true;
+    borrarBorrador();   // el reporte ya quedó guardado
   }catch(e){ hideOverlay(); console.error(e); toast('Error al guardar. Verifica tu conexión.','error'); }
   finally{
     _enviando = false;
@@ -1277,6 +1435,7 @@ function nuevaActividad(){
   geo=null; fotos.generales=[]; fotos.muestreo=[]; fotos.ventas=[]; fotos.obsequios=[];
   refs.ventas=[]; refs.obsequios=[]; gastos=[]; facturas=[];
   fallosSubida=[]; _enviando=false;
+  borrarBorrador(); pasoActual=1; _enviado=false;
   const aviso=$('success-warn'); if(aviso){ aviso.style.display='none'; aviso.innerHTML=''; }
   document.querySelectorAll('input[type=text],input[type=number],textarea').forEach(el=>el.value='');
   document.querySelectorAll('input[type=checkbox]').forEach(el=>el.checked=false);
@@ -1338,6 +1497,12 @@ $('btn-fac-pdf').addEventListener('click', () => $('fac-pdf').click());
 $('fac-cam').addEventListener('change', () => agregarFacturas($('fac-cam'), 'imagen'));
 $('fac-gal').addEventListener('change', () => agregarFacturas($('fac-gal'), 'imagen'));
 $('fac-pdf').addEventListener('change', () => agregarFacturas($('fac-pdf'), 'pdf'));
+
+// ── AUTOGUARDADO DEL BORRADOR ──
+// Cada edición reprograma el guardado; también al cambiar de paso y al cerrar.
+document.addEventListener('input',  programarGuardado);
+document.addEventListener('change', programarGuardado);
+window.addEventListener('beforeunload', () => { if(plantillaActual && impulsor) guardarBorrador(); });
 
 // ── INIT: arrancar en login ──
 // (no llamar solicitarGeo aquí, se llama al seleccionar actividad)
