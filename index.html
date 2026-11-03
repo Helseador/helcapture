@@ -394,6 +394,7 @@ input[type=file]{display:none;}
 
 /* Opcional tag */
 .optional-tag{font-size:10px;background:var(--g100);color:var(--g400);padding:2px 8px;border-radius:20px;font-weight:700;margin-left:8px;letter-spacing:0.3px;}
+.required-tag{font-size:10px;background:rgba(42,191,192,0.16);color:var(--teal-dark);padding:2px 8px;border-radius:20px;font-weight:700;margin-left:8px;letter-spacing:0.3px;}
 
 /* ══ ÉXITO ══ */
 #screen-success{align-items:center;justify-content:center;padding:40px 24px;text-align:center;gap:0;}
@@ -614,7 +615,7 @@ input[type=file]{display:none;}
             <textarea id="muestreo-obs" rows="2" placeholder="Reacciones, feedback..."></textarea>
           </div>
           <div>
-            <div class="foto-section-label">Evidencia fotográfica <span id="cnt-muestreo">0/8</span></div>
+            <div class="foto-section-label">Evidencia fotográfica <span id="cnt-muestreo">0/15</span></div>
             <div class="photos-grid" id="grid-muestreo"></div>
             <div class="photo-source-btns" id="btns-muestreo">
               <button class="btn-source" id="btn-cam-muestreo">📷 Cámara</button>
@@ -652,7 +653,7 @@ input[type=file]{display:none;}
             <textarea id="ventas-obs" rows="2" placeholder="Productos más demandados, objeciones..."></textarea>
           </div>
           <div>
-            <div class="foto-section-label">Evidencia fotográfica <span id="cnt-ventas">0/8</span></div>
+            <div class="foto-section-label">Evidencia fotográfica <span id="cnt-ventas">0/15</span></div>
             <div class="photos-grid" id="grid-ventas"></div>
             <div class="photo-source-btns" id="btns-ventas">
               <button class="btn-source" id="btn-cam-ventas">📷 Cámara</button>
@@ -690,7 +691,7 @@ input[type=file]{display:none;}
             <textarea id="obsequios-obs" rows="2" placeholder="Reacciones, destino de los obsequios..."></textarea>
           </div>
           <div>
-            <div class="foto-section-label">Evidencia fotográfica <span id="cnt-obsequios">0/8</span></div>
+            <div class="foto-section-label">Evidencia fotográfica <span id="cnt-obsequios">0/15</span></div>
             <div class="photos-grid" id="grid-obsequios"></div>
             <div class="photo-source-btns" id="btns-obsequios">
               <button class="btn-source" id="btn-cam-obsequios">📷 Cámara</button>
@@ -723,7 +724,7 @@ input[type=file]{display:none;}
 
       <!-- FACTURAS -->
       <div class="card">
-        <div class="card-title"><div class="card-title-icon">🧾</div> Facturas y soportes <span class="optional-tag">opcional</span></div>
+        <div class="card-title"><div class="card-title-icon">🧾</div> Facturas y soportes <span class="required-tag">mínimo 1</span></div>
         <p style="font-size:13px;color:var(--gray-400);margin-bottom:14px;line-height:1.5;">
           Adjunta las facturas o comprobantes de los gastos. Puedes subir fotos de tiquetes, PDFs de facturas electrónicas o capturas de pantalla.
         </p>
@@ -733,7 +734,7 @@ input[type=file]{display:none;}
           <button class="btn-source" id="btn-fac-gal">🖼️ Galería</button>
           <button class="btn-source" id="btn-fac-pdf">📄 PDF</button>
         </div>
-        <div class="factura-hint">Máximo 10 archivos · Fotos JPG/PNG y PDFs aceptados</div>
+        <div class="factura-hint">Máximo 15 archivos · mínimo 1 · JPG, PNG y PDF</div>
         <input type="file" id="fac-cam" accept="image/*" capture="environment">
         <input type="file" id="fac-gal" accept="image/*" multiple>
         <input type="file" id="fac-pdf" accept="application/pdf" multiple>
@@ -1125,14 +1126,33 @@ function irPaso2(){
   showPaso(2); setStep(2);
 }
 function irPaso3(){
-  if(fotos.generales.length===0){ toast('Agrega al menos 1 foto del evento','error'); return; }
+  const faltan = seccionesSinFoto();
+  if(faltan.length){ toast(`Falta al menos 1 foto en: ${faltan.join(', ')}`,'error'); return; }
   showPaso(3); setStep(3);
 }
-function irPaso4(){ showPaso(4); setStep(4); }
+function irPaso4(){
+  if(facturas.length === 0){ toast('Adjunta al menos 1 factura o soporte','error'); return; }
+  showPaso(4); setStep(4);
+}
+
+// ── LÍMITES DE ARCHIVOS ──
+const MAX_FOTOS = 15;     // por sección (evento, muestreo, ventas, obsequios)
+const MAX_SOPORTES = 15;  // facturas y comprobantes
+
+// Devuelve las secciones activas que aún no tienen ninguna foto.
+function seccionesSinFoto() {
+  const faltan = [];
+  if (fotos.generales.length === 0) faltan.push('fotos del evento');
+  ['muestreo','ventas','obsequios'].forEach(sec => {
+    const chk = $('chk-'+sec);
+    if (chk && chk.checked && fotos[sec].length === 0) faltan.push(sec);
+  });
+  return faltan;
+}
 
 // ── FOTOS ──
 function renderFotos(seccion){
-  const max = seccion==='generales'?5:8;
+  const max = MAX_FOTOS;
   const arr = fotos[seccion];
 
   if(seccion==='generales'){
@@ -1188,7 +1208,7 @@ async function comprimirImagen(file, maxLado=1800, calidad=0.85){
 }
 
 function agregarFotos(input, seccion){
-  const max=seccion==='generales'?5:8;
+  const max = MAX_FOTOS;
   const arr=fotos[seccion];
   const files=Array.from(input.files);
   const restantes=max-arr.length;
@@ -1258,7 +1278,7 @@ function renderFacturas(){
 }
 
 function agregarFacturas(input, tipo){
-  const MAX = 10;
+  const MAX = MAX_SOPORTES;
   const files = Array.from(input.files);
   const restantes = MAX - facturas.length;
   if(!files.length) return;
@@ -1452,7 +1472,9 @@ async function enviarActividad(){
   const impacto=$('impacto').value.trim();
   if(!desc||!impacto){ toast('Completa la descripción e impacto','error'); return; }
   if(!plantillaActual){ toast('No hay actividad seleccionada','error'); return; }
-  if(fotos.generales.length===0){ toast('Agrega al menos 1 foto del evento','error'); return; }
+  const faltanFotos = seccionesSinFoto();
+  if(faltanFotos.length){ toast(`Falta al menos 1 foto en: ${faltanFotos.join(', ')}`,'error'); return; }
+  if(facturas.length === 0){ toast('Adjunta al menos 1 factura o soporte','error'); return; }
 
   // Evita registros duplicados si se toca dos veces "Cerrar actividad".
   if(_enviando) return;
