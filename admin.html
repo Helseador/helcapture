@@ -440,6 +440,23 @@ body {
 .stat-card.success { --accent: #34D399; }
 .stat-card.warning { --accent: #FBBF24; }
 
+/* Las tarjetas de métrica llevan a la vista filtrada */
+.stat-card[data-stat] { cursor: pointer; }
+.stat-card[data-stat]::after {
+  content: '→';
+  position: absolute;
+  right: 18px;
+  bottom: 11px;
+  font-size: 14px;
+  line-height: 1;
+  color: var(--ink-faint);
+  opacity: 0;
+  transform: translateX(-5px);
+  transition: opacity .25s ease, transform .25s ease, color .25s ease;
+}
+.stat-card[data-stat]:hover::after { opacity: 1; transform: none; color: var(--teal-bright); }
+.stat-card[data-stat]:focus-visible { outline: 2px solid rgba(42, 191, 192, .85); outline-offset: 3px; }
+
 /* ── 8. TARJETAS Y TABLAS ──────────────────────────────────────────── */
 .table-card {
   border-radius: var(--r-md);
@@ -1960,27 +1977,27 @@ td strong, td b { color: var(--ink); font-weight: 700; }
     <!-- ══ DASHBOARD ══ -->
     <div class="view active" id="view-dashboard">
       <div class="stats-grid">
-        <div class="stat-card teal"><div class="stat-accent"></div>
+        <div class="stat-card teal" data-stat="total" title="Ver todas las actividades"><div class="stat-accent"></div>
           <div class="stat-label">Total actividades</div>
           <div class="stat-value" id="stat-total">–</div>
           <div class="stat-icon">📋</div>
         </div>
-        <div class="stat-card navy"><div class="stat-accent"></div>
+        <div class="stat-card navy" data-stat="mes" title="Ver las actividades de este mes"><div class="stat-accent"></div>
           <div class="stat-label">Este mes</div>
           <div class="stat-value" id="stat-mes">–</div>
           <div class="stat-icon">📅</div>
         </div>
-        <div class="stat-card success"><div class="stat-accent"></div>
+        <div class="stat-card success" data-stat="asistentes" title="Ver actividades con asistentes"><div class="stat-accent"></div>
           <div class="stat-label">Total asistentes</div>
           <div class="stat-value" id="stat-asistentes">–</div>
           <div class="stat-icon">👥</div>
         </div>
-        <div class="stat-card warning"><div class="stat-accent"></div>
+        <div class="stat-card warning" data-stat="gastos" title="Ver actividades con gastos legalizados"><div class="stat-accent"></div>
           <div class="stat-label">Con legalización</div>
           <div class="stat-value" id="stat-gastos">–</div>
           <div class="stat-icon">💵</div>
         </div>
-        <div class="stat-card success"><div class="stat-accent"></div>
+        <div class="stat-card success" data-stat="facturas" title="Ver actividades con facturas adjuntas"><div class="stat-accent"></div>
           <div class="stat-label">Con facturas adjuntas</div>
           <div class="stat-value" id="stat-facturas">–</div>
           <div class="stat-icon">🧾</div>
@@ -2035,6 +2052,7 @@ td strong, td b { color: var(--ink); font-weight: 700; }
           <option value="ventas">Con ventas</option>
           <option value="obsequios">Con obsequios</option>
           <option value="gastos">Con gastos</option>
+          <option value="facturas">Con facturas</option>
         </select>
         <button class="btn btn-outline btn-sm" onclick="limpiarFiltros()">✕ Limpiar</button>
       </div>
@@ -3054,6 +3072,7 @@ window.filtrarActividades = function() {
     if (sec === 'ventas' && !a.ventas?.activo) return false;
     if (sec === 'obsequios' && !a.obsequios?.activo) return false;
     if (sec === 'gastos' && !(a.gastos?.items||[]).filter(Boolean).length) return false;
+    if (sec === 'facturas' && !(a.facturas||[]).filter(Boolean).length) return false;
     return true;
   });
   renderTablaAll(data);
@@ -3065,6 +3084,57 @@ window.limpiarFiltros = function() {
   });
   renderTablaAll(window._actividades);
 };
+
+// ── MÉTRICAS DEL DASHBOARD → VISTA FILTRADA ──
+function fechaISOlocal(d) {
+  const p = n => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
+}
+
+window.irAStat = function(tipo) {
+  navigate('actividades');
+  limpiarFiltros();   // parte siempre de cero y repinta todo
+
+  const set = (id, valor) => { const el = document.getElementById(id); if (el) el.value = valor; };
+  let etiqueta = 'Todas las actividades';
+
+  if (tipo === 'mes') {
+    const hoy = new Date();
+    const primero = new Date(hoy.getFullYear(), hoy.getMonth(), 1);
+    const ultimo  = new Date(hoy.getFullYear(), hoy.getMonth() + 1, 0);
+    set('filtro-desde', fechaISOlocal(primero));
+    set('filtro-hasta', fechaISOlocal(ultimo));
+    etiqueta = 'Actividades de ' + hoy.toLocaleDateString('es-CO', { month: 'long', year: 'numeric' });
+  } else if (tipo === 'gastos') {
+    set('filtro-seccion', 'gastos');
+    etiqueta = 'Actividades con gastos legalizados';
+  } else if (tipo === 'facturas') {
+    set('filtro-seccion', 'facturas');
+    etiqueta = 'Actividades con facturas adjuntas';
+  } else if (tipo === 'asistentes') {
+    etiqueta = 'Actividades registradas';
+  }
+
+  filtrarActividades();
+
+  const filas = document.getElementById('tabla-all')?.children.length || 0;
+  showToast(`${etiqueta}: ${filas}`, '');
+  const content = document.querySelector('.content');
+  if (content) content.scrollTop = 0;
+};
+
+// Las tarjetas se comportan como botones (ratón y teclado)
+document.querySelectorAll('.stat-card[data-stat]').forEach(tarjeta => {
+  tarjeta.setAttribute('role', 'button');
+  tarjeta.setAttribute('tabindex', '0');
+  tarjeta.addEventListener('click', () => irAStat(tarjeta.dataset.stat));
+  tarjeta.addEventListener('keydown', e => {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      irAStat(tarjeta.dataset.stat);
+    }
+  });
+});
 
 // ── INFORMES ──
 function getActividadesFiltradas() {
