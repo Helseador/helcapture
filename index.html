@@ -407,6 +407,18 @@ input[type=file]{display:none;}
 }
 .success-title{color:#fff;font-size:26px;font-weight:800;letter-spacing:-0.3px;}
 .success-sub{color:rgba(255,255,255,0.6);font-size:14px;line-height:1.7;}
+.success-warn{
+  display:none;
+  width:100%;
+  padding:14px 16px;
+  border-radius:var(--radius-sm);
+  background:rgba(245,158,11,0.14);
+  border:1px solid rgba(245,158,11,0.45);
+  color:#FDE68A;
+  font-size:13px;
+  line-height:1.5;
+  text-align:left;
+}
 .success-badge{
   background:rgba(255,255,255,0.08);backdrop-filter:blur(8px);
   border:1px solid rgba(255,255,255,0.15);
@@ -773,6 +785,7 @@ input[type=file]{display:none;}
     <div class="success-check">✅</div>
     <div class="success-title">¡Registro enviado!</div>
     <div class="success-sub">Tu reporte quedó guardado con GPS, fotos y toda la información capturada. ¡Buen trabajo!</div>
+    <div class="success-warn" id="success-warn"></div>
     <div class="success-badge" id="success-id">Actividad registrada</div>
     <button class="btn-new" id="btn-nueva">+ Nueva actividad</button>
   </div>
@@ -1115,19 +1128,35 @@ function seleccionarActividad(id) {
 }
 
 // ── FOTOS: usar carpeta de plantilla para aislar ──
+// Cola de archivos que no se pudieron subir: se informa al impulsor al cerrar.
+let fallosSubida = [];
+let _enviando = false;   // bloquea el doble envío del mismo reporte
+
+// Sube un archivo con un reintento. Devuelve la URL o null (y registra el fallo).
+async function subirArchivoConReintento(ruta, file, etiqueta){
+  for(let intento=1; intento<=2; intento++){
+    try{
+      const snap = await stor.ref(ruta).put(file);
+      return await snap.ref.getDownloadURL();
+    }catch(e){
+      console.error(`Error subiendo ${etiqueta} (intento ${intento}):`, e);
+      if(intento===1) await new Promise(r=>setTimeout(r, 800));
+      else fallosSubida.push(etiqueta);
+    }
+  }
+  return null;
+}
+
 async function subirFotos(seccion, reporteId){
   const arr=fotos[seccion]; const urls=[];
   const base = `actividades/${reporteId}`;
   for(let i=0;i<arr.length;i++){
     const f=arr[i];
     if(!f.file) continue;
-    try{
-      showOverlay(`Subiendo fotos ${i+1}/${arr.length}...`);
-      const storRef=stor.ref(`${base}/${seccion}/${Date.now()}_${f.nombre}`);
-      const snap=await storRef.put(f.file);
-      const url=await snap.ref.getDownloadURL();
-      urls.push({url, nombre:f.nombre});
-    }catch(e){ console.error(e); }
+    showOverlay(`Subiendo fotos ${i+1}/${arr.length}...`);
+    const url = await subirArchivoConReintento(
+      `${base}/${seccion}/${Date.now()}_${f.nombre}`, f.file, `foto ${seccion}: ${f.nombre}`);
+    if(url) urls.push({url, nombre:f.nombre});
   }
   return urls;
 }
@@ -1138,13 +1167,10 @@ async function subirFacturas(reporteId){
   for(let i=0; i<facturas.length; i++){
     const f = facturas[i];
     if(!f.file) continue;
-    try{
-      showOverlay(`Subiendo soportes ${i+1}/${facturas.length}...`);
-      const storRef = stor.ref(`${base}/facturas/${Date.now()}_${f.nombre}`);
-      const snap = await storRef.put(f.file);
-      const url = await snap.ref.getDownloadURL();
-      urls.push({ url, nombre: f.nombre, tipo: f.tipo, size: f.size });
-    }catch(e){ console.error('Error subiendo factura:', e); }
+    showOverlay(`Subiendo soportes ${i+1}/${facturas.length}...`);
+    const url = await subirArchivoConReintento(
+      `${base}/facturas/${Date.now()}_${f.nombre}`, f.file, `soporte: ${f.nombre}`);
+    if(url) urls.push({ url, nombre: f.nombre, tipo: f.tipo, size: f.size });
   }
   return urls;
 }
@@ -1155,10 +1181,17 @@ async function enviarActividad(){
   if(!desc||!impacto){ toast('Completa la descripción e impacto','error'); return; }
   if(!plantillaActual){ toast('No hay actividad seleccionada','error'); return; }
 
+  // Evita registros duplicados si se toca dos veces "Cerrar actividad".
+  if(_enviando) return;
+  _enviando = true;
+  const btnEnviar = $('btn-enviar');
+  if(btnEnviar){ btnEnviar.disabled = true; btnEnviar.style.opacity = '.55'; btnEnviar.style.pointerEvents = 'none'; }
+
   const tipo=$('tipo-evento').value==='Otro' ? ($('tipo-otro-texto').value.trim()||'Otro') : $('tipo-evento').value;
 
   try{
     showOverlay('Creando registro...');
+    fallosSubida = [];
 
     // Datos base del reporte
     const datosBase = {
@@ -1224,13 +1257,35 @@ async function enviarActividad(){
 
     hideOverlay();
     $('success-id').textContent = '✓ ' + plantillaActual.nombre;
+
+    // Si alguna foto o soporte no subió, se dice explícitamente en vez de
+    // dar el envío por completo.
+    const aviso = $('success-warn');
+    if(aviso){
+      if(fallosSubida.length){
+        aviso.style.display = 'block';
+        aviso.innerHTML = '⚠️ <strong>' + fallosSubida.length + ' archivo(s) no se pudieron subir</strong>' +
+          '<br><span style="font-size:12px;opacity:.85;">' + fallosSubida.join(' · ') + '</span>' +
+          '<br><span style="font-size:12px;opacity:.85;">El reporte quedó guardado con el resto de la información. Avísale a tu coordinador.</span>';
+      } else {
+        aviso.style.display = 'none';
+        aviso.innerHTML = '';
+      }
+    }
     showScreen('screen-success');
   }catch(e){ hideOverlay(); console.error(e); toast('Error al guardar. Verifica tu conexión.','error'); }
+  finally{
+    _enviando = false;
+    const b = $('btn-enviar');
+    if(b){ b.disabled = false; b.style.opacity = ''; b.style.pointerEvents = ''; }
+  }
 }
 
 function nuevaActividad(){
   geo=null; fotos.generales=[]; fotos.muestreo=[]; fotos.ventas=[]; fotos.obsequios=[];
   refs.ventas=[]; refs.obsequios=[]; gastos=[]; facturas=[];
+  fallosSubida=[]; _enviando=false;
+  const aviso=$('success-warn'); if(aviso){ aviso.style.display='none'; aviso.innerHTML=''; }
   document.querySelectorAll('input[type=text],input[type=number],textarea').forEach(el=>el.value='');
   document.querySelectorAll('input[type=checkbox]').forEach(el=>el.checked=false);
   document.querySelectorAll('.section-body').forEach(el=>el.classList.remove('open'));
