@@ -1486,14 +1486,83 @@ td strong, td b { color: var(--ink); font-weight: 700; }
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 10px;
-  padding: 9px 0;
+  gap: 8px;
+  padding: 6px 0;
   font-size: 12.5px;
   font-weight: 600;
   color: var(--ink-soft);
   border-bottom: 1px solid rgba(255, 255, 255, .06);
 }
 .section-toggle:last-child { border-bottom: 0; }
+.section-toggle .sec-icono { flex-shrink: 0; font-size: 14px; }
+.section-toggle .sec-titulo {
+  flex: 1;
+  min-width: 0;
+  padding: 4px 6px;
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--ink-soft);
+  font-family: inherit;
+  font-size: 12.5px;
+  font-weight: 600;
+  outline: none;
+  transition: background .16s ease, box-shadow .16s ease;
+}
+.section-toggle .sec-titulo:hover { background: rgba(255, 255, 255, .05); }
+.section-toggle .sec-titulo:focus { background: rgba(255, 255, 255, .08); box-shadow: inset 0 0 0 1px rgba(42, 191, 192, .45); }
+.sec-fijo { flex-shrink: 0; font-size: 10px; font-weight: 700; color: var(--teal-bright); white-space: nowrap; }
+.sec-quitar {
+  flex-shrink: 0;
+  width: 22px;
+  height: 22px;
+  border: 0;
+  border-radius: 6px;
+  font-size: 13px;
+  line-height: 1;
+  color: #FCA5A5;
+  background: rgba(248, 113, 113, .12);
+  cursor: pointer;
+}
+.sec-quitar:hover { background: rgba(248, 113, 113, .26); }
+
+/* Añadir / quitar fotos propias en la vista previa */
+.preview-foto-add {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  width: 108px;
+  height: 108px;
+  padding: 6px;
+  text-align: center;
+  font-family: inherit;
+  font-size: 11px;
+  font-weight: 600;
+  color: #5A6B80;
+  border: 1.5px dashed #C9D6E4;
+  border-radius: 11px;
+  background: #F4F7FB;
+  cursor: pointer;
+  transition: .16s ease;
+}
+.preview-foto-add:hover { color: var(--teal-dark); border-color: var(--teal); background: #EAF7F7; }
+.preview-foto-del {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  font-size: 12px;
+  line-height: 1;
+  color: #fff;
+  border: 0;
+  border-radius: 50%;
+  background: rgba(15, 23, 42, .72);
+  cursor: pointer;
+}
+.preview-foto-del:hover { background: rgba(239, 68, 68, .85); }
 .toggle-switch {
   position: relative;
   width: 36px;
@@ -2153,6 +2222,16 @@ td strong, td b { color: var(--ink); font-weight: 700; }
         <!-- Panel izquierdo -->
         <div class="constructor-panel">
 
+          <!-- Actividad a generar -->
+          <div class="constructor-panel-section">
+            <div class="constructor-panel-section-title">📌 Actividad a generar</div>
+            <div class="form-field">
+              <select id="cfg-actividad" onchange="cambiarActividadConstructor(this.value)">
+                <option value="">Selecciona una actividad…</option>
+              </select>
+            </div>
+          </div>
+
           <!-- Portada -->
           <div class="constructor-panel-section">
             <div class="constructor-panel-section-title">🎨 Portada</div>
@@ -2205,8 +2284,10 @@ td strong, td b { color: var(--ink); font-weight: 700; }
 
           <!-- Secciones activas -->
           <div class="constructor-panel-section">
-            <div class="constructor-panel-section-title">📋 Secciones visibles</div>
+            <div class="constructor-panel-section-title">📋 Secciones del informe</div>
             <div id="section-toggles"></div>
+            <button class="btn btn-outline btn-sm" style="width:100%;margin-top:10px;" onclick="agregarSeccionConstructor()">＋ Añadir sección</button>
+            <div style="font-size:10.5px;color:var(--ink-faint);margin-top:8px;line-height:1.5;">Haz clic en un título para renombrarlo. Arrastra en la vista previa para reordenar.</div>
           </div>
 
         </div>
@@ -3729,7 +3810,11 @@ window.navigate = function(view) {
 
   if (view === 'rentabilidad') renderRentabilidad();
   if (view === 'plantillas') renderPlantillas();
-  if (view === 'constructor') actualizarPreview();
+  if (view === 'constructor') {
+    poblarSelectorActividades();
+    if (!window._constructorState.actividadId) limpiarConstructor();
+    else actualizarPreview();
+  }
   if (view === 'informes') {
     actualizarSelectImpulsores();
     actualizarAlcanceInformes();
@@ -3775,9 +3860,10 @@ window._constructorState = {
   actividadId: null,
   color: '#2ABFC0',
   logoDataUrl: null,
-  secciones: [],        // orden y visibilidad
-  fotosExcluidas: {},   // { seccion_idx: Set de índices excluidos }
+  secciones: [],        // orden y visibilidad (label editable)
+  fotosExcluidas: {},   // { seccion_key: Set de índices excluidos }
   comentarios: {},      // { seccion_key: texto }
+  fotosExtra: {},       // { seccion_key: [{ dataUrl, nombre }] } fotos que adjunta el coordinador
 };
 
 const SECCIONES_DEF = [
@@ -3799,6 +3885,7 @@ window.abrirConstructor = function(id) {
   s.actividadId = id;
   s.fotosExcluidas = {};
   s.comentarios = {};
+  s.fotosExtra = {};
 
   // Construir secciones disponibles para esta actividad
   s.secciones = SECCIONES_DEF
@@ -3820,22 +3907,181 @@ window.abrirConstructor = function(id) {
   document.getElementById('cfg-subtitulo').value = 'By Grupo Helse';
   document.getElementById('cfg-fecha').value = a.evento?.fecha || new Date().toISOString().split('T')[0];
   document.getElementById('constructor-activity-name').textContent = a.evento?.nombre || 'Actividad';
+  poblarSelectorActividades();
+  const sel = document.getElementById('cfg-actividad');
+  if (sel) sel.value = id;
 
   renderSectionToggles();
   actualizarPreview();
   navigate('constructor');
 };
 
+// Rellena el desplegable de actividades del constructor
+window.poblarSelectorActividades = function() {
+  const sel = document.getElementById('cfg-actividad');
+  if (!sel) return;
+  const acts = window._actividades.slice().sort((a, b) =>
+    String(b.evento?.fecha || '').localeCompare(String(a.evento?.fecha || '')));
+  sel.innerHTML = '<option value="">Selecciona una actividad…</option>' + acts.map(a =>
+    `<option value="${a.id}">${a.evento?.nombre || 'Sin nombre'} · ${fmtFecha(a.evento?.fecha)}</option>`
+  ).join('');
+  const actual = window._constructorState.actividadId;
+  if (actual) sel.value = actual;
+};
+
+window.cambiarActividadConstructor = function(id) {
+  if (!id) {
+    limpiarConstructor();
+    return;
+  }
+  abrirConstructor(id);
+};
+
+// Deja el constructor vacío cuando no hay actividad elegida
+function limpiarConstructor() {
+  const s = window._constructorState;
+  s.actividadId = null;
+  s.secciones = [];
+  s.fotosExcluidas = {};
+  s.comentarios = {};
+  s.fotosExtra = {};
+  document.getElementById('constructor-activity-name').textContent = 'Selecciona una actividad';
+  renderSectionToggles();
+  const prev = document.getElementById('preview-page');
+  if (prev) prev.innerHTML = `
+    <div style="text-align:center;color:#8394A8;padding:80px 20px;">
+      <div style="font-size:48px;margin-bottom:16px;opacity:.35;">🎨</div>
+      <p style="font-size:15px;font-weight:600;">Elige la actividad arriba para empezar</p>
+      <p style="font-size:13px;margin-top:8px;max-width:360px;margin-left:auto;margin-right:auto;line-height:1.6;">
+        Después podrás renombrar secciones, añadir tus propias fotos y crear secciones nuevas.
+      </p>
+    </div>`;
+}
+
 function renderSectionToggles() {
   const s = window._constructorState;
   const wrap = document.getElementById('section-toggles');
   wrap.innerHTML = s.secciones.map((sec, i) => `
     <div class="section-toggle">
-      <span>${sec.icon} ${sec.label}</span>
-      ${sec.always ? '<span style="font-size:11px;color:var(--teal-dark);font-weight:600;">Siempre</span>'
+      <span class="sec-icono">${sec.icon}</span>
+      <input class="sec-titulo" type="text" value="${(sec.label || '').replace(/"/g, '&quot;')}"
+             title="Renombrar sección" oninput="renombrarSeccion(${i}, this.value)">
+      ${sec.always ? '<span class="sec-fijo">Siempre</span>'
         : `<div class="toggle-switch ${sec.visible ? 'on' : ''}" onclick="toggleSeccion(${i})"></div>`}
+      ${sec.custom ? `<button class="sec-quitar" title="Quitar sección" onclick="quitarSeccionConstructor(${i})">×</button>` : ''}
     </div>
   `).join('');
+}
+
+window.renombrarSeccion = function(i, valor) {
+  const s = window._constructorState;
+  if (!s.secciones[i]) return;
+  s.secciones[i].label = valor;
+  actualizarPreview();
+};
+
+let _secSeq = 0;
+window.agregarSeccionConstructor = function() {
+  const s = window._constructorState;
+  if (!s.actividadId) { showToast('Primero elige una actividad', 'error'); return; }
+  s.secciones.push({
+    key: 'custom_' + (++_secSeq) + '_' + Date.now().toString(36),
+    label: 'Nueva sección',
+    icon: '✳️',
+    visible: true,
+    custom: true,
+  });
+  renderSectionToggles();
+  actualizarPreview();
+};
+
+window.quitarSeccionConstructor = function(i) {
+  const s = window._constructorState;
+  const sec = s.secciones[i];
+  if (!sec) return;
+  s.secciones.splice(i, 1);
+  delete s.comentarios[sec.key];
+  delete s.fotosExtra[sec.key];
+  renderSectionToggles();
+  actualizarPreview();
+};
+
+// ── Fotos propias del coordinador ──
+// Se comprimen en el navegador: un archivo de 4 MB queda en unos cientos de KB
+// y así entra sin problema en el PDF y en el PPTX.
+function comprimirImagenAdmin(file, maxLado, calidad) {
+  return new Promise(resolve => {
+    if (!file || !file.type || !file.type.startsWith('image/')) return resolve(null);
+    const lector = new FileReader();
+    lector.onload = () => {
+      const img = new Image();
+      img.onload = () => {
+        try {
+          const escala = Math.min(1, (maxLado || 1600) / Math.max(img.width, img.height));
+          const cnv = document.createElement('canvas');
+          cnv.width = Math.max(1, Math.round(img.width * escala));
+          cnv.height = Math.max(1, Math.round(img.height * escala));
+          const ctx = cnv.getContext('2d');
+          ctx.imageSmoothingEnabled = true;
+          ctx.imageSmoothingQuality = 'high';
+          ctx.fillStyle = '#FFFFFF';
+          ctx.fillRect(0, 0, cnv.width, cnv.height);
+          ctx.drawImage(img, 0, 0, cnv.width, cnv.height);
+          resolve(cnv.toDataURL('image/jpeg', calidad || 0.85));
+        } catch (e) { resolve(null); }
+      };
+      img.onerror = () => resolve(null);
+      img.src = lector.result;
+    };
+    lector.onerror = () => resolve(null);
+    lector.readAsDataURL(file);
+  });
+}
+
+window.agregarFotosSeccion = function(secKey) {
+  if (!window._constructorState.actividadId) { showToast('Primero elige una actividad', 'error'); return; }
+  const input = document.createElement('input');
+  input.type = 'file';
+  input.accept = 'image/*';
+  input.multiple = true;
+  input.onchange = async () => {
+    const files = Array.from(input.files || []);
+    if (!files.length) return;
+    const s = window._constructorState;
+    s.fotosExtra[secKey] = s.fotosExtra[secKey] || [];
+    progresoMostrar('Procesando fotos...');
+    try {
+      for (let i = 0; i < files.length; i++) {
+        progresoActualizar(((i + 1) / files.length) * 100, `Foto ${i + 1}/${files.length}`);
+        const dataUrl = await comprimirImagenAdmin(files[i], 1600, 0.85);
+        if (dataUrl) s.fotosExtra[secKey].push({ dataUrl, nombre: files[i].name });
+      }
+    } finally {
+      progresoOcultar();
+    }
+    actualizarPreview();
+  };
+  input.click();
+};
+
+window.quitarFotoExtra = function(secKey, idx) {
+  const lista = window._constructorState.fotosExtra[secKey];
+  if (!lista) return;
+  lista.splice(idx, 1);
+  actualizarPreview();
+};
+
+// Franja de fotos propias dentro de una sección de la vista previa
+function fotosExtraHTML(sec) {
+  const extras = window._constructorState.fotosExtra[sec.key] || [];
+  const fotos = extras.map((f, i) => `
+    <div class="preview-foto-item">
+      <img src="${f.dataUrl}" alt="foto" loading="lazy">
+      <button class="preview-foto-del" title="Quitar foto" onclick="event.stopPropagation();quitarFotoExtra('${sec.key}',${i})">×</button>
+    </div>`).join('');
+  return `<div class="preview-foto-grid">${fotos}
+    <div class="preview-foto-add" onclick="agregarFotosSeccion('${sec.key}')">＋ Añadir foto</div>
+  </div>`;
 }
 
 window.toggleSeccion = function(i) {
@@ -4028,6 +4274,9 @@ window.actualizarPreview = function() {
         📍 Ver en Google Maps · ${a.ubicacion.lat?.toFixed(5)}, ${a.ubicacion.lng?.toFixed(5)} · ±${Math.round(a.ubicacion.accuracy||0)}m
       </a>`;
     }
+
+    // Fotos que adjunta el coordinador (además de las del impulsor)
+    html += fotosExtraHTML(sec);
 
     html += `</div>`; // cierre preview-section
   });
@@ -4223,6 +4472,12 @@ window.exportarConstructorPDF = async function() {
       doc.setTextColor(...colorRGB);
       doc.text(`GPS: ${a.ubicacion.lat?.toFixed(5)}, ${a.ubicacion.lng?.toFixed(5)} (±${Math.round(a.ubicacion.accuracy||0)}m)`,14,y);
     }
+
+    // Fotos que adjuntó el coordinador para esta sección
+    const extras = (s.fotosExtra[sec.key] || []);
+    if (extras.length) {
+      y = agregarFotosEnPDF(doc, extras, y + 4, colorRGB, b64Map);
+    }
   });
 
   // Footer en cada página
@@ -4313,6 +4568,26 @@ window.exportarConstructorPPTX = async function() {
   // ── SLIDES POR SECCIÓN ──
   const secsVisible = s.secciones.filter(x=>x.visible);
   secsVisible.forEach(sec => {
+    // Las fotos que adjuntó el coordinador van en su propia diapositiva,
+    // así se incluyen también cuando la sección es general.
+    const extras = (s.fotosExtra[sec.key] || []);
+    if (extras.length) {
+      const slideExtra = pptx.addSlide();
+      slideExtra.background = { color: 'FFFFFF' };
+      slideExtra.addShape(pptx.ShapeType.rect, { x:0, y:0, w:13.33, h:0.8, fill:{color:colorHex} });
+      slideExtra.addText(`${sec.icon}  ${sec.label}`, { x:0.3, y:0.12, w:12, h:0.55, fontSize:18, bold:true, color:'FFFFFF' });
+      extras.slice(0, 6).forEach((f, i) => {
+        try {
+          slideExtra.addImage({
+            data: f.dataUrl,
+            x: 0.4 + (i % 3) * 4.3,
+            y: 1.1 + Math.floor(i / 3) * 2.7,
+            w: 4, h: 2.5,
+          });
+        } catch (e) { /* se omite */ }
+      });
+    }
+
     if (sec.key==='general') return; // ya está en portada
 
     const slide = pptx.addSlide();
