@@ -861,6 +861,95 @@ function leerBorrador(){
 
 function borrarBorrador(){
   try{ localStorage.removeItem(BORRADOR_KEY); }catch(e){}
+  try{ idbBorrar('borrador').catch(()=>{}); }catch(e){}
+}
+
+// ── ARCHIVOS DEL BORRADOR (IndexedDB) ──
+// localStorage aguanta ~5 MB y no serializa archivos, así que las fotos y los
+// soportes van a IndexedDB: guarda Blobs y su cuota es mucho mayor.
+const IDB_NOMBRE = 'hc_borrador_db';
+const IDB_STORE  = 'archivos';
+let _tArchivos = null;
+
+function idbAbrir(){
+  return new Promise((res, rej) => {
+    if(!window.indexedDB) return rej(new Error('IndexedDB no disponible'));
+    const r = indexedDB.open(IDB_NOMBRE, 1);
+    r.onupgradeneeded = () => {
+      const d = r.result;
+      if(!d.objectStoreNames.contains(IDB_STORE)) d.createObjectStore(IDB_STORE);
+    };
+    r.onsuccess = () => res(r.result);
+    r.onerror = () => rej(r.error);
+  });
+}
+
+function idbEscribir(clave, valor){
+  return idbAbrir().then(db => new Promise((res, rej) => {
+    const tx = db.transaction(IDB_STORE, 'readwrite');
+    tx.objectStore(IDB_STORE).put(valor, clave);
+    tx.oncomplete = () => res();
+    tx.onerror = () => rej(tx.error);
+  }));
+}
+
+function idbLeer(clave){
+  return idbAbrir().then(db => new Promise((res, rej) => {
+    const tx = db.transaction(IDB_STORE, 'readonly');
+    const rq = tx.objectStore(IDB_STORE).get(clave);
+    rq.onsuccess = () => res(rq.result);
+    rq.onerror = () => rej(rq.error);
+  }));
+}
+
+function idbBorrar(clave){
+  return idbAbrir().then(db => new Promise((res, rej) => {
+    const tx = db.transaction(IDB_STORE, 'readwrite');
+    tx.objectStore(IDB_STORE).delete(clave);
+    tx.oncomplete = () => res();
+    tx.onerror = () => rej(tx.error);
+  }));
+}
+
+function programarGuardadoArchivos(){
+  if(_enviado || !plantillaActual) return;
+  clearTimeout(_tArchivos);
+  _tArchivos = setTimeout(guardarArchivosBorrador, 400);
+}
+
+async function guardarArchivosBorrador(){
+  if(_enviado || !plantillaActual) return;
+  try{
+    const empaquetar = lista => (lista||[]).map(f => ({ file: f.file, nombre: f.nombre }));
+    await idbEscribir('borrador', {
+      guardadoEn: Date.now(),
+      fotos: {
+        generales: empaquetar(fotos.generales),
+        muestreo:  empaquetar(fotos.muestreo),
+        ventas:    empaquetar(fotos.ventas),
+        obsequios: empaquetar(fotos.obsequios)
+      },
+      facturas: (facturas||[]).map(f => ({ file: f.file, nombre: f.nombre, tipo: f.tipo, size: f.size }))
+    });
+  }catch(e){ console.warn('No se pudieron guardar los archivos del borrador:', e); }
+}
+
+async function restaurarArchivosBorrador(){
+  try{
+    const d = await idbLeer('borrador');
+    if(!d) return false;
+    ['generales','muestreo','ventas','obsequios'].forEach(sec => {
+      const lista = (d.fotos && d.fotos[sec]) || [];
+      fotos[sec] = lista.filter(x => x && x.file).map(x => ({
+        preview: URL.createObjectURL(x.file), file: x.file, nombre: x.nombre || 'foto'
+      }));
+    });
+    facturas = (d.facturas || []).filter(x => x && x.file).map(x => ({
+      file: x.file, nombre: x.nombre, tipo: x.tipo, size: x.size,
+      preview: x.tipo === 'imagen' ? URL.createObjectURL(x.file) : undefined
+    }));
+    return true;
+  }catch(e){ console.warn('No se pudieron recuperar los archivos del borrador:', e); return false; }
 }
 
 function programarGuardado(){
@@ -889,6 +978,7 @@ function guardarBorrador(){
       geo
     }));
   }catch(e){ console.warn('No se pudo guardar el borrador:', e); }
+  programarGuardadoArchivos();   // fotos y soportes van a IndexedDB
 }
 
 // Reconstruye las filas de referencias y sus valores
@@ -924,7 +1014,7 @@ function restaurarGastos(lista){
   });
 }
 
-function restaurarBorrador(d){
+async function restaurarBorrador(d){
   const p = plantillasDisponibles.find(x => x.id === d.plantillaId);
   if(!p) return false;
 
@@ -957,7 +1047,12 @@ function restaurarBorrador(d){
   if($('chk-obsequios').checked && refs.obsequios.length===0) addRef('obsequios');
 
   geo = d.geo || null;
-  renderFotos('generales');
+
+  // Recupera fotos y soportes desde IndexedDB antes de pintar
+  await restaurarArchivosBorrador();
+  ['generales','muestreo','ventas','obsequios'].forEach(sec => renderFotos(sec));
+  renderFacturas();
+
   showPaso(Math.min(Math.max(parseInt(d.paso)||1,1),4));
   setStep(pasoActual);
   solicitarGeo();
@@ -1051,13 +1146,44 @@ function renderFotos(seccion){
     // re-bind dinámico
     c.querySelectorAll('[data-trigger]').forEach(b=>b.addEventListener('click',()=>$(b.dataset.trigger).click()));
     c.querySelectorAll('input[type=file]').forEach(inp=>inp.addEventListener('change',()=>{ agregarFotos(inp,'generales'); }));
-    c.querySelectorAll('.remove-photo').forEach(b=>b.addEventListener('click',()=>{ fotos[b.dataset.sec].splice(+b.dataset.idx,1); renderFotos(b.dataset.sec); }));
+    c.querySelectorAll('.remove-photo').forEach(b=>b.addEventListener('click',()=>{ fotos[b.dataset.sec].splice(+b.dataset.idx,1); renderFotos(b.dataset.sec); programarGuardado(); }));
   } else {
     $('cnt-'+seccion).textContent=`${arr.length}/${max}`;
     const grid=$('grid-'+seccion);
     grid.innerHTML=arr.map((f,i)=>`<div class="photo-thumb"><img src="${f.preview}"><button class="remove-photo" data-sec="${seccion}" data-idx="${i}">×</button></div>`).join('');
-    grid.querySelectorAll('.remove-photo').forEach(b=>b.addEventListener('click',()=>{ fotos[b.dataset.sec].splice(+b.dataset.idx,1); renderFotos(b.dataset.sec); }));
+    grid.querySelectorAll('.remove-photo').forEach(b=>b.addEventListener('click',()=>{ fotos[b.dataset.sec].splice(+b.dataset.idx,1); renderFotos(b.dataset.sec); programarGuardado(); }));
     $('btns-'+seccion).style.display=arr.length>=max?'none':'grid';
+  }
+}
+
+// Reduce la foto antes de guardarla: el original de un celular pesa 3-6 MB,
+// así tarda en subir y no cabe en el borrador. 1800 px de lado mayor al 85 %
+// de calidad se ve nítido en el informe y pesa una fracción del original.
+async function comprimirImagen(file, maxLado=1800, calidad=0.85){
+  if(!file || !file.type || !file.type.startsWith('image/')) return file;
+  try{
+    const bmp = await createImageBitmap(file);
+    const escala = Math.min(1, maxLado / Math.max(bmp.width, bmp.height));
+    const w = Math.max(1, Math.round(bmp.width * escala));
+    const h = Math.max(1, Math.round(bmp.height * escala));
+    const cnv = document.createElement('canvas');
+    cnv.width = w; cnv.height = h;
+    const ctx = cnv.getContext('2d');
+    ctx.imageSmoothingEnabled = true;
+    ctx.imageSmoothingQuality = 'high';
+    // JPEG no tiene transparencia: sin este fondo blanco, un PNG con alfa
+    // (capturas de pantalla, logos) saldría con fondo negro.
+    ctx.fillStyle = '#FFFFFF';
+    ctx.fillRect(0, 0, w, h);
+    ctx.drawImage(bmp, 0, 0, w, h);
+    if(bmp.close) bmp.close();
+    const blob = await new Promise(res => cnv.toBlob(res, 'image/jpeg', calidad));
+    if(!blob) return file;
+    const nombre = (file.name || 'foto').replace(/\.[^.]+$/, '') + '.jpg';
+    return new File([blob], nombre, { type: 'image/jpeg' });
+  }catch(e){
+    console.warn('No se pudo comprimir, se guarda el original:', e);
+    return file;
   }
 }
 
@@ -1068,9 +1194,11 @@ function agregarFotos(input, seccion){
   const restantes=max-arr.length;
   if(files.length>restantes) toast(`Máximo ${max} fotos en esta sección`,'error');
   files.slice(0,restantes).forEach(file=>{
-    const reader=new FileReader();
-    reader.onload=e=>{ arr.push({preview:e.target.result, file, nombre:file.name}); renderFotos(seccion); };
-    reader.readAsDataURL(file);
+    comprimirImagen(file).then(f=>{
+      arr.push({ preview: URL.createObjectURL(f), file: f, nombre: f.name });
+      renderFotos(seccion);
+      programarGuardado();
+    });
   });
   input.value='';
 }
@@ -1124,6 +1252,7 @@ function renderFacturas(){
     btn.addEventListener('click', () => {
       facturas.splice(+btn.dataset.idx, 1);
       renderFacturas();
+      programarGuardado();
     });
   });
 }
@@ -1135,14 +1264,17 @@ function agregarFacturas(input, tipo){
   if(!files.length) return;
   if(facturas.length >= MAX){ toast(`Máximo ${MAX} archivos de soporte`, 'error'); return; }
   files.slice(0, restantes).forEach(file => {
-    const entry = { nombre: file.name, tipo, size: file.size, file };
     if(tipo === 'imagen'){
-      const reader = new FileReader();
-      reader.onload = e => { entry.preview = e.target.result; facturas.push(entry); renderFacturas(); };
-      reader.readAsDataURL(file);
+      // Los soportes llevan texto pequeño: se comprimen menos que las fotos.
+      comprimirImagen(file, 2200, 0.9).then(f => {
+        facturas.push({ nombre: f.name, tipo, size: f.size, file: f, preview: URL.createObjectURL(f) });
+        renderFacturas();
+        programarGuardado();
+      });
     } else {
-      facturas.push(entry);
+      facturas.push({ nombre: file.name, tipo, size: file.size, file });
       renderFacturas();
+      programarGuardado();
     }
   });
   if(files.length > restantes) toast(`Solo se agregaron ${restantes} archivos (máximo ${MAX})`,'error');
@@ -1202,10 +1334,9 @@ async function cargarActividadesImpulsor() {
         const cuando = new Date(d.guardadoEn).toLocaleString('es-CO', { day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit' });
         const reanudar = confirm(
           `Tienes un borrador sin enviar de "${p.nombre}" (${cuando}).\n\n` +
-          `¿Reanudarlo?\n\n` +
-          `Nota: las fotos no se guardan en el borrador, tendrás que volver a tomarlas.`
+          `¿Reanudarlo? Se recuperan los textos y las fotos.`
         );
-        if(reanudar) restaurarBorrador(d);
+        if(reanudar) await restaurarBorrador(d);
         else borrarBorrador();
       }
     }
