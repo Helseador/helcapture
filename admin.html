@@ -852,6 +852,50 @@ td strong, td b { color: var(--ink); font-weight: 700; }
 .report-desc { font-size: 12.5px; line-height: 1.6; color: var(--ink-dim); }
 .report-format { display: flex; gap: 6px; flex-wrap: wrap; margin-top: auto; }
 
+/* Alcance del informe y barra de progreso */
+.informes-hint { font-size: 12.5px; color: var(--ink-dim); margin-bottom: 13px; }
+.informes-alcance {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 12px;
+  padding: 9px 14px;
+  border-radius: 12px;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--ink-soft);
+  background: rgba(42, 191, 192, .08);
+  box-shadow: inset 0 0 0 1px rgba(42, 191, 192, .22);
+}
+.informes-alcance b { color: var(--teal-bright); font-variant-numeric: tabular-nums; }
+
+.progreso {
+  position: fixed;
+  left: 50%;
+  bottom: 26px;
+  z-index: 900;
+  display: none;
+  min-width: 320px;
+  max-width: min(560px, 92vw);
+  padding: 14px 18px;
+  border-radius: 16px;
+  opacity: 0;
+  transform: translateX(-50%) translateY(12px);
+  background: linear-gradient(160deg, rgba(24, 34, 58, .97), rgba(10, 16, 30, .98));
+  box-shadow: 0 28px 60px -24px #000, inset 0 0 0 1px rgba(255, 255, 255, .1);
+  transition: opacity .25s ease, transform .25s ease;
+}
+.progreso.show { display: block; opacity: 1; transform: translateX(-50%); }
+.progreso-txt { font-size: 12.5px; font-weight: 600; color: var(--ink); margin-bottom: 9px; }
+.progreso-track { height: 8px; border-radius: 99px; background: rgba(255, 255, 255, .1); overflow: hidden; }
+.progreso-fill {
+  height: 100%;
+  width: 0;
+  border-radius: 99px;
+  background: linear-gradient(90deg, var(--teal), var(--cyan));
+  transition: width .2s linear;
+}
+
 /* ── 15. FORMULARIOS ───────────────────────────────────────────────── */
 .form-row {
   display: grid;
@@ -1953,66 +1997,48 @@ td strong, td b { color: var(--ink); font-weight: 700; }
 
     <!-- ══ INFORMES ══ -->
     <div class="view" id="view-informes">
-      <div style="margin-bottom:20px;">
-        <div style="font-size:15px;color:var(--gray-600);margin-bottom:16px;">Selecciona el rango de fechas para el informe:</div>
+      <div style="margin-bottom:18px;">
+        <div class="informes-hint">Filtra el alcance y genera el informe con esas actividades.</div>
         <div class="filter-bar">
-          <input type="date" class="filter-select" id="inf-desde">
-          <input type="date" class="filter-select" id="inf-hasta">
-          <select class="filter-select" id="inf-tipo">
+          <input type="date" class="filter-select" id="inf-desde" onchange="actualizarAlcanceInformes()" title="Desde">
+          <input type="date" class="filter-select" id="inf-hasta" onchange="actualizarAlcanceInformes()" title="Hasta">
+          <select class="filter-select" id="inf-tipo" onchange="actualizarAlcanceInformes()">
             <option value="">Todos los tipos</option>
             <option>Feria</option><option>Charla</option>
             <option>Capacitación</option><option>Evento presencial</option><option>Volanteo</option>
           </select>
+          <select class="filter-select" id="inf-impulsor" onchange="actualizarAlcanceInformes()">
+            <option value="">Todos los impulsores</option>
+          </select>
+          <button class="btn btn-outline btn-sm" onclick="limpiarFiltrosInformes()">✕ Limpiar</button>
         </div>
+        <div class="informes-alcance" id="informes-alcance">Calculando alcance…</div>
       </div>
+
       <div class="reports-grid">
         <div class="report-card" onclick="generarPDF()">
           <div class="report-icon">📄</div>
           <div class="report-title">Informe PDF</div>
-          <div class="report-desc">Resumen ejecutivo con métricas, detalle de cada actividad, secciones de muestreo, ventas y obsequios.</div>
-          <div class="report-format">
-            <span class="badge danger">PDF</span>
-          </div>
+          <div class="report-desc">Portada, resumen y por cada actividad: datos, impacto, muestreo, ventas, obsequios, gastos y evidencia fotográfica.</div>
+          <div class="report-format"><span class="badge danger">PDF</span></div>
         </div>
         <div class="report-card" onclick="generarPPTX()">
           <div class="report-icon">📊</div>
           <div class="report-title">Presentación PPTX</div>
-          <div class="report-desc">Diapositivas automáticas por actividad con métricas de impacto, secciones activas y fotos de evidencia.</div>
-          <div class="report-format">
-            <span class="badge navy">PPTX</span>
-          </div>
+          <div class="report-desc">Diapositivas por actividad con métricas de impacto, secciones activas y todas las fotos de evidencia.</div>
+          <div class="report-format"><span class="badge navy">PPTX</span></div>
         </div>
         <div class="report-card" onclick="exportarExcel()">
           <div class="report-icon">📈</div>
           <div class="report-title">Informe Excel</div>
-          <div class="report-desc">Hoja por módulo: Actividades, Muestreo, Ventas, Obsequios y Legalización de gastos por punto.</div>
-          <div class="report-format">
-            <span class="badge success">XLSX</span>
-          </div>
+          <div class="report-desc">Seis hojas: Resumen, Actividades, Muestreo, Ventas, Obsequios y Gastos, con anchos, autofiltro y totales.</div>
+          <div class="report-format"><span class="badge success">XLSX</span></div>
         </div>
         <div class="report-card" onclick="generarLegalizacion()">
           <div class="report-icon">💵</div>
           <div class="report-title">Formato legalización</div>
-          <div class="report-desc">Excel de gastos con concepto, valor y punto de venta para tramite contable.</div>
-          <div class="report-format">
-            <span class="badge success">XLSX</span>
-          </div>
-        </div>
-        <div class="report-card" onclick="generarVentas()">
-          <div class="report-icon">💰</div>
-          <div class="report-title">Informe de ventas</div>
-          <div class="report-desc">Resumen de referencias vendidas y cantidades por evento, agrupado por producto.</div>
-          <div class="report-format">
-            <span class="badge success">XLSX</span><span class="badge danger">PDF</span>
-          </div>
-        </div>
-        <div class="report-card" onclick="generarMuestreo()">
-          <div class="report-icon">🧪</div>
-          <div class="report-title">Informe de muestreo</div>
-          <div class="report-desc">Actividades con degustaciones y sampling, con conteo de asistentes y observaciones.</div>
-          <div class="report-format">
-            <span class="badge success">XLSX</span><span class="badge danger">PDF</span>
-          </div>
+          <div class="report-desc">Excel de gastos con concepto, valor y punto de venta para trámite contable.</div>
+          <div class="report-format"><span class="badge success">XLSX</span></div>
         </div>
       </div>
     </div>
@@ -2437,6 +2463,12 @@ td strong, td b { color: var(--ink); font-weight: 700; }
 <!-- TOAST -->
 <div class="toast" id="toast"></div>
 
+<!-- PROGRESO DE INFORMES -->
+<div class="progreso" id="progreso">
+  <div class="progreso-txt" id="progreso-txt">Preparando el informe...</div>
+  <div class="progreso-track"><div class="progreso-fill" id="progreso-fill"></div></div>
+</div>
+
 <!-- MODAL INFORME LISTO -->
 <div class="modal-bg" id="modal-informe-listo">
   <div class="modal" style="max-width:480px;">
@@ -2575,37 +2607,91 @@ window.pdfToBlob = function(doc) {
   return doc.output('blob');
 };
 
+// ── IMÁGENES PARA INFORMES ──
+// Caché por URL: si generas PDF y luego PPTX, las fotos no se vuelven a bajar.
+const _b64Cache = new Map();
+let _omitidasInforme = 0;   // fotos que no se pudieron descargar en la última generación
+
 // Convierte una URL (Firebase Storage u otra) a base64 data URL
 window.urlABase64 = async function(url) {
+  if (!url) return null;
+  if (url.startsWith('data:')) return url;
+  if (_b64Cache.has(url)) return _b64Cache.get(url);
   try {
-    const resp = await fetch(url);
+    const opciones = (typeof AbortSignal !== 'undefined' && AbortSignal.timeout)
+      ? { signal: AbortSignal.timeout(25000) }
+      : {};
+    const resp = await fetch(url, opciones);
+    if (!resp.ok) throw new Error('HTTP ' + resp.status);
     const blob = await resp.blob();
-    return await new Promise((resolve, reject) => {
+    const b64 = await new Promise((resolve, reject) => {
       const reader = new FileReader();
       reader.onload = () => resolve(reader.result);
       reader.onerror = reject;
       reader.readAsDataURL(blob);
     });
+    _b64Cache.set(url, b64);
+    return b64;
   } catch(e) {
     console.warn('No se pudo cargar imagen:', url, e);
     return null;
   }
 };
 
-// Convierte un array de objetos {url, dataUrl} a base64, descartando los que fallen
+// Convierte un array de objetos {url, dataUrl} a base64.
+// Descarga en paralelo (5 a la vez) en vez de una por una, conserva el orden
+// original y deja en _omitidasInforme cuántas fallaron.
 window.fotosABase64 = async function(fotos, onProgreso) {
-  const resultados = [];
-  for (let i = 0; i < fotos.length; i++) {
-    const f = fotos[i];
-    const src = f.url || f.dataUrl || '';
-    if (!src) continue;
-    if (onProgreso) onProgreso(i + 1, fotos.length);
-    // Si ya es base64 no hace falta fetch
-    const b64 = src.startsWith('data:') ? src : await window.urlABase64(src);
-    if (b64) resultados.push(b64);
+  const urls = (fotos || []).map(f => f && (f.url || f.dataUrl)).filter(Boolean);
+  if (!urls.length) return [];
+
+  const resultados = new Array(urls.length).fill(null);
+  const CONCURRENCIA = 5;
+  let siguiente = 0, hechas = 0;
+
+  async function trabajador() {
+    while (true) {
+      const i = siguiente++;
+      if (i >= urls.length) return;
+      resultados[i] = await window.urlABase64(urls[i]);
+      hechas++;
+      if (onProgreso) onProgreso(hechas, urls.length);
+    }
   }
-  return resultados;
+
+  await Promise.all(Array.from({ length: Math.min(CONCURRENCIA, urls.length) }, trabajador));
+
+  const ok = resultados.filter(Boolean);
+  _omitidasInforme += urls.length - ok.length;
+  return ok;
 };
+
+// Barra de progreso de los informes
+function progresoMostrar(texto) {
+  const caja = document.getElementById('progreso');
+  if (!caja) return;
+  const txt = document.getElementById('progreso-txt');
+  const fill = document.getElementById('progreso-fill');
+  if (txt) txt.textContent = texto || 'Preparando el informe...';
+  if (fill) fill.style.width = '0%';
+  caja.classList.add('show');
+}
+function progresoActualizar(pct, texto) {
+  const fill = document.getElementById('progreso-fill');
+  const txt = document.getElementById('progreso-txt');
+  if (fill) fill.style.width = Math.max(0, Math.min(100, pct)) + '%';
+  if (txt && texto) txt.textContent = texto;
+}
+function progresoOcultar() {
+  const caja = document.getElementById('progreso');
+  if (caja) caja.classList.remove('show');
+}
+function avisarFotosOmitidas() {
+  if (_omitidasInforme > 0) {
+    showToast(`${_omitidasInforme} foto(s) no se pudieron descargar y se omitieron`, 'error');
+    _omitidasInforme = 0;
+  }
+}
 
 // ── ESTADO ──
 window._actividades = [];
@@ -2634,6 +2720,8 @@ onSnapshot(q, snap => {
   actualizarStats();
   renderTabla(window._actividades);
   renderTablaAll(window._actividades);
+  actualizarSelectImpulsores();
+  if (document.getElementById('view-informes')?.classList.contains('active')) actualizarAlcanceInformes();
   document.getElementById('last-update').textContent = 'Actualizado: ' + new Date().toLocaleTimeString('es-CO');
 }, err => avisarFalloLectura('actividades', err));
 
@@ -2899,15 +2987,80 @@ window.limpiarFiltros = function() {
 
 // ── INFORMES ──
 function getActividadesFiltradas() {
-  const desde = document.getElementById('inf-desde').value;
-  const hasta = document.getElementById('inf-hasta').value;
-  const tipo = document.getElementById('inf-tipo').value;
+  const val = id => { const el = document.getElementById(id); return el ? el.value : ''; };
+  const desde = val('inf-desde');
+  const hasta = val('inf-hasta');
+  const tipo = val('inf-tipo');
+  const impulsor = val('inf-impulsor');
   return window._actividades.filter(a => {
     if (desde && a.evento?.fecha < desde) return false;
     if (hasta && a.evento?.fecha > hasta) return false;
     if (tipo && a.evento?.tipo !== tipo) return false;
+    if (impulsor && (a.impulsor?.nombre || '') !== impulsor) return false;
     return true;
   });
+}
+
+// Rellena el filtro de impulsores con quienes realmente han reportado
+window.actualizarSelectImpulsores = function() {
+  const sel = document.getElementById('inf-impulsor');
+  if (!sel) return;
+  const actual = sel.value;
+  const nombres = [...new Set(window._actividades.map(a => a.impulsor?.nombre).filter(Boolean))]
+    .sort((a, b) => a.localeCompare(b, 'es'));
+  sel.innerHTML = '<option value="">Todos los impulsores</option>'
+    + nombres.map(n => `<option value="${n}">${n}</option>`).join('');
+  if (nombres.includes(actual)) sel.value = actual;
+};
+
+// Cuánto entra en el informe con los filtros puestos
+window.actualizarAlcanceInformes = function() {
+  const el = document.getElementById('informes-alcance');
+  if (!el) return;
+  const acts = getActividadesFiltradas();
+  if (!acts.length) {
+    el.innerHTML = 'Sin actividades con estos filtros';
+    return;
+  }
+  let fotos = 0, soportes = 0, bytes = 0;
+  acts.forEach(a => {
+    const n = (a.fotosGenerales || []).length
+      + (a.muestreo?.fotos || []).length
+      + (a.ventas?.fotos || []).length
+      + (a.obsequios?.fotos || []).length;
+    fotos += n;
+    bytes += n * 350 * 1024;                    // tamaño medio tras comprimir
+    (a.facturas || []).forEach(x => { soportes++; bytes += (x.size || 0); });
+  });
+  const mb = (bytes / (1024 * 1024)).toFixed(1);
+  el.innerHTML = `Alcance: <b>${acts.length}</b> actividad(es) · <b>${fotos}</b> foto(s) · ` +
+                 `<b>${soportes}</b> soporte(s) · <b>${mb} MB</b> de evidencia`;
+};
+
+window.limpiarFiltrosInformes = function() {
+  ['inf-desde', 'inf-hasta', 'inf-tipo', 'inf-impulsor'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.value = '';
+  });
+  actualizarAlcanceInformes();
+};
+
+// Añade anchos de columna y autofiltro a una hoja generada desde un array
+function hojaFormateada(rows, anchos) {
+  const ws = XLSX.utils.json_to_sheet(rows);
+  if (anchos) ws['!cols'] = anchos.map(w => ({ wch: w }));
+  if (rows && rows.length) {
+    const cols = Object.keys(rows[0]).length;
+    ws['!autofilter'] = { ref: XLSX.utils.encode_range({ s: { r: 0, c: 0 }, e: { r: rows.length, c: cols - 1 } }) };
+  }
+  return ws;
+}
+
+// Fila final de totales. Se le pasa la fila completa para que el valor caiga
+// bajo su columna numérica y no debajo del nombre del impulsor.
+function filaTotales(ws, fila) {
+  XLSX.utils.sheet_add_aoa(ws, [fila], { origin: -1 });
+  return ws;
 }
 
 window.exportarExcel = async function() {
@@ -2915,57 +3068,115 @@ window.exportarExcel = async function() {
   if (!acts.length) { showToast('No hay datos para exportar','error'); return; }
 
   const wb = XLSX.utils.book_new();
+  const nomImpulsor = a => a.impulsor?.nombre || '';
+  const refs = (sec) => (sec?.referencias || []).filter(Boolean);
+  const items = a => (a.gastos?.items || []).filter(Boolean);
 
-  // Hoja 1: Actividades
+  // Hoja 1: Resumen por actividad
+  const rowsResumen = acts.map(a => {
+    const udsVendidas = refs(a.ventas).reduce((s, r) => s + (parseInt(r.cantidad) || 0), 0);
+    const udsObsequio = refs(a.obsequios).reduce((s, r) => s + (parseInt(r.cantidad) || 0), 0);
+    const fotos = (a.fotosGenerales || []).length + (a.muestreo?.fotos || []).length
+      + (a.ventas?.fotos || []).length + (a.obsequios?.fotos || []).length;
+    const gastos = items(a).reduce((s, g) => s + (parseFloat(g.valor) || 0), 0);
+    return {
+      'Actividad': a.evento?.nombre || '',
+      'Impulsor': nomImpulsor(a),
+      'Tipo': a.evento?.tipo || '',
+      'Fecha': a.evento?.fecha || '',
+      'Lugar': a.evento?.lugar || '',
+      'Asistentes': parseInt(a.evento?.asistentes) || 0,
+      'Personas impactadas': a.cierre?.personasImpactadas || '',
+      'Fotos': fotos,
+      'Uds vendidas': udsVendidas,
+      'Obsequios entregados': udsObsequio,
+      'Gastos legalizados': gastos,
+      'Facturas': (a.facturas || []).length,
+    };
+  });
+  XLSX.utils.book_append_sheet(wb, hojaFormateada(rowsResumen, [34, 20, 16, 12, 24, 11, 20, 8, 13, 20, 19, 10]), 'Resumen');
+
+  // Hoja 2: Actividades (detalle)
   const rowsActs = acts.map(a => ({
     'Evento': a.evento?.nombre||'',
+    'Impulsor': nomImpulsor(a),
     'Tipo': a.evento?.tipo||'',
     'Fecha': a.evento?.fecha||'',
     'Lugar': a.evento?.lugar||'',
     'Asistentes': a.evento?.asistentes||0,
     'Descripción': a.cierre?.descripcion||'',
     'Impacto': a.cierre?.impacto||'',
+    'Detalle de impacto': a.cierre?.detalleImpacto||'',
+    'Personas impactadas': a.cierre?.personasImpactadas||'',
     'GPS Lat': a.ubicacion?.lat||'',
     'GPS Lng': a.ubicacion?.lng||'',
     'Muestreo': a.muestreo?.activo ? 'Sí' : 'No',
     'Ventas': a.ventas?.activo ? 'Sí' : 'No',
     'Obsequios': a.obsequios?.activo ? 'Sí' : 'No',
+    'Observaciones': a.cierre?.observaciones||'',
   }));
-  XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(rowsActs), 'Actividades');
+  XLSX.utils.book_append_sheet(wb, hojaFormateada(rowsActs, [34, 20, 16, 12, 24, 11, 40, 40, 30, 20, 11, 11, 10, 9, 11, 30]), 'Actividades');
 
-  // Hoja 2: Ventas
+  // Hoja 3: Ventas
   const rowsVentas = [];
-  acts.filter(a=>a.ventas?.activo).forEach(a => {
-    (a.ventas.referencias||[]).filter(Boolean).forEach(r => {
-      rowsVentas.push({ 'Evento': a.evento?.nombre, 'Fecha': a.evento?.fecha, 'Lugar': a.evento?.lugar, 'Referencia': r.referencia, 'Cantidad': r.cantidad, 'Observaciones': a.ventas.observaciones||'' });
+  acts.filter(a => a.ventas?.activo).forEach(a => {
+    refs(a.ventas).forEach(r => {
+      rowsVentas.push({
+        'Evento': a.evento?.nombre, 'Impulsor': nomImpulsor(a), 'Fecha': a.evento?.fecha,
+        'Lugar': a.evento?.lugar, 'Referencia': r.referencia || '',
+        'Cantidad': parseInt(r.cantidad) || 0, 'Observaciones': a.ventas.observaciones || '',
+      });
     });
   });
-  if (rowsVentas.length) XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(rowsVentas), 'Ventas');
+  if (rowsVentas.length) {
+    const ws = hojaFormateada(rowsVentas, [34, 20, 12, 24, 26, 10, 34]);
+    const total = rowsVentas.reduce((s, r) => s + r.Cantidad, 0);
+    XLSX.utils.book_append_sheet(wb, filaTotales(ws, ['TOTAL', '', '', '', '', total, '']), 'Ventas');
+  }
 
-  // Hoja 3: Obsequios
+  // Hoja 4: Obsequios
   const rowsObsequios = [];
-  acts.filter(a=>a.obsequios?.activo).forEach(a => {
-    (a.obsequios.referencias||[]).filter(Boolean).forEach(r => {
-      rowsObsequios.push({ 'Evento': a.evento?.nombre, 'Fecha': a.evento?.fecha, 'Lugar': a.evento?.lugar, 'Referencia': r.referencia, 'Cantidad': r.cantidad, 'Observaciones': a.obsequios.observaciones||'' });
+  acts.filter(a => a.obsequios?.activo).forEach(a => {
+    refs(a.obsequios).forEach(r => {
+      rowsObsequios.push({
+        'Evento': a.evento?.nombre, 'Impulsor': nomImpulsor(a), 'Fecha': a.evento?.fecha,
+        'Lugar': a.evento?.lugar, 'Referencia': r.referencia || '',
+        'Cantidad': parseInt(r.cantidad) || 0, 'Observaciones': a.obsequios.observaciones || '',
+      });
     });
   });
-  if (rowsObsequios.length) XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(rowsObsequios), 'Obsequios');
+  if (rowsObsequios.length) {
+    const ws = hojaFormateada(rowsObsequios, [34, 20, 12, 24, 26, 10, 34]);
+    const total = rowsObsequios.reduce((s, r) => s + r.Cantidad, 0);
+    XLSX.utils.book_append_sheet(wb, filaTotales(ws, ['TOTAL', '', '', '', '', total, '']), 'Obsequios');
+  }
 
-  // Hoja 4: Muestreo
-  const rowsMuestreo = acts.filter(a=>a.muestreo?.activo).map(a => ({
-    'Evento': a.evento?.nombre, 'Fecha': a.evento?.fecha, 'Lugar': a.evento?.lugar,
-    'Asistentes': a.evento?.asistentes, 'Descripción muestreo': a.muestreo.descripcion||'', 'Observaciones': a.muestreo.observaciones||''
+  // Hoja 5: Muestreo
+  const rowsMuestreo = acts.filter(a => a.muestreo?.activo).map(a => ({
+    'Evento': a.evento?.nombre, 'Impulsor': nomImpulsor(a), 'Fecha': a.evento?.fecha,
+    'Lugar': a.evento?.lugar, 'Asistentes': a.evento?.asistentes || 0,
+    'Descripción muestreo': a.muestreo.descripcion||'', 'Observaciones': a.muestreo.observaciones||'',
   }));
-  if (rowsMuestreo.length) XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(rowsMuestreo), 'Muestreo');
+  if (rowsMuestreo.length) {
+    XLSX.utils.book_append_sheet(wb, hojaFormateada(rowsMuestreo, [34, 20, 12, 24, 11, 40, 34]), 'Muestreo');
+  }
 
-  // Hoja 5: Gastos
+  // Hoja 6: Gastos
   const rowsGastos = [];
   acts.forEach(a => {
-    (a.gastos?.items||[]).filter(Boolean).forEach(g => {
-      rowsGastos.push({ 'Evento': a.evento?.nombre, 'Fecha': a.evento?.fecha, 'Lugar': a.evento?.lugar, 'Concepto': g.concepto, 'Valor': g.valor });
+    items(a).forEach(g => {
+      rowsGastos.push({
+        'Evento': a.evento?.nombre, 'Impulsor': nomImpulsor(a), 'Fecha': a.evento?.fecha,
+        'Lugar': a.evento?.lugar, 'Concepto': g.concepto || '',
+        'Valor': parseFloat(g.valor) || 0,
+      });
     });
   });
-  if (rowsGastos.length) XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(rowsGastos), 'Gastos');
+  if (rowsGastos.length) {
+    const ws = hojaFormateada(rowsGastos, [34, 20, 12, 24, 30, 14]);
+    const total = rowsGastos.reduce((s, r) => s + r.Valor, 0);
+    XLSX.utils.book_append_sheet(wb, filaTotales(ws, ['TOTAL', '', '', '', '', total]), 'Gastos');
+  }
 
   const nombre = `HelCapture_Informe_${new Date().toISOString().split('T')[0]}.xlsx`;
   const wbBlob = new Blob([XLSX.write(wb, { bookType:'xlsx', type:'array' })], { type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
@@ -2989,94 +3200,275 @@ window.generarLegalizacion = async function() {
   await window.mostrarModalInforme(wbBlob, nombre, 'xlsx', '💵');
 };
 
-window.generarVentas = async function() {
-  const acts = getActividadesFiltradas().filter(a=>a.ventas?.activo);
-  if (!acts.length) { showToast('No hay actividades con ventas','error'); return; }
-  const rows = [];
-  acts.forEach(a => {
-    (a.ventas.referencias||[]).filter(Boolean).forEach(r => {
-      rows.push({ 'Evento': a.evento?.nombre, 'Fecha': a.evento?.fecha, 'Lugar': a.evento?.lugar, 'Referencia': r.referencia, 'Cantidad': parseInt(r.cantidad)||0, 'Observaciones': a.ventas.observaciones||'' });
-    });
-  });
-  const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(rows), 'Ventas');
-  const nombre = `HelCapture_Ventas_${new Date().toISOString().split('T')[0]}.xlsx`;
-  const wbBlob = new Blob([XLSX.write(wb, { bookType:'xlsx', type:'array' })], { type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
-  await window.mostrarModalInforme(wbBlob, nombre, 'xlsx', '💰');
-};
+// (Los informes de ventas y muestreo viven como hojas del Excel multi-hoja)
 
-window.generarMuestreo = async function() {
-  const acts = getActividadesFiltradas().filter(a=>a.muestreo?.activo);
-  if (!acts.length) { showToast('No hay actividades con muestreo','error'); return; }
-  const rows = acts.map(a => ({ 'Evento': a.evento?.nombre, 'Fecha': a.evento?.fecha, 'Lugar': a.evento?.lugar, 'Asistentes': a.evento?.asistentes, 'Descripción': a.muestreo.descripcion, 'Observaciones': a.muestreo.observaciones }));
-  const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(rows), 'Muestreo');
-  const nombre = `HelCapture_Muestreo_${new Date().toISOString().split('T')[0]}.xlsx`;
-  const wbBlob = new Blob([XLSX.write(wb, { bookType:'xlsx', type:'array' })], { type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
-  await window.mostrarModalInforme(wbBlob, nombre, 'xlsx', '🧪');
-};
+// ── Utilidades de composición del PDF ──
+const PDF_ALTO = 297, PDF_MARGEN = 14, PDF_ANCHO_UTIL = 182, PDF_PIE = 275;
+
+function pdfAsegurarEspacio(doc, y, alto) {
+  if (y + alto > PDF_PIE) { doc.addPage(); return 24; }
+  return y;
+}
+
+function pdfTituloPagina(doc, titulo, subtitulo) {
+  doc.setFillColor(27, 42, 74); doc.rect(0, 0, 210, 22, 'F');
+  doc.setFillColor(42, 191, 192); doc.rect(0, 22, 210, 1.2, 'F');
+  doc.setTextColor(255, 255, 255); doc.setFont('helvetica', 'bold'); doc.setFontSize(13);
+  doc.text(String(titulo).slice(0, 62), 14, 12);
+  if (subtitulo) {
+    doc.setFont('helvetica', 'normal'); doc.setFontSize(8);
+    doc.text(String(subtitulo).slice(0, 90), 14, 18);
+  }
+  doc.setTextColor(0, 0, 0);
+}
+
+function pdfSubtitulo(doc, texto, y) {
+  y = pdfAsegurarEspacio(doc, y, 12);
+  doc.setFont('helvetica', 'bold'); doc.setFontSize(9.5); doc.setTextColor(30, 152, 153);
+  doc.text(texto, 14, y);
+  doc.setTextColor(0, 0, 0); doc.setFont('helvetica', 'normal');
+  return y + 5;
+}
+
+function pdfParrafo(doc, etiqueta, texto, y) {
+  if (!texto) return y;
+  const lineas = doc.splitTextToSize(String(texto), PDF_ANCHO_UTIL);
+  y = pdfAsegurarEspacio(doc, y, lineas.length * 4.4 + 10);
+  doc.setFont('helvetica', 'bold'); doc.setFontSize(9);
+  doc.text(etiqueta, 14, y);
+  doc.setFont('helvetica', 'normal'); doc.setFontSize(8.5);
+  doc.setTextColor(70, 80, 95);
+  doc.text(lineas, 14, y + 4.5);
+  doc.setTextColor(0, 0, 0);
+  return y + 6 + lineas.length * 4.4;
+}
+
+function pdfTabla(doc, head, body, y, colorRGB) {
+  if (!body || !body.length) return y;
+  y = pdfAsegurarEspacio(doc, y, 30);
+  doc.autoTable({
+    startY: y,
+    head: [head],
+    body,
+    headStyles: { fillColor: colorRGB || [42, 191, 192], textColor: 255, fontStyle: 'bold', fontSize: 8 },
+    styles: { fontSize: 8, cellPadding: 2 },
+    alternateRowStyles: { fillColor: [245, 250, 250] },
+    margin: { left: 14, right: 14 },
+  });
+  return doc.lastAutoTable.finalY + 7;
+}
+
+// Inserta una retícula de fotos; convierte las URLs a base64 en paralelo.
+async function pdfBloqueFotos(doc, fotos, y, etiqueta) {
+  const urls = (fotos || []).map(f => f && (f.url || f.dataUrl)).filter(Boolean);
+  if (!urls.length) return y;
+  y = pdfSubtitulo(doc, `${etiqueta} (${urls.length})`, y);
+
+  const b64s = await window.fotosABase64(urls.map(u => ({ url: u })), (h, t) =>
+    progresoActualizar((100 * h) / t, `Fotos ${etiqueta}: ${h}/${t}`));
+
+  const W = 58, H = 44, GAP = 4;
+  let x = PDF_MARGEN;
+  for (const b64 of b64s) {
+    if (y + H > PDF_PIE) { doc.addPage(); y = 24; x = PDF_MARGEN; }
+    if (x + W > 196) { x = PDF_MARGEN; y += H + GAP; }
+    try { doc.addImage(b64, x, y, W, H); } catch (e) { /* se omite */ }
+    x += W + GAP;
+  }
+  return y + H + GAP + 5;
+}
 
 window.generarPDF = async function() {
   const { jsPDF } = window.jspdf;
   const acts = getActividadesFiltradas();
   if (!acts.length) { showToast('No hay datos para el PDF','error'); return; }
 
-  const doc = new jsPDF();
   const teal = [42, 191, 192];
   const navy = [27, 42, 74];
+  const gris = [110, 120, 135];
+  const doc = new jsPDF();
 
-  // Portada
-  doc.setFillColor(...navy); doc.rect(0,0,210,40,'F');
-  doc.setTextColor(255,255,255); doc.setFontSize(22); doc.setFont('helvetica','bold');
-  doc.text('HelCapture', 14, 22);
-  doc.setFontSize(11); doc.setFont('helvetica','normal');
-  doc.text('Informe de actividades de impulso · By Grupo Helse', 14, 32);
-  doc.setTextColor(0,0,0);
+  _omitidasInforme = 0;
+  progresoMostrar('Preparando el informe...');
 
-  // Resumen
-  doc.setFontSize(10); doc.setTextColor(100,100,100);
-  doc.text(`Generado: ${new Date().toLocaleDateString('es-CO')} · Total actividades: ${acts.length}`, 14, 50);
+  try {
+    // ── Portada ──
+    doc.setFillColor(...navy); doc.rect(0, 0, 210, 42, 'F');
+    doc.setFillColor(...teal); doc.rect(0, 42, 210, 2, 'F');
+    doc.setTextColor(255, 255, 255); doc.setFont('helvetica', 'bold'); doc.setFontSize(24);
+    doc.text('HelCapture', 14, 22);
+    doc.setFont('helvetica', 'normal'); doc.setFontSize(11);
+    doc.text('Informe de actividades de impulso · By Grupo Helse', 14, 32);
 
-  const totalAsistentes = acts.reduce((s,a)=>s+(parseInt(a.evento?.asistentes)||0),0);
-  doc.autoTable({
-    startY: 56,
-    head: [['Evento','Tipo','Fecha','Lugar','Asistentes']],
-    body: acts.map(a=>[a.evento?.nombre||'', a.evento?.tipo||'', a.evento?.fecha||'', a.evento?.lugar||'', a.evento?.asistentes||0]),
-    headStyles: { fillColor: teal, textColor: 255, fontStyle: 'bold' },
-    alternateRowStyles: { fillColor: [245,250,250] },
-    styles: { fontSize: 9 },
-    margin: { left: 14, right: 14 }
-  });
+    const totalAsist = acts.reduce((s, a) => s + (parseInt(a.evento?.asistentes) || 0), 0);
+    const totalGastos = acts.reduce((s, a) =>
+      s + (a.gastos?.items || []).filter(Boolean).reduce((x, g) => x + (parseFloat(g.valor) || 0), 0), 0);
+    const totalFotos = acts.reduce((s, a) =>
+      s + (a.fotosGenerales || []).length + (a.muestreo?.fotos || []).length
+        + (a.ventas?.fotos || []).length + (a.obsequios?.fotos || []).length, 0);
 
-  // Detalle por actividad
-  acts.forEach((a, idx) => {
-    doc.addPage();
-    doc.setFillColor(...navy); doc.rect(0,0,210,20,'F');
-    doc.setTextColor(255,255,255); doc.setFontSize(13); doc.setFont('helvetica','bold');
-    doc.text(a.evento?.nombre||'Sin nombre', 14, 13);
-    doc.setTextColor(0,0,0); doc.setFontSize(9); doc.setFont('helvetica','normal');
-    let y = 28;
-    doc.text(`Tipo: ${a.evento?.tipo||'–'}  |  Fecha: ${a.evento?.fecha||'–'}  |  Lugar: ${a.evento?.lugar||'–'}  |  Asistentes: ${a.evento?.asistentes||0}`, 14, y); y+=8;
-    if (a.ubicacion) { doc.setTextColor(...teal); doc.text(`GPS: ${a.ubicacion.lat?.toFixed(5)}, ${a.ubicacion.lng?.toFixed(5)}`, 14, y); doc.setTextColor(0,0,0); y+=7; }
-    if (a.cierre?.descripcion) { doc.setFont('helvetica','bold'); doc.text('Descripción:', 14, y); doc.setFont('helvetica','normal'); y+=5; const lines = doc.splitTextToSize(a.cierre.descripcion, 180); doc.text(lines, 14, y); y += lines.length*4+4; }
-    if (a.cierre?.impacto) { doc.setFont('helvetica','bold'); doc.text('Impacto:', 14, y); doc.setFont('helvetica','normal'); y+=5; const lines = doc.splitTextToSize(a.cierre.impacto, 180); doc.text(lines, 14, y); y += lines.length*4+4; }
+    doc.setFontSize(9); doc.setTextColor(...gris);
+    doc.text(`Generado: ${new Date().toLocaleString('es-CO')}`, 14, 52);
 
-    const gastos = (a.gastos?.items||[]).filter(Boolean);
-    if (gastos.length) {
-      doc.autoTable({ startY: y, head:[['Concepto','Valor']], body: gastos.map(g=>[g.concepto, `$${(parseFloat(g.valor)||0).toLocaleString('es-CO')}`]), headStyles:{fillColor:teal}, styles:{fontSize:9}, margin:{left:14,right:14} });
+    const kpis = [
+      ['Actividades', String(acts.length)],
+      ['Asistentes', totalAsist.toLocaleString('es-CO')],
+      ['Gastos', '$' + Math.round(totalGastos).toLocaleString('es-CO')],
+      ['Fotos', String(totalFotos)],
+    ];
+    let kx = 14;
+    kpis.forEach(([etiqueta, valor]) => {
+      doc.setFillColor(243, 248, 249); doc.roundedRect(kx, 58, 43, 18, 2, 2, 'F');
+      doc.setTextColor(...gris); doc.setFontSize(7); doc.setFont('helvetica', 'normal');
+      doc.text(etiqueta.toUpperCase(), kx + 4, 64.5);
+      doc.setTextColor(...navy); doc.setFontSize(12.5); doc.setFont('helvetica', 'bold');
+      doc.text(valor, kx + 4, 72.5);
+      kx += 46;
+    });
+
+    doc.setFont('helvetica', 'normal');
+    doc.autoTable({
+      startY: 84,
+      head: [['Evento', 'Impulsor', 'Tipo', 'Fecha', 'Lugar', 'Asistentes']],
+      body: acts.map(a => [
+        a.evento?.nombre || '', a.impulsor?.nombre || '', a.evento?.tipo || '',
+        fmtFecha(a.evento?.fecha), a.evento?.lugar || '', String(a.evento?.asistentes || 0),
+      ]),
+      headStyles: { fillColor: navy, textColor: 255, fontStyle: 'bold', fontSize: 8 },
+      styles: { fontSize: 8, cellPadding: 2.2 },
+      alternateRowStyles: { fillColor: [245, 250, 250] },
+      margin: { left: 14, right: 14 },
+    });
+
+    // ── Detalle por actividad ──
+    for (let i = 0; i < acts.length; i++) {
+      const a = acts[i];
+      doc.addPage();
+      pdfTituloPagina(doc, a.evento?.nombre || 'Sin nombre',
+        `${a.impulsor?.nombre || 'Impulsor'} · ${a.evento?.tipo || ''}`);
+
+      let y = 30;
+      const datos = [
+        ['Tipo', a.evento?.tipo || '–'],
+        ['Fecha', fmtFecha(a.evento?.fecha)],
+        ['Lugar', a.evento?.lugar || '–'],
+        ['Asistentes', String(a.evento?.asistentes || 0)],
+        ['Personas impactadas', a.cierre?.personasImpactadas || '–'],
+      ];
+      doc.autoTable({
+        startY: y,
+        body: datos,
+        theme: 'plain',
+        styles: { fontSize: 8.5, cellPadding: 1.4 },
+        columnStyles: { 0: { fontStyle: 'bold', cellWidth: 42, textColor: navy }, 1: { cellWidth: 'auto' } },
+        margin: { left: 14, right: 14 },
+      });
+      y = doc.lastAutoTable.finalY + 5;
+
+      if (a.ubicacion) {
+        y = pdfAsegurarEspacio(doc, y, 8);
+        doc.setFontSize(8); doc.setTextColor(...teal);
+        doc.text(`Ubicación: ${a.ubicacion.lat?.toFixed(5)}, ${a.ubicacion.lng?.toFixed(5)}  (±${Math.round(a.ubicacion.accuracy || 0)} m)`, 14, y);
+        doc.setTextColor(0, 0, 0); y += 7;
+      }
+
+      y = pdfParrafo(doc, 'Descripción', a.cierre?.descripcion, y);
+      y = pdfParrafo(doc, 'Impacto', a.cierre?.impacto, y);
+      y = pdfParrafo(doc, 'Detalle de impacto', a.cierre?.detalleImpacto, y);
+
+      // Evidencia del evento
+      if ((a.fotosGenerales || []).length) {
+        y = await pdfBloqueFotos(doc, a.fotosGenerales, y, 'Evidencia del evento');
+      }
+
+      // Muestreo
+      if (a.muestreo?.activo) {
+        y = pdfSubtitulo(doc, 'Muestreo', y);
+        y = pdfParrafo(doc, 'Qué se hizo', a.muestreo.descripcion, y);
+        y = pdfParrafo(doc, 'Observaciones', a.muestreo.observaciones, y);
+        if ((a.muestreo.fotos || []).length) y = await pdfBloqueFotos(doc, a.muestreo.fotos, y, 'Fotos de muestreo');
+      }
+
+      // Ventas
+      if (a.ventas?.activo) {
+        const refs = (a.ventas.referencias || []).filter(Boolean);
+        y = pdfSubtitulo(doc, 'Ventas', y);
+        if (refs.length) {
+          y = pdfTabla(doc, ['Referencia', 'Cantidad'],
+            refs.map(r => [r.referencia || '', String(parseInt(r.cantidad) || 0)]), y);
+        }
+        y = pdfParrafo(doc, 'Observaciones', a.ventas.observaciones, y);
+        if ((a.ventas.fotos || []).length) y = await pdfBloqueFotos(doc, a.ventas.fotos, y, 'Fotos de ventas');
+      }
+
+      // Obsequios
+      if (a.obsequios?.activo) {
+        const refs = (a.obsequios.referencias || []).filter(Boolean);
+        y = pdfSubtitulo(doc, 'Obsequios', y);
+        if (refs.length) {
+          y = pdfTabla(doc, ['Referencia', 'Cantidad'],
+            refs.map(r => [r.referencia || '', String(parseInt(r.cantidad) || 0)]), y);
+        }
+        y = pdfParrafo(doc, 'Observaciones', a.obsequios.observaciones, y);
+        if ((a.obsequios.fotos || []).length) y = await pdfBloqueFotos(doc, a.obsequios.fotos, y, 'Fotos de obsequios');
+      }
+
+      // Gastos
+      const gastos = (a.gastos?.items || []).filter(Boolean);
+      if (gastos.length) {
+        const total = gastos.reduce((s, g) => s + (parseFloat(g.valor) || 0), 0);
+        y = pdfSubtitulo(doc, 'Gastos legalizados', y);
+        y = pdfTabla(doc, ['Concepto', 'Valor'],
+          gastos.map(g => [g.concepto || '', '$' + (parseFloat(g.valor) || 0).toLocaleString('es-CO')])
+            .concat([['TOTAL', '$' + Math.round(total).toLocaleString('es-CO')]]), y);
+        y = pdfParrafo(doc, 'Observaciones', a.gastos?.observaciones, y);
+      }
+
+      // Facturas adjuntas
+      const facturas = (a.facturas || []).filter(Boolean);
+      if (facturas.length) {
+        y = pdfSubtitulo(doc, 'Soportes y facturas', y);
+        y = pdfTabla(doc, ['Archivo', 'Tipo', 'Tamaño'],
+          facturas.map(f => [f.nombre || 'Archivo', (f.tipo || '').toUpperCase(),
+            f.size ? Math.round(f.size / 1024) + ' KB' : '–']), y);
+      }
     }
-  });
 
-  const nombre = `HelCapture_Informe_${new Date().toISOString().split('T')[0]}.pdf`;
-  const blob = window.pdfToBlob(doc);
-  await window.mostrarModalInforme(blob, nombre, 'pdf', '📄');
+    // ── Pie de página ──
+    const totalPaginas = doc.internal.getNumberOfPages();
+    for (let p = 1; p <= totalPaginas; p++) {
+      doc.setPage(p);
+      doc.setDrawColor(...teal); doc.setLineWidth(0.4);
+      doc.line(14, 289, 196, 289);
+      doc.setFontSize(7.5); doc.setTextColor(...gris); doc.setFont('helvetica', 'normal');
+      doc.text('HelCapture · By Grupo Helse', 14, 293);
+      doc.text(`Pág. ${p} de ${totalPaginas}`, 196, 293, { align: 'right' });
+    }
+
+    const nombre = `HelCapture_Informe_${new Date().toISOString().split('T')[0]}.pdf`;
+    await window.mostrarModalInforme(window.pdfToBlob(doc), nombre, 'pdf', '📄');
+  } finally {
+    progresoOcultar();
+    avisarFotosOmitidas();
+  }
 };
 
 window.generarPPTX = async function() {
+  _omitidasInforme = 0;
+  progresoMostrar('Preparando la presentación...');
+  try {
+    await _generarPPTX();
+  } finally {
+    progresoOcultar();
+    avisarFotosOmitidas();
+  }
+};
+
+async function _generarPPTX() {
   const acts = getActividadesFiltradas();
   if (!acts.length) { showToast('No hay datos para la presentación','error'); return; }
 
-  showToast('Preparando presentación con fotos...', '');
+  progresoActualizar(0, 'Preparando la presentación...');
 
   const pptx = new PptxGenJS();
   pptx.layout = 'LAYOUT_WIDE';
@@ -3097,7 +3489,8 @@ window.generarPPTX = async function() {
   async function agregarSlidesFotos(pptx, titulo, etiqueta, fotosArr) {
     if (!fotosArr || !fotosArr.length) return;
     const MAX_POR_SLIDE = 6;
-    const b64s = await window.fotosABase64(fotosArr);
+    const b64s = await window.fotosABase64(fotosArr, (h, t) =>
+      progresoActualizar((100 * h) / t, `Fotos ${etiqueta}: ${h}/${t}`));
     if (!b64s.length) return;
 
     for (let i = 0; i < b64s.length; i += MAX_POR_SLIDE) {
@@ -3174,7 +3567,8 @@ window.generarPPTX = async function() {
     // Slide datos
     const slide = pptx.addSlide();
     slide.background = { color: 'FFFFFF' };
-    headerSlide(slide, a.evento?.nombre || 'Actividad', `${a.evento?.tipo||''} · ${fmtFecha(a.evento?.fecha)} · ${a.evento?.lugar||''}`);
+    headerSlide(slide, a.evento?.nombre || 'Actividad',
+      [a.impulsor?.nombre, a.evento?.tipo, fmtFecha(a.evento?.fecha), a.evento?.lugar].filter(Boolean).join(' · '));
 
     // Chips de métricas
     const metaY = 1.3;
@@ -3336,6 +3730,10 @@ window.navigate = function(view) {
   if (view === 'rentabilidad') renderRentabilidad();
   if (view === 'plantillas') renderPlantillas();
   if (view === 'constructor') actualizarPreview();
+  if (view === 'informes') {
+    actualizarSelectImpulsores();
+    actualizarAlcanceInformes();
+  }
 };
 
 window.cerrarModal = function(id) { document.getElementById(id).classList.remove('open'); };
@@ -3672,11 +4070,39 @@ window.dropSec = function(e, targetIdx) {
 };
 
 // ── EXPORTAR PDF DESDE CONSTRUCTOR ──
+// Descarga las fotos de una actividad y devuelve un Map url -> base64.
+// Necesario porque addImage de jsPDF/PptxGenJS no acepta URLs de Storage.
+async function mapaFotosBase64(a) {
+  const todas = [
+    ...(a.fotosGenerales || []),
+    ...(a.muestreo?.fotos || []),
+    ...(a.ventas?.fotos || []),
+    ...(a.obsequios?.fotos || []),
+  ];
+  const urls = [...new Set(todas.map(f => f && f.url).filter(Boolean))];
+  if (!urls.length) return new Map();
+  progresoMostrar('Preparando las fotos...');
+  try {
+    let hechas = 0;
+    const pares = await Promise.all(urls.map(async u => {
+      const b64 = await window.urlABase64(u);
+      hechas++;
+      progresoActualizar((100 * hechas) / urls.length, `Descargando fotos: ${hechas}/${urls.length}`);
+      return [u, b64];
+    }));
+    return new Map(pares.filter(([, b64]) => b64));
+  } finally {
+    progresoOcultar();
+  }
+}
+
 window.exportarConstructorPDF = async function() {
   const s = window._constructorState;
   if (!s.actividadId) { showToast('Selecciona una actividad primero','error'); return; }
   const a = window._actividades.find(x => x.id === s.actividadId);
   if (!a) return;
+
+  const b64Map = await mapaFotosBase64(a);
 
   const { jsPDF } = window.jspdf;
   const doc = new jsPDF();
@@ -3759,27 +4185,27 @@ window.exportarConstructorPDF = async function() {
 
     else if (sec.key==='fotos') {
       const fotos = (a.fotosGenerales||[]).filter((_,i)=>!(s.fotosExcluidas['fotos']||new Set()).has(i));
-      y = agregarFotosEnPDF(doc, fotos, y, colorRGB);
+      y = agregarFotosEnPDF(doc, fotos, y, colorRGB, b64Map);
     }
 
     else if (sec.key==='muestreo') {
       if (a.muestreo?.descripcion) { const l=doc.splitTextToSize(a.muestreo.descripcion,182); doc.text(l,14,y); y+=l.length*4.5+6; }
       const fotos = (a.muestreo?.fotos||[]).filter((_,i)=>!(s.fotosExcluidas['muestreo']||new Set()).has(i));
-      y = agregarFotosEnPDF(doc, fotos, y, colorRGB);
+      y = agregarFotosEnPDF(doc, fotos, y, colorRGB, b64Map);
     }
 
     else if (sec.key==='ventas') {
       const refs = (a.ventas?.referencias||[]).filter(Boolean);
       if (refs.length) { doc.autoTable({ startY:y, head:[['Referencia','Cantidad']], body:refs.map(r=>[r.referencia,r.cantidad]), headStyles:{fillColor:colorRGB}, styles:{fontSize:9}, margin:{left:14,right:14} }); y=doc.lastAutoTable.finalY+8; }
       const fotos = (a.ventas?.fotos||[]).filter((_,i)=>!(s.fotosExcluidas['ventas']||new Set()).has(i));
-      y = agregarFotosEnPDF(doc, fotos, y, colorRGB);
+      y = agregarFotosEnPDF(doc, fotos, y, colorRGB, b64Map);
     }
 
     else if (sec.key==='obsequios') {
       const refs = (a.obsequios?.referencias||[]).filter(Boolean);
       if (refs.length) { doc.autoTable({ startY:y, head:[['Referencia','Cantidad']], body:refs.map(r=>[r.referencia,r.cantidad]), headStyles:{fillColor:colorRGB}, styles:{fontSize:9}, margin:{left:14,right:14} }); y=doc.lastAutoTable.finalY+8; }
       const fotos = (a.obsequios?.fotos||[]).filter((_,i)=>!(s.fotosExcluidas['obsequios']||new Set()).has(i));
-      y = agregarFotosEnPDF(doc, fotos, y, colorRGB);
+      y = agregarFotosEnPDF(doc, fotos, y, colorRGB, b64Map);
     }
 
     else if (sec.key==='gastos') {
@@ -3814,16 +4240,16 @@ window.exportarConstructorPDF = async function() {
   await window.mostrarModalInforme(blob, nombre, 'pdf', '📄');
 };
 
-function agregarFotosEnPDF(doc, fotos, y, colorRGB) {
+function agregarFotosEnPDF(doc, fotos, y, colorRGB, mapa) {
   if (!fotos.length) return y;
   const W=55, H=42, GAP=5, MARGL=14, MAXW=196;
   let x=MARGL;
   fotos.forEach((f,i) => {
-    const src = f.dataUrl||f.url||'';
+    const src = f.dataUrl || (mapa && mapa.get(f.url)) || '';
     if (!src) return;
     if (y+H > 280) { doc.addPage(); y=20; x=MARGL; }
     if (x+W > MAXW) { x=MARGL; y+=H+GAP; }
-    try { doc.addImage(src,'JPEG',x,y,W,H,'','FAST'); } catch(e){}
+    try { doc.addImage(src,x,y,W,H,undefined,'FAST'); } catch(e){}
     x+=W+GAP;
     if ((i+1)%3===0) { x=MARGL; y+=H+GAP; }
   });
@@ -3843,6 +4269,8 @@ window.exportarConstructorPPTX = async function() {
   if (!s.actividadId) { showToast('Selecciona una actividad primero','error'); return; }
   const a = window._actividades.find(x => x.id === s.actividadId);
   if (!a) return;
+
+  const b64Map = await mapaFotosBase64(a);
 
   const pptx = new PptxGenJS();
   pptx.layout = 'LAYOUT_WIDE';
@@ -3909,7 +4337,7 @@ window.exportarConstructorPPTX = async function() {
       }
       const fotos = (src?.fotos||[]).filter((_,i)=>!(s.fotosExcluidas[sec.key]||new Set()).has(i)).slice(0,4);
       fotos.forEach((f,i) => {
-        const src2 = f.dataUrl||f.url||'';
+        const src2 = f.dataUrl || b64Map.get(f.url) || '';
         if (src2) { try { slide.addImage({ data:src2, x:6.8+(i%2)*3.2, y:y+(Math.floor(i/2)*2.2), w:3, h:2 }); } catch(e){} }
       });
     }
@@ -3917,7 +4345,7 @@ window.exportarConstructorPPTX = async function() {
     else if (sec.key==='fotos') {
       const fotos = (a.fotosGenerales||[]).filter((_,i)=>!(s.fotosExcluidas['fotos']||new Set()).has(i)).slice(0,6);
       fotos.forEach((f,i) => {
-        const src2 = f.url||f.dataUrl||'';
+        const src2 = f.dataUrl || b64Map.get(f.url) || '';
         if (src2) { try { slide.addImage({ data:src2, x:0.4+(i%3)*4.3, y:y+(Math.floor(i/3)*2.3), w:4, h:2.1 }); } catch(e){} }
       });
     }
@@ -3926,7 +4354,7 @@ window.exportarConstructorPPTX = async function() {
       if (a.muestreo?.descripcion) slide.addText(a.muestreo.descripcion, {x:0.4,y,w:12.5,h:0.8,fontSize:12,color:'334155',wrap:true}); y+=0.9;
       const fotos = (a.muestreo?.fotos||[]).filter((_,i)=>!(s.fotosExcluidas['muestreo']||new Set()).has(i)).slice(0,4);
       fotos.forEach((f,i) => {
-        const src2 = f.dataUrl||f.url||'';
+        const src2 = f.dataUrl || b64Map.get(f.url) || '';
         if (src2) { try { slide.addImage({ data:src2, x:0.4+(i%4)*3.2, y, w:3, h:2.2 }); } catch(e){} }
       });
     }
