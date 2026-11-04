@@ -396,6 +396,24 @@ input[type=file]{display:none;}
 .optional-tag{font-size:10px;background:var(--g100);color:var(--g400);padding:2px 8px;border-radius:20px;font-weight:700;margin-left:8px;letter-spacing:0.3px;}
 .required-tag{font-size:10px;background:rgba(42,191,192,0.16);color:var(--teal-dark);padding:2px 8px;border-radius:20px;font-weight:700;margin-left:8px;letter-spacing:0.3px;}
 
+/* ══ JORNADA ══ */
+.jornada-meta{font-size:12.5px;color:var(--g400);margin-bottom:10px;line-height:1.6;}
+.jornada-estado{font-size:12px;font-weight:700;color:var(--teal-dark);background:rgba(42,191,192,.10);border-radius:var(--radius-sm);padding:9px 12px;margin-bottom:14px;line-height:1.4;}
+.jornada-estado.activa{color:#065F46;background:rgba(16,185,129,.14);}
+.jornada-estado.cerrada{color:var(--g400);background:var(--g100);}
+.btn-jornada{display:flex;align-items:center;gap:14px;width:100%;padding:18px 20px;border:none;border-radius:var(--radius);font-family:inherit;text-align:left;cursor:pointer;margin-bottom:10px;transition:transform .18s ease,box-shadow .18s ease,opacity .18s ease;}
+.btn-jornada b{display:block;font-size:16px;font-weight:800;letter-spacing:-0.2px;}
+.btn-jornada small{display:block;font-size:12px;font-weight:500;opacity:.75;margin-top:2px;}
+.btn-jornada-icon{font-size:22px;line-height:1;}
+.btn-jornada.inicio{background:linear-gradient(135deg,var(--teal),#22D3EE);color:#04212B;box-shadow:0 12px 26px -12px rgba(42,191,192,.85);}
+.btn-jornada.fin{background:rgba(239,68,68,.12);color:#991B1B;box-shadow:inset 0 0 0 1px rgba(239,68,68,.28);}
+.btn-jornada:disabled{opacity:.45;cursor:not-allowed;box-shadow:none;}
+.btn-jornada:active:not(:disabled){transform:scale(.99);}
+.equipo-sub{font-size:12.5px;color:var(--g400);margin-bottom:12px;line-height:1.5;}
+#equipo-lista .ref-item{grid-template-columns:1fr 118px 34px;}
+.equipo-fila{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:var(--radius-xs);background:var(--g50);margin-bottom:6px;font-size:13px;color:var(--g800);}
+.equipo-fila input[type=checkbox]{width:18px;height:18px;accent-color:var(--teal);flex-shrink:0;}
+.equipo-fila .equipo-doc{color:var(--g400);font-size:12px;}
 /* ══ ÉXITO ══ */
 #screen-success{align-items:center;justify-content:center;padding:40px 24px;text-align:center;gap:0;}
 .success-wrap{animation:scaleIn .5s cubic-bezier(.34,1.56,.64,1) both;display:flex;flex-direction:column;align-items:center;gap:20px;max-width:320px;}
@@ -785,6 +803,73 @@ input[type=file]{display:none;}
   </div>
 </div>
 
+    <!-- JORNADA -->
+    <div class="screen" id="screen-jornada">
+      <div class="app-header">
+        <div id="jornada-logo-wrap"></div>
+        <div class="header-badge"><span class="geo-dot"></span>Código válido</div>
+      </div>
+      <div class="main-content">
+        <div class="card">
+          <div class="card-title"><div class="card-title-icon">📅</div> <span id="jornada-nombre">Actividad</span></div>
+          <div class="jornada-meta" id="jornada-meta"></div>
+          <div class="jornada-estado" id="jornada-estado">Aún no se ha iniciado</div>
+
+          <button class="btn-jornada inicio" id="btn-iniciar">
+            <span class="btn-jornada-icon">▶</span>
+            <span><b>Iniciar actividad</b><small>Registrar quién llegó hoy</small></span>
+          </button>
+
+          <button class="btn-jornada fin" id="btn-cerrar">
+            <span class="btn-jornada-icon">⏹</span>
+            <span><b>Cerrar actividad</b><small>Marcar la salida del equipo</small></span>
+          </button>
+        </div>
+
+        <button class="btn-submit" id="btn-capturar">📝 Capturar mi reporte</button>
+        <button class="btn-back" id="btn-jornada-salir" style="margin-top:10px;">Salir</button>
+      </div>
+    </div>
+
+    <!-- EQUIPO: lista de asistencia -->
+    <div class="screen" id="screen-equipo">
+      <div class="app-header">
+        <div id="equipo-logo-wrap"></div>
+        <div class="header-badge"><span class="geo-dot"></span>Jornada</div>
+      </div>
+      <div class="main-content">
+        <div class="card">
+          <div class="card-title"><div class="card-title-icon">👥</div> <span id="equipo-titulo">Registrar equipo</span></div>
+          <p class="equipo-sub" id="equipo-sub"></p>
+          <div class="ref-list" id="equipo-lista"></div>
+          <button class="btn-add-ref" id="btn-add-miembro">+ Agregar persona</button>
+        </div>
+
+        <div class="card">
+          <div class="card-title"><div class="card-title-icon">📸</div> <span id="evidencia-titulo">Evidencia de llegada</span></div>
+          <div class="photos-grid" id="evidencia-grid"></div>
+          <div class="photo-source-btns" id="evidencia-btns">
+            <button class="btn-source" id="btn-ev-cam">📷 Cámara</button>
+            <button class="btn-source" id="btn-ev-gal">🖼️ Galería</button>
+          </div>
+          <input type="file" id="ev-cam" accept="image/*" capture="environment">
+          <input type="file" id="ev-gal" accept="image/*" multiple>
+        </div>
+
+        <div class="card">
+          <div class="field">
+            <label>Observaciones de la jornada</label>
+            <textarea id="jornada-obs" rows="3" placeholder="Novedades, quién llegó tarde, permisos..."></textarea>
+          </div>
+        </div>
+
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+          <button class="btn-back" id="btn-equipo-volver">← Volver</button>
+          <button class="btn-submit" id="btn-guardar-jornada">Guardar</button>
+        </div>
+      </div>
+    </div>
+
 <!-- SUCCESS -->
 <div class="screen dark-screen" id="screen-success">
   <div class="success-wrap">
@@ -829,6 +914,8 @@ document.getElementById('login-logo-wrap').innerHTML  = `<img src="${LOGO_CAP}" 
 document.getElementById('act-header-logo').innerHTML  = `<img src="${LOGO_CAP}" alt="HelCapture" style="height:28px;">`;
 document.getElementById('splash-logo-wrap').innerHTML = `<img src="${LOGO_CAP}" alt="HelCapture" style="width:220px;max-width:80vw;">`;
 document.getElementById('header-logo-wrap').innerHTML = `<img src="${LOGO_CAP}" alt="HelCapture" style="height:32px;">`;
+document.getElementById('jornada-logo-wrap').innerHTML = `<img src="${LOGO_CAP}" alt="HelCapture" style="height:28px;">`;
+document.getElementById('equipo-logo-wrap').innerHTML = `<img src="${LOGO_CAP}" alt="HelCapture" style="height:28px;">`;
 
 // ── ESTADO ──
 let geo = null;
@@ -1325,6 +1412,254 @@ function addGasto(){
 // ── ENVIAR ──
 // (subirFotos/subirFacturas viven junto al formulario de captura, más abajo)
 
+// ══ JORNADA: inicio y cierre de actividad ══
+// Un solo responsable puede registrar a todo el equipo. Cada persona queda en
+// ingresos/{actividad}_{documento}_{fecha}; si además entra sola, escribe el
+// mismo documento y no se duplica.
+let jornada = { iniciada: false, cerrada: false, entradaEn: null, salidaEn: null };
+let equipo = [];
+let fotosEvidencia = [];
+let modoJornada = 'inicio';
+
+function fechaHoy() {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
+function horaBonita(v) {
+  const d = v ? (typeof v.toDate === 'function' ? v.toDate() : new Date(v)) : null;
+  return d && !isNaN(d.getTime()) ? d.toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' }) : '';
+}
+
+async function mostrarJornada() {
+  const p = plantillaActual;
+  if (!p) return;
+  $('jornada-nombre').textContent = p.nombre || 'Actividad';
+  $('jornada-meta').textContent = [p.tipo, p.fecha, p.lugar, p.ciudad].filter(Boolean).join(' · ');
+  await cargarEstadoJornada();
+  showScreen('screen-jornada');
+}
+
+async function cargarEstadoJornada() {
+  const p = plantillaActual;
+  jornada = { iniciada: false, cerrada: false, entradaEn: null, salidaEn: null };
+  try {
+    const snap = await db.collection('ingresos').where('fecha', '==', fechaHoy()).get();
+    const delDia = snap.docs.map(d => d.data()).filter(i => i.plantillaId === p.id);
+    const conEntrada = delDia.filter(i => i.entradaEn);
+    if (conEntrada.length) {
+      jornada.iniciada = true;
+      jornada.entradaEn = conEntrada[0].entradaEn;
+      if (conEntrada.every(i => i.salidaEn)) {
+        jornada.cerrada = true;
+        jornada.salidaEn = conEntrada[conEntrada.length - 1].salidaEn;
+      }
+    }
+  } catch (e) { console.warn('No se pudo leer el estado de la jornada:', e); }
+  pintarEstadoJornada();
+}
+
+function pintarEstadoJornada() {
+  const el = $('jornada-estado');
+  const bIni = $('btn-iniciar');
+  const bFin = $('btn-cerrar');
+  if (!el) return;
+
+  if (jornada.cerrada) {
+    el.className = 'jornada-estado cerrada';
+    el.textContent = `Jornada cerrada${jornada.salidaEn ? ' · ' + horaBonita(jornada.salidaEn) : ''}`;
+    bIni.disabled = true;
+    bFin.disabled = true;
+  } else if (jornada.iniciada) {
+    el.className = 'jornada-estado activa';
+    el.textContent = `Jornada iniciada${jornada.entradaEn ? ' · ' + horaBonita(jornada.entradaEn) : ''}`;
+    bIni.disabled = true;
+    bFin.disabled = false;
+  } else {
+    el.className = 'jornada-estado';
+    el.textContent = 'Aún no se ha iniciado';
+    bIni.disabled = false;
+    bFin.disabled = false;
+  }
+}
+
+async function abrirEquipo(modo) {
+  modoJornada = modo;
+  equipo = [];
+  fotosEvidencia = [];
+  $('jornada-obs').value = '';
+  $('equipo-titulo').textContent = modo === 'inicio' ? 'Quién llegó hoy' : 'Quién sale hoy';
+  $('evidencia-titulo').textContent = modo === 'inicio' ? 'Evidencia de llegada' : 'Evidencia de salida';
+  $('btn-guardar-jornada').textContent = modo === 'inicio' ? '✅ Guardar inicio' : '✅ Guardar cierre';
+  $('equipo-sub').textContent = modo === 'inicio'
+    ? 'Escribe el nombre y el documento de cada persona. Tú ya vienes incluido.'
+    : 'Desmarca a quien no estaba al cierre.';
+  $('btn-add-miembro').style.display = modo === 'inicio' ? 'block' : 'none';
+
+  if (modo === 'inicio') {
+    equipo = [{ nombre: impulsor.nombre, cedula: impulsor.cedula }];
+    renderEquipo();
+  } else {
+    $('equipo-lista').innerHTML = '<div class="equipo-sub">Cargando la lista de hoy...</div>';
+    try {
+      const snap = await db.collection('ingresos').where('fecha', '==', fechaHoy()).get();
+      const lista = snap.docs.map(d => d.data())
+        .filter(i => i.plantillaId === plantillaActual.id && i.entradaEn && !i.salidaEn);
+      equipo = lista.map(i => ({ nombre: i.nombre, cedula: String(i.cedula), marcado: true }));
+      renderEquipo();
+    } catch (e) {
+      console.error(e);
+      $('equipo-lista').innerHTML = '<div class="equipo-sub">No se pudo cargar la lista.</div>';
+    }
+  }
+
+  renderEvidencia();
+  showScreen('screen-equipo');
+}
+
+function renderEquipo() {
+  const cont = $('equipo-lista');
+  if (!cont) return;
+
+  if (!equipo.length) {
+    cont.innerHTML = '<div class="equipo-sub">No hay nadie registrado hoy. Primero inicia la actividad.</div>';
+    return;
+  }
+
+  if (modoJornada === 'inicio') {
+    cont.innerHTML = equipo.map((m, i) => `
+      <div class="ref-item">
+        <input type="text" placeholder="Nombre completo" value="${esc(m.nombre || '')}" data-nombre="${i}">
+        <input type="text" placeholder="Documento" inputmode="numeric" value="${esc(m.cedula || '')}" data-cedula="${i}">
+        <button class="btn-icon" data-quitar="${i}">×</button>
+      </div>`).join('');
+
+    cont.querySelectorAll('[data-nombre]').forEach(el => {
+      el.addEventListener('input', e => { equipo[+e.target.dataset.nombre].nombre = e.target.value; });
+    });
+    cont.querySelectorAll('[data-cedula]').forEach(el => {
+      el.addEventListener('input', e => { equipo[+e.target.dataset.cedula].cedula = e.target.value; });
+    });
+    cont.querySelectorAll('[data-quitar]').forEach(el => {
+      el.addEventListener('click', () => { equipo.splice(+el.dataset.quitar, 1); renderEquipo(); });
+    });
+  } else {
+    cont.innerHTML = equipo.map((m, i) => `
+      <label class="equipo-fila">
+        <input type="checkbox" data-marca="${i}" ${m.marcado ? 'checked' : ''}>
+        <span><strong>${esc(m.nombre)}</strong><br><span class="equipo-doc">${esc(m.cedula)}</span></span>
+      </label>`).join('');
+    cont.querySelectorAll('[data-marca]').forEach(el => {
+      el.addEventListener('change', e => { equipo[+e.target.dataset.marca].marcado = e.target.checked; });
+    });
+  }
+}
+
+function renderEvidencia() {
+  const grid = $('evidencia-grid');
+  if (!grid) return;
+  grid.innerHTML = fotosEvidencia.map((f, i) => `
+    <div class="photo-thumb">
+      <img src="${f.preview}">
+      <button class="remove-photo" data-ev="${i}">×</button>
+    </div>`).join('');
+  grid.querySelectorAll('[data-ev]').forEach(b => {
+    b.addEventListener('click', () => { fotosEvidencia.splice(+b.dataset.ev, 1); renderEvidencia(); });
+  });
+  const btns = $('evidencia-btns');
+  if (btns) btns.style.display = fotosEvidencia.length >= 3 ? 'none' : 'grid';
+}
+
+function agregarEvidencia(input) {
+  const libres = Math.max(0, 3 - fotosEvidencia.length);
+  Array.from(input.files || []).slice(0, libres).forEach(file => {
+    comprimirImagen(file, 1600, 0.82).then(f => {
+      fotosEvidencia.push({ preview: URL.createObjectURL(f), file: f, nombre: f.name });
+      renderEvidencia();
+    });
+  });
+  input.value = '';
+}
+
+async function guardarJornada() {
+  const p = plantillaActual;
+  if (!p) return;
+  const fecha = fechaHoy();
+  const obs = $('jornada-obs').value.trim();
+
+  let personas = [];
+  if (modoJornada === 'inicio') {
+    personas = equipo
+      .map(m => ({ nombre: String(m.nombre || '').trim(), cedula: String(m.cedula || '').trim() }))
+      .filter(m => m.nombre && m.cedula);
+    if (!personas.length) { toast('Agrega al menos una persona con nombre y documento', 'error'); return; }
+
+    const docs = personas.map(m => m.cedula);
+    if (new Set(docs).size !== docs.length) { toast('Hay un documento repetido en la lista', 'error'); return; }
+  } else {
+    personas = equipo.filter(m => m.marcado)
+      .map(m => ({ nombre: m.nombre, cedula: String(m.cedula) }));
+    if (!personas.length) { toast('No hay nadie marcado para cerrar', 'error'); return; }
+  }
+
+  showOverlay(modoJornada === 'inicio' ? 'Registrando llegada...' : 'Registrando salida...');
+  try {
+    // Evidencia (opcional)
+    const urls = [];
+    const carpeta = `actividades/${p.id}_${fecha}/asistencia/${modoJornada}`;
+    for (let i = 0; i < fotosEvidencia.length; i++) {
+      showOverlay(`Subiendo evidencia ${i + 1}/${fotosEvidencia.length}...`);
+      const url = await subirArchivoConReintento(
+        `${carpeta}/${Date.now()}_${fotosEvidencia[i].nombre}`,
+        fotosEvidencia[i].file,
+        `evidencia ${i + 1}`
+      );
+      if (url) urls.push(url);
+    }
+
+    const sello = firebase.firestore.FieldValue.serverTimestamp();
+    const lider = { cedula: impulsor.cedula, nombre: impulsor.nombre };
+
+    for (const m of personas) {
+      const esLider = String(m.cedula) === String(impulsor.cedula);
+      const ref = db.collection('ingresos').doc(`${p.id}_${m.cedula}_${fecha}`);
+      const datos = { ultimoEn: sello };
+
+      if (modoJornada === 'inicio') {
+        const existe = await ref.get().then(s => s.exists).catch(() => false);
+        Object.assign(datos, {
+          codigo: codigoActual,
+          plantillaId: p.id,
+          plantillaNombre: p.nombre || '',
+          cedula: m.cedula,
+          nombre: m.nombre,
+          fecha,
+          entradaEn: sello,
+          registradoPor: lider,
+          ...(existe ? {} : { primerEn: sello }),
+        });
+      } else {
+        datos.salidaEn = sello;
+      }
+
+      if (esLider) {
+        if (urls.length) datos[modoJornada === 'inicio' ? 'evidenciaInicio' : 'evidenciaFin'] = urls;
+        if (obs) datos.observaciones = obs;
+      }
+
+      await ref.set(datos, { merge: true });
+    }
+
+    hideOverlay();
+    toast(modoJornada === 'inicio' ? `Inicio guardado · ${personas.length} persona(s)` : `Cierre guardado · ${personas.length} persona(s)`, 'success');
+    await mostrarJornada();
+  } catch (e) {
+    hideOverlay();
+    console.error(e);
+    toast('No se pudo guardar. Revisa tu conexión.', 'error');
+  }
+}
+
 // ── LOGIN ──
 // El código de jornada lo genera el coordinador en el panel y se comparte por
 // WhatsApp. Vive dentro de la actividad (plantillas/{id}.codigoJornada), así que
@@ -1424,7 +1759,13 @@ async function cargarActividadesImpulsor(actividadDelCodigo) {
     $('act-user-pill').textContent = `👤 ${impulsor.nombre}`;
     $('act-subtitle').textContent  = `${plantillasDisponibles.length} actividad(es) disponible(s)`;
     renderActividadesIndex(plantillasDisponibles);
-    showScreen('screen-actividades');
+
+    // Con código, la actividad ya está elegida: se entra directo a la jornada.
+    if (codigoPlantilla && plantillaActual === null && plantillasDisponibles.length === 1) {
+      plantillaActual = plantillasDisponibles[0];
+    }
+    if (plantillaActual) await mostrarJornada();
+    else showScreen('screen-actividades');
 
     // Si este impulsor dejó un borrador a medias, se ofrece reanudarlo.
     const d = leerBorrador();
@@ -1711,6 +2052,19 @@ $('btn-nueva').addEventListener('click', nuevaActividad);
 $('btn-add-gasto').addEventListener('click', addGasto);
 $('btn-add-ventas').addEventListener('click', ()=>addRef('ventas'));
 $('btn-add-obsequios').addEventListener('click', ()=>addRef('obsequios'));
+
+// ── JORNADA ──
+$('btn-iniciar').addEventListener('click', () => abrirEquipo('inicio'));
+$('btn-cerrar').addEventListener('click', () => abrirEquipo('fin'));
+$('btn-capturar').addEventListener('click', () => { if (plantillaActual) seleccionarActividad(plantillaActual.id); });
+$('btn-jornada-salir').addEventListener('click', nuevaActividad);
+$('btn-add-miembro').addEventListener('click', () => { equipo.push({ nombre: '', cedula: '' }); renderEquipo(); });
+$('btn-equipo-volver').addEventListener('click', () => showScreen('screen-jornada'));
+$('btn-guardar-jornada').addEventListener('click', guardarJornada);
+$('btn-ev-cam').addEventListener('click', () => $('ev-cam').click());
+$('btn-ev-gal').addEventListener('click', () => $('ev-gal').click());
+$('ev-cam').addEventListener('change', () => agregarEvidencia($('ev-cam')));
+$('ev-gal').addEventListener('change', () => agregarEvidencia($('ev-gal')));
 
 ['muestreo','ventas','obsequios'].forEach(nombre=>{
   $('hdr-'+nombre).addEventListener('click', e=>{

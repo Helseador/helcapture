@@ -1520,6 +1520,20 @@ td strong, td b { color: var(--ink); font-weight: 700; }
 }
 .codigo-hint { font-size: 10.5px; color: var(--ink-faint); }
 
+/* Evidencia de jornada en la tabla de ingresos */
+.ing-evidencia {
+  width: 38px;
+  height: 38px;
+  object-fit: cover;
+  border-radius: 8px;
+  margin-right: 4px;
+  cursor: pointer;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .12);
+  transition: transform .16s ease;
+}
+.ing-evidencia:hover { transform: scale(1.08); }
+.ing-evidencia-mas { font-size: 10px; color: var(--ink-faint); }
+
 .reporte-card {
   padding: 14px 16px;
   margin-bottom: 10px;
@@ -2348,12 +2362,20 @@ td strong, td b { color: var(--ink); font-weight: 700; }
                 <th>Documento</th>
                 <th>Actividad</th>
                 <th>Día</th>
-                <th>Entró</th>
+                <th>Entró
+                  <span class="ayuda" data-tip="Hora en que la persona entró con su código. Si solo la registró el líder, aquí aparece la hora del registro.">?</span>
+                </th>
+                <th>Jornada
+                  <span class="ayuda" data-tip="Inicio y cierre de actividad marcados con los botones grandes de la app, con el total de horas.">?</span>
+                </th>
                 <th style="text-align:center;">Reporte
                   <span class="ayuda" data-tip="Si envió o no la captura ese día.">?</span>
                 </th>
                 <th>Qué capturó
                   <span class="ayuda" data-tip="Resumen del reporte: asistentes, fotos, muestreo/ventas/obsequios y gastos legalizados.">?</span>
+                </th>
+                <th>Evidencia
+                  <span class="ayuda" data-tip="Fotos que adjuntó el responsable al iniciar o cerrar la jornada.">?</span>
                 </th>
                 <th></th>
               </tr>
@@ -5535,6 +5557,14 @@ function horaDe(v) {
   return d ? d.toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' }) : '–';
 }
 
+// Horas entre el inicio y el cierre de la jornada
+function horasEntre(a, b) {
+  const d1 = aFecha(a), d2 = aFecha(b);
+  if (!d1 || !d2) return null;
+  const h = (d2.getTime() - d1.getTime()) / 3600000;
+  return h > 0 ? h.toFixed(1) : null;
+}
+
 // Reporte que envió esa persona ese día en esa actividad
 function reporteDeIngreso(ing) {
   return (window._actividades || []).find(a =>
@@ -5627,16 +5657,40 @@ window.renderIngresos = function() {
       ? '<span class="badge success">Enviado</span>'
       : '<span class="badge gray">Solo entró</span>';
 
+    // Jornada: inicio → cierre y horas
+    const ini = horaDe(raw.entradaEn);
+    const fin = horaDe(raw.salidaEn);
+    let jornadaTxt = '–';
+    if (raw.entradaEn) {
+      jornadaTxt = `${ini} → ${fin || '—'}`;
+      const horas = horasEntre(raw.entradaEn, raw.salidaEn);
+      if (horas) jornadaTxt += ` <span class="badge teal" style="font-size:10px;">${horas}h</span>`;
+    }
+
+    // Quién lo registró (si no fue la propia persona)
+    const lider = raw.registradoPor?.nombre;
+    const porOtro = lider && String(raw.registradoPor?.cedula || '') !== String(raw.cedula || '');
+
+    // Evidencia adjunta por el responsable
+    const evidencias = [...(raw.evidenciaInicio || []), ...(raw.evidenciaFin || [])].filter(Boolean);
+    const evid = evidencias.length
+      ? evidencias.slice(0, 3).map(u => `<img class="ing-evidencia" src="${e(u)}" data-foto="${e(u)}" alt="evidencia">`).join('')
+        + (evidencias.length > 3 ? `<span class="ing-evidencia-mas">+${evidencias.length - 3}</span>` : '')
+      : '<span style="color:var(--ink-faint);">—</span>';
+
     return `<tr>
-      <td><strong>${i.nombre || '–'}</strong></td>
+      <td>
+        <strong>${i.nombre || '–'}</strong>
+        ${porOtro ? `<div style="font-size:10.5px;color:var(--ink-faint);margin-top:3px;">registró ${i.registradoPor?.nombre || ''}</div>` : ''}
+      </td>
       <td>${i.cedula || '–'}</td>
       <td>${i.plantillaNombre || '–'}</td>
       <td>${fmtFecha(i.fecha)}</td>
-      <td style="white-space:nowrap;">${horaDe(raw.primerEn)}${
-        raw.ultimoEn && fechaLocalDe(raw.ultimoEn) === raw.fecha && horaDe(raw.ultimoEn) !== horaDe(raw.primerEn)
-          ? ` <span style="color:var(--ink-faint);">/ ${horaDe(raw.ultimoEn)}</span>` : ''}</td>
+      <td style="white-space:nowrap;">${horaDe(raw.primerEn)}</td>
+      <td style="white-space:nowrap;">${jornadaTxt}</td>
       <td style="text-align:center;">${estado}</td>
       <td style="font-size:12px;color:var(--ink-dim);">${rep ? resumenCaptura(rep) : '—'}</td>
+      <td style="white-space:nowrap;">${evid}</td>
       <td style="white-space:nowrap;">
         ${rep ? `<button class="btn btn-outline btn-sm" onclick="verDetalle('${rep.id}')">Ver reporte</button>` : ''}
       </td>
@@ -5667,14 +5721,18 @@ window.exportarIngresosExcel = async function() {
       'Actividad': i.plantillaNombre || '',
       'Día': i.fecha || '',
       'Entró': horaDe(i.primerEn),
-      'Última entrada': horaDe(i.ultimoEn),
+      'Inicio jornada': horaDe(i.entradaEn),
+      'Cierre jornada': horaDe(i.salidaEn),
+      'Horas': horasEntre(i.entradaEn, i.salidaEn) || '',
+      'Registrado por': i.registradoPor?.nombre || '',
       'Envió reporte': rep ? 'Sí' : 'No',
       'Qué capturó': rep ? resumenCaptura(rep) : '',
+      'Observaciones': i.observaciones || '',
     };
   }).sort((a, b) => String(b['Día']).localeCompare(String(a['Día'])) || String(a['Persona']).localeCompare(String(b['Persona']), 'es'));
 
   const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, hojaFormateada(rows, [30, 16, 34, 12, 9, 14, 13, 60]), 'Ingresos');
+  XLSX.utils.book_append_sheet(wb, hojaFormateada(rows, [30, 16, 34, 12, 9, 14, 14, 8, 20, 13, 50, 40]), 'Ingresos');
   const nombre = `HelCapture_Ingresos_${new Date().toISOString().split('T')[0]}.xlsx`;
   const blob = new Blob([XLSX.write(wb, { bookType: 'xlsx', type: 'array' })],
     { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
