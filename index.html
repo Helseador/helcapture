@@ -1674,6 +1674,41 @@ function fechaDe(v) {
   return isNaN(d.getTime()) ? null : d;
 }
 
+// Resuelve un código de jornada. Primero mira la colección codigos (que no se
+// puede listar); si no está, busca en las actividades por compatibilidad con
+// los códigos generados antes.
+async function resolverCodigo(codigo) {
+  try {
+    const snap = await db.collection('codigos').doc(codigo).get().catch(() => null);
+
+    if (snap && snap.exists) {
+      const c = snap.data() || {};
+      if (c.activo === false) return { ok: false, motivo: 'Ese código fue revocado. Pídele uno nuevo a tu coordinador.' };
+      const exp = fechaDe(c.expiraEn);
+      if (exp && exp.getTime() <= Date.now()) return { ok: false, motivo: 'Ese código ya venció. Pídele uno nuevo a tu coordinador.' };
+      return { ok: true, plantillaId: c.plantillaId || null };
+    }
+
+    // Compatibilidad: códigos guardados dentro de la actividad
+    const q = await db.collection('plantillas').where('estado', '==', 'activa').get();
+    const hoy = new Date().toISOString().split('T')[0];
+    const encontrada = q.docs
+      .map(d => ({ id: d.id, ...d.data() }))
+      .filter(p => !p.vencimiento || p.vencimiento >= hoy)
+      .find(p => String(p.codigoJornada || '').toUpperCase() === codigo);
+
+    if (!encontrada) return { ok: false, motivo: 'Ese código no es válido o la actividad ya cerró. Pídele uno nuevo a tu coordinador.' };
+
+    const exp = fechaDe(encontrada.codigoExpira);
+    if (exp && exp.getTime() <= Date.now()) return { ok: false, motivo: 'Ese código ya venció. Pídele uno nuevo a tu coordinador.' };
+
+    return { ok: true, plantillaId: encontrada.id };
+  } catch (e) {
+    console.error('Error validando el código:', e);
+    return { ok: false, motivo: 'No se pudo validar el código. Revisa tu conexión.' };
+  }
+}
+
 async function hacerLogin() {
   const codigo = $('login-codigo').value.trim().toUpperCase();
   const cedula = $('login-cedula').value.trim();
@@ -1684,34 +1719,14 @@ async function hacerLogin() {
   if (!codigo || !cedula || !nombre) return fallar('Completa el código, tu documento y tu nombre.');
 
   showOverlay('Validando código...');
-  let disponible = null;
-  try {
-    const snap = await db.collection('plantillas').where('estado','==','activa').get();
-    const hoy = new Date().toISOString().split('T')[0];
-    const activas = snap.docs
-      .map(d => ({ id: d.id, ...d.data() }))
-      .filter(p => !p.vencimiento || p.vencimiento >= hoy);
-
-    disponible = activas.find(p => String(p.codigoJornada || '').toUpperCase() === codigo) || null;
-  } catch (e) {
-    hideOverlay();
-    console.error('Error validando el código:', e);
-    return fallar('No se pudo validar el código. Revisa tu conexión.');
-  }
+  const res = await resolverCodigo(codigo);
   hideOverlay();
-
-  if (!disponible) return fallar('Ese código no es válido o la actividad ya cerró. Pídele uno nuevo a tu coordinador.');
-
-  const expira = fechaDe(disponible.codigoExpira);
-  if (expira && expira.getTime() <= Date.now()) {
-    return fallar('Ese código ya venció. Pídele uno nuevo a tu coordinador.');
-  }
+  if (!res.ok) return fallar(res.motivo);
 
   codigoActual = codigo;
-  codigoPlantilla = disponible.id;
+  codigoPlantilla = res.plantillaId;
   impulsor = { cedula, nombre };
-  await registrarIngreso(codigo, disponible);
-  await cargarActividadesImpulsor(disponible);
+  await cargarActividadesImpulsor();
 }
 
 // Deja constancia de quién entró cada día. No frena la captura si falla: el
@@ -1740,32 +1755,31 @@ async function registrarIngreso(codigo, plantilla) {
   }
 }
 
-async function cargarActividadesImpulsor(actividadDelCodigo) {
+async function cargarActividadesImpulsor() {
   showOverlay('Cargando actividades...');
   try {
-    let lista;
-    if (actividadDelCodigo) {
-      lista = [actividadDelCodigo];
-    } else {
-      const snap = await db.collection('plantillas').where('estado','==','activa').get();
-      const hoy = new Date().toISOString().split('T')[0];
-      lista = snap.docs
-        .map(d => ({ id: d.id, ...d.data() }))
-        .filter(p => !p.vencimiento || p.vencimiento >= hoy);
-    }
-    plantillasDisponibles = lista
+    const snap = await db.collection('plantillas').where('estado','==','activa').get();
+    const hoy = new Date().toISOString().split('T')[0];
+    plantillasDisponibles = snap.docs
+      .map(d => ({ id: d.id, ...d.data() }))
+      .filter(p => !p.vencimiento || p.vencimiento >= hoy)
       .filter(p => !codigoPlantilla || p.id === codigoPlantilla);
+
     hideOverlay();
     $('act-user-pill').textContent = `👤 ${impulsor.nombre}`;
     $('act-subtitle').textContent  = `${plantillasDisponibles.length} actividad(es) disponible(s)`;
     renderActividadesIndex(plantillasDisponibles);
 
     // Con código, la actividad ya está elegida: se entra directo a la jornada.
-    if (codigoPlantilla && plantillaActual === null && plantillasDisponibles.length === 1) {
+    if (codigoPlantilla && plantillasDisponibles.length === 1) {
       plantillaActual = plantillasDisponibles[0];
     }
-    if (plantillaActual) await mostrarJornada();
-    else showScreen('screen-actividades');
+    if (plantillaActual) {
+      await registrarIngreso(codigoActual, plantillaActual);
+      await mostrarJornada();
+    } else {
+      showScreen('screen-actividades');
+    }
 
     // Si este impulsor dejó un borrador a medias, se ofrece reanudarlo.
     const d = leerBorrador();

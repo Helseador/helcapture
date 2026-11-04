@@ -4227,7 +4227,7 @@ window.navigate = function(view) {
   if (content) content.scrollTop = 0;
 
   if (view === 'rentabilidad') { actualizarSelectImpulsorRent(); renderRentabilidad(); }
-  if (view === 'plantillas') renderPlantillas();
+  if (view === 'plantillas') { renderPlantillas(); verificarCodigosLocales(); }
   if (view === 'ingresos') { actualizarSelectActividadIngresos(); renderIngresos(); }
   if (view === 'constructor') {
     poblarSelectorActividades();
@@ -5740,10 +5740,13 @@ window.exportarIngresosExcel = async function() {
 };
 
 // ── CÓDIGO DE JORNADA ──
-// Va dentro de la propia actividad (plantillas/{id}), así la captura ya lo
-// recibe al listar: no hace falta una colección nueva ni tocar las reglas para
-// empezar a usarlo.
-window._codigos = {};
+// El código ya NO vive en la actividad (esa colección es pública y cualquiera
+// podía leer todos los códigos activos). Ahora vive en codigos/{CODIGO}, una
+// colección que se puede consultar por id pero no listar.
+// El panel recuerda en este navegador qué código generó para cada actividad.
+window._codigosLocal = {};
+const CODIGOS_KEY = 'hc_codigos';
+const DIAS_CODIGO = 7;
 
 function codigoAzar() {
   // Sin caracteres que se confunden al dictarlos por teléfono:
@@ -5754,14 +5757,6 @@ function codigoAzar() {
   return s.slice(0, 3) + '-' + s.slice(3);
 }
 
-function expiracionCodigo(plantilla) {
-  // Vence al final del día de vencimiento de la actividad, o en 7 días.
-  if (plantilla && plantilla.vencimiento) {
-    return new Date(plantilla.vencimiento + 'T23:59:59');
-  }
-  return new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
-}
-
 function aFecha(v) {
   if (!v) return null;
   if (typeof v.toDate === 'function') return v.toDate();
@@ -5769,28 +5764,52 @@ function aFecha(v) {
   return isNaN(d.getTime()) ? null : d;
 }
 
-function codigoVigente(p) {
-  if (!p || !p.codigoJornada) return false;
-  const exp = aFecha(p.codigoExpira);
-  return exp ? exp.getTime() > Date.now() : true;
+function leerCodigosLocal() {
+  try {
+    const raw = localStorage.getItem(CODIGOS_KEY);
+    window._codigosLocal = raw ? JSON.parse(raw) : {};
+  } catch (e) { window._codigosLocal = {}; }
+}
+function guardarCodigosLocal() {
+  try { localStorage.setItem(CODIGOS_KEY, JSON.stringify(window._codigosLocal)); } catch (e) {}
+}
+leerCodigosLocal();
+
+// Comprueba contra Firestore que los códigos recordados sigan vigentes
+async function verificarCodigosLocales() {
+  const mapa = window._codigosLocal || {};
+  const ids = Object.keys(mapa);
+  if (!ids.length) return;
+  let cambiado = false;
+  for (const plantillaId of ids) {
+    const c = mapa[plantillaId];
+    try {
+      const snap = await getDoc(doc(db, 'codigos', c.codigo));
+      const vivo = snap.exists() && snap.data().activo !== false
+        && (!aFecha(snap.data().expiraEn) || aFecha(snap.data().expiraEn).getTime() > Date.now());
+      if (!vivo) { delete mapa[plantillaId]; cambiado = true; }
+    } catch (e) { /* sin red: se deja como está */ }
+  }
+  if (cambiado) { guardarCodigosLocal(); renderPlantillas(); }
 }
 
 function bloqueCodigo(p) {
-  if (!p.codigoJornada) {
+  const guardado = window._codigosLocal[p.id];
+  if (!guardado) {
     return `<div class="codigo-jornada">
       <button class="btn btn-outline btn-sm" onclick="generarCodigoPlantilla('${p.id}')">🔑 Generar código</button>
       <span class="codigo-hint">para que un impulsor nuevo pueda entrar</span>
     </div>`;
   }
-  const exp = aFecha(p.codigoExpira);
+  const exp = aFecha(guardado.expira);
+  const vencido = exp && exp.getTime() <= Date.now();
   const expTxt = exp ? exp.toLocaleDateString('es-CO', { day: '2-digit', month: 'short' }) : 'sin vencimiento';
-  const vigente = codigoVigente(p);
   return `<div class="codigo-jornada">
-    <span class="codigo-chip" style="${vigente ? '' : 'opacity:.45;text-decoration:line-through;'}"
-          title="Pásale este código al impulsor">${e(p.codigoJornada)}</span>
-    ${vigente ? `<button class="btn btn-outline btn-sm" title="Copiar" onclick="copiarCodigo('${e(p.codigoJornada)}')">📋</button>` : ''}
-    <button class="btn btn-outline btn-sm" onclick="revocarCodigo('${p.id}')">${vigente ? 'Revocar' : 'Borrar'}</button>
-    <span class="codigo-hint">${vigente ? 'vence ' + expTxt : 'vencido · genera otro'}</span>
+    <span class="codigo-chip" style="${vencido ? 'opacity:.45;text-decoration:line-through;' : ''}"
+          title="Pásale este código al impulsor">${e(guardado.codigo)}</span>
+    ${vencido ? '' : `<button class="btn btn-outline btn-sm" title="Copiar" onclick="copiarCodigo('${e(guardado.codigo)}')">📋</button>`}
+    <button class="btn btn-outline btn-sm" onclick="revocarCodigo('${p.id}')">${vencido ? 'Borrar' : 'Revocar'}</button>
+    <span class="codigo-hint">${vencido ? 'vencido · genera otro' : 'vence ' + expTxt}</span>
   </div>`;
 }
 
@@ -5799,16 +5818,29 @@ window.generarCodigoPlantilla = async function(id) {
   if (!p) return;
   try {
     let codigo = codigoAzar();
-    // Que no se repita con el de otra actividad
-    for (let intento = 0; intento < 5 && window._plantillas.some(x => x.codigoJornada === codigo); intento++) {
+    for (let intento = 0; intento < 5; intento++) {
+      const yaExiste = await getDoc(doc(db, 'codigos', codigo)).then(s => s.exists()).catch(() => false);
+      if (!yaExiste) break;
       codigo = codigoAzar();
     }
 
-    await updateDoc(doc(db, 'plantillas', id), {
-      codigoJornada: codigo,
-      codigoExpira: Timestamp.fromDate(expiracionCodigo(p)),
-      codigoCreadoEn: serverTimestamp(),
+    // Vence al final del día de vencimiento de la actividad, o en 7 días.
+    const fin = p.vencimiento
+      ? new Date(p.vencimiento + 'T23:59:59')
+      : new Date(Date.now() + DIAS_CODIGO * 24 * 60 * 60 * 1000);
+
+    await setDoc(doc(db, 'codigos', codigo), {
+      codigo,
+      plantillaId: id,
+      plantillaNombre: p.nombre || '',
+      activo: true,
+      creadoEn: serverTimestamp(),
+      expiraEn: Timestamp.fromDate(fin),
     });
+
+    window._codigosLocal[id] = { codigo, expira: fin.toISOString() };
+    guardarCodigosLocal();
+    renderPlantillas();
 
     showToast(`Código ${codigo} creado`, 'success');
     copiarCodigo(codigo, true);
@@ -5819,11 +5851,14 @@ window.generarCodigoPlantilla = async function(id) {
 };
 
 window.revocarCodigo = async function(id) {
-  const p = window._plantillas.find(x => x.id === id);
-  if (!p) return;
-  if (!confirm(`¿Anular el código ${p.codigoJornada || ''}? Quien lo tenga dejará de poder enviar.`)) return;
+  const guardado = window._codigosLocal[id];
+  if (!guardado) return;
+  if (!confirm(`¿Anular el código ${guardado.codigo}? Quien lo tenga dejará de poder enviar.`)) return;
   try {
-    await updateDoc(doc(db, 'plantillas', id), { codigoJornada: null, codigoExpira: null });
+    await updateDoc(doc(db, 'codigos', guardado.codigo), { activo: false, revocadoEn: serverTimestamp() });
+    delete window._codigosLocal[id];
+    guardarCodigosLocal();
+    renderPlantillas();
     showToast('Código anulado', 'success');
   } catch (err) {
     console.error(err);
