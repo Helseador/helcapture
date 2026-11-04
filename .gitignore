@@ -1,0 +1,10 @@
+# Configuración de seguridad: no se versiona porque el repo es público.
+# Las reglas viven en la consola de Firebase (Firestore → Reglas).
+firestore.rules
+firestore.indexes.json
+storage.rules
+*.rules
+
+# Sistema
+.DS_Store
+Thumbs.db
