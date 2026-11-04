@@ -41,5 +41,15 @@ service cloud.firestore {
     match /usuarios/{userId} {
       allow read, write: if true;
     }
+
+    // Registro de quién entró a capturar cada día.
+    // El id es determinista (actividad_documento_fecha), así que volver a
+    // entrar el mismo día actualiza el mismo documento y no duplica.
+    match /ingresos/{ingresoId} {
+      allow read: if true;
+      allow create: if codigoValido(request.resource.data);
+      allow update: if codigoValido(resource.data);
+      allow delete: if false;
+    }
   }
 }

@@ -2104,8 +2104,11 @@ td strong, td b { color: var(--ink); font-weight: 700; }
     <div class="nav-item" data-view="plantillas" onclick="navigate('plantillas')">
       <span class="nav-icon">📌</span> Plantillas
     </div>
+    <div class="nav-item" data-view="ingresos" onclick="navigate('ingresos')">
+      <span class="nav-icon">👥</span> Ingresos
+    </div>
     <div class="nav-item" data-view="usuarios" onclick="navigate('usuarios')">
-      <span class="nav-icon">👥</span> Usuarios
+      <span class="nav-icon">🎫</span> Usuarios
     </div>
   </nav>
 
@@ -2282,6 +2285,85 @@ td strong, td b { color: var(--ink); font-weight: 700; }
           <div class="report-title">Formato legalización</div>
           <div class="report-desc">Excel de gastos con concepto, valor y punto de venta para trámite contable.</div>
           <div class="report-format"><span class="badge success">XLSX</span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══ INGRESOS DE IMPULSORES ══ -->
+    <div class="view" id="view-ingresos">
+      <div class="informes-hint">
+        <span class="ayuda" data-tip="Cada vez que un impulsor entra con su código de jornada queda registrado aquí. Si la misma persona vuelve a entrar el mismo día, se actualiza la hora y no se duplica.">?</span>
+        Quién entró a capturar, por actividad y por día.
+      </div>
+
+      <div class="filter-bar">
+        <select class="filter-select" id="ing-actividad" onchange="renderIngresos()" title="Actividad">
+          <option value="">Todas las actividades</option>
+        </select>
+        <input type="date" class="filter-select" id="ing-fecha" onchange="renderIngresos()" title="Día">
+        <button class="btn btn-outline btn-sm" onclick="limpiarFiltrosIngresos()">✕ Limpiar</button>
+        <button class="btn btn-teal btn-sm" onclick="exportarIngresosExcel()" title="Descarga la lista con nombre, documento y qué capturó cada persona">📊 Exportar Excel</button>
+      </div>
+
+      <div class="rent-summary-bar">
+        <div class="rent-chip teal">
+          <div class="val" id="ing-total">–</div>
+          <div class="lbl">Personas
+            <span class="ayuda" data-tip="Personas distintas que entraron con este filtro. Cada persona cuenta una vez por día.">?</span>
+          </div>
+        </div>
+        <div class="rent-chip pos">
+          <div class="val" id="ing-con-reporte">–</div>
+          <div class="lbl">Enviaron reporte
+            <span class="ayuda" data-tip="De las que entraron, cuántas cerraron y enviaron la captura.">?</span>
+          </div>
+        </div>
+        <div class="rent-chip na">
+          <div class="val" id="ing-sin-reporte">–</div>
+          <div class="lbl">Solo entraron
+            <span class="ayuda" data-tip="Entraron pero no enviaron nada. Sirve para saber quién se quedó a medias.">?</span>
+          </div>
+        </div>
+        <div class="rent-chip navy">
+          <div class="val" id="ing-actividades">–</div>
+          <div class="lbl">Actividades
+            <span class="ayuda" data-tip="Cuántas actividades distintas tienen ingresos con este filtro.">?</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="table-card">
+        <div class="table-toolbar">
+          <div class="table-toolbar-title">Personas que entraron</div>
+          <div class="search-box">
+            <span>🔍</span>
+            <input type="text" id="ing-buscar" placeholder="Buscar por nombre o documento..." oninput="renderIngresos()">
+          </div>
+        </div>
+        <div style="overflow-x:auto;">
+          <table class="rent-tabla">
+            <thead>
+              <tr>
+                <th>Persona</th>
+                <th>Documento</th>
+                <th>Actividad</th>
+                <th>Día</th>
+                <th>Entró</th>
+                <th style="text-align:center;">Reporte
+                  <span class="ayuda" data-tip="Si envió o no la captura ese día.">?</span>
+                </th>
+                <th>Qué capturó
+                  <span class="ayuda" data-tip="Resumen del reporte: asistentes, fotos, muestreo/ventas/obsequios y gastos legalizados.">?</span>
+                </th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody id="ing-tbody"></tbody>
+          </table>
+        </div>
+        <div class="empty-state" id="ing-empty" style="display:none;">
+          <div class="icon">👥</div>
+          <p>Nadie ha entrado con estos filtros</p>
         </div>
       </div>
     </div>
@@ -4101,6 +4183,7 @@ const TITULOS_VISTA = {
   constructor:  'Constructor de informe',
   rentabilidad: 'Rentabilidad',
   plantillas:   'Plantillas de actividades',
+  ingresos:     'Ingresos de impulsores',
   usuarios:     'Usuarios'
 };
 
@@ -4123,6 +4206,7 @@ window.navigate = function(view) {
 
   if (view === 'rentabilidad') { actualizarSelectImpulsorRent(); renderRentabilidad(); }
   if (view === 'plantillas') renderPlantillas();
+  if (view === 'ingresos') { actualizarSelectActividadIngresos(); renderIngresos(); }
   if (view === 'constructor') {
     poblarSelectorActividades();
     if (!window._constructorState.actividadId) limpiarConstructor();
@@ -5419,6 +5503,183 @@ const CIUDADES_CO = [
 
 window._plantillas = [];
 window._editPlantillaId = null;
+
+// ══════════════════════════════════════════
+// INGRESOS DE IMPULSORES (quién entró cada día)
+// ══════════════════════════════════════════
+window._ingresos = [];
+
+onSnapshot(collection(db, 'ingresos'), snap => {
+  _fallosAvisados.ingresos = false;
+  window._ingresos = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+  actualizarSelectActividadIngresos();
+  if (document.getElementById('view-ingresos')?.classList.contains('active')) renderIngresos();
+}, err => {
+  // Todavía puede no existir la regla de esta colección en Firestore
+  console.warn('[Firestore] No se pudo leer ingresos:', err?.code || err);
+  if (!_fallosAvisados.ingresos) {
+    _fallosAvisados.ingresos = true;
+    showToast('Ingresos no disponibles: falta publicar la regla de la colección', 'error');
+  }
+});
+
+// Fecha local (no UTC) de un Timestamp o texto
+function fechaLocalDe(v) {
+  const d = aFecha(v);
+  if (!d) return '';
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
+function horaDe(v) {
+  const d = aFecha(v);
+  return d ? d.toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' }) : '–';
+}
+
+// Reporte que envió esa persona ese día en esa actividad
+function reporteDeIngreso(ing) {
+  return (window._actividades || []).find(a =>
+    a.plantillaId === ing.plantillaId &&
+    String(a.impulsor?.cedula || '') === String(ing.cedula || '') &&
+    fechaLocalDe(a.creadoEn) === ing.fecha
+  ) || null;
+}
+
+// Resumen corto de lo que capturó
+function resumenCaptura(a) {
+  if (!a) return '';
+  const fotos = (a.fotosGenerales || []).length + (a.muestreo?.fotos || []).length
+    + (a.ventas?.fotos || []).length + (a.obsequios?.fotos || []).length;
+  const referencias = (a.ventas?.referencias || []).filter(Boolean).length
+    + (a.obsequios?.referencias || []).filter(Boolean).length;
+  const gastos = (a.gastos?.items || []).filter(Boolean)
+    .reduce((s, g) => s + (parseFloat(g.valor) || 0), 0);
+
+  const partes = [`${parseInt(a.evento?.asistentes) || 0} asistentes`];
+  if (fotos) partes.push(`${fotos} foto${fotos > 1 ? 's' : ''}`);
+  if (a.muestreo?.activo) partes.push('muestreo');
+  if (referencias) partes.push(`${referencias} ref${referencias > 1 ? 's' : ''}`);
+  if (gastos) partes.push('$' + Math.round(gastos).toLocaleString('es-CO'));
+  return partes.join(' · ');
+}
+
+window.actualizarSelectActividadIngresos = function() {
+  const sel = document.getElementById('ing-actividad');
+  if (!sel) return;
+  const actual = sel.value;
+  const mapa = new Map();
+  (window._plantillas || []).forEach(p => mapa.set(p.id, p.nombre || 'Sin nombre'));
+  (window._ingresos || []).forEach(i => {
+    if (!mapa.has(i.plantillaId)) mapa.set(i.plantillaId, i.plantillaNombre || 'Actividad');
+  });
+  const lista = [...mapa.entries()].sort((a, b) => String(a[1]).localeCompare(String(b[1]), 'es'));
+  sel.innerHTML = '<option value="">Todas las actividades</option>'
+    + lista.map(([id, nombre]) => `<option value="${e(id)}">${e(nombre)}</option>`).join('');
+  if (lista.some(([id]) => id === actual)) sel.value = actual;
+};
+
+window.limpiarFiltrosIngresos = function() {
+  ['ing-actividad', 'ing-fecha', 'ing-buscar'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.value = '';
+  });
+  renderIngresos();
+};
+
+window.renderIngresos = function() {
+  const tbody = document.getElementById('ing-tbody');
+  if (!tbody) return;
+
+  const act = document.getElementById('ing-actividad')?.value || '';
+  const fecha = document.getElementById('ing-fecha')?.value || '';
+  const q = (document.getElementById('ing-buscar')?.value || '').toLowerCase().trim();
+
+  const lista = (window._ingresos || []).filter(i => {
+    if (act && i.plantillaId !== act) return false;
+    if (fecha && i.fecha !== fecha) return false;
+    if (q && !(`${i.nombre || ''} ${i.cedula || ''}`.toLowerCase().includes(q))) return false;
+    return true;
+  }).sort((a, b) =>
+    String(b.fecha || '').localeCompare(String(a.fecha || '')) ||
+    String(a.nombre || '').localeCompare(String(b.nombre || ''), 'es'));
+
+  const empty = document.getElementById('ing-empty');
+  if (!lista.length) {
+    tbody.innerHTML = '';
+    if (empty) empty.style.display = 'block';
+    ['ing-total', 'ing-con-reporte', 'ing-sin-reporte', 'ing-actividades'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.textContent = '0';
+    });
+    return;
+  }
+  if (empty) empty.style.display = 'none';
+
+  let conReporte = 0;
+  const actividades = new Set();
+
+  tbody.innerHTML = lista.map(raw => {
+    const i = escaparDatos(raw);
+    actividades.add(raw.plantillaId);
+    const rep = reporteDeIngreso(raw);
+    if (rep) conReporte++;
+
+    const estado = rep
+      ? '<span class="badge success">Enviado</span>'
+      : '<span class="badge gray">Solo entró</span>';
+
+    return `<tr>
+      <td><strong>${i.nombre || '–'}</strong></td>
+      <td>${i.cedula || '–'}</td>
+      <td>${i.plantillaNombre || '–'}</td>
+      <td>${fmtFecha(i.fecha)}</td>
+      <td style="white-space:nowrap;">${horaDe(raw.primerEn)}${
+        raw.ultimoEn && fechaLocalDe(raw.ultimoEn) === raw.fecha && horaDe(raw.ultimoEn) !== horaDe(raw.primerEn)
+          ? ` <span style="color:var(--ink-faint);">/ ${horaDe(raw.ultimoEn)}</span>` : ''}</td>
+      <td style="text-align:center;">${estado}</td>
+      <td style="font-size:12px;color:var(--ink-dim);">${rep ? resumenCaptura(rep) : '—'}</td>
+      <td style="white-space:nowrap;">
+        ${rep ? `<button class="btn btn-outline btn-sm" onclick="verDetalle('${rep.id}')">Ver reporte</button>` : ''}
+      </td>
+    </tr>`;
+  }).join('');
+
+  const total = lista.length;
+  const poner = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v; };
+  poner('ing-total', total);
+  poner('ing-con-reporte', conReporte);
+  poner('ing-sin-reporte', total - conReporte);
+  poner('ing-actividades', actividades.size);
+};
+
+window.exportarIngresosExcel = async function() {
+  const filas = (window._ingresos || []);
+  if (!filas.length) { showToast('Todavía no hay ingresos registrados', 'error'); return; }
+
+  const act = document.getElementById('ing-actividad')?.value || '';
+  const fecha = document.getElementById('ing-fecha')?.value || '';
+  const lista = filas.filter(i => (!act || i.plantillaId === act) && (!fecha || i.fecha === fecha));
+
+  const rows = lista.map(i => {
+    const rep = reporteDeIngreso(i);
+    return {
+      'Persona': i.nombre || '',
+      'Documento': i.cedula || '',
+      'Actividad': i.plantillaNombre || '',
+      'Día': i.fecha || '',
+      'Entró': horaDe(i.primerEn),
+      'Última entrada': horaDe(i.ultimoEn),
+      'Envió reporte': rep ? 'Sí' : 'No',
+      'Qué capturó': rep ? resumenCaptura(rep) : '',
+    };
+  }).sort((a, b) => String(b['Día']).localeCompare(String(a['Día'])) || String(a['Persona']).localeCompare(String(b['Persona']), 'es'));
+
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, hojaFormateada(rows, [30, 16, 34, 12, 9, 14, 13, 60]), 'Ingresos');
+  const nombre = `HelCapture_Ingresos_${new Date().toISOString().split('T')[0]}.xlsx`;
+  const blob = new Blob([XLSX.write(wb, { bookType: 'xlsx', type: 'array' })],
+    { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+  await window.mostrarModalInforme(blob, nombre, 'xlsx', '👥');
+};
 
 // ── CÓDIGO DE JORNADA ──
 // Va dentro de la propia actividad (plantillas/{id}), así la captura ya lo

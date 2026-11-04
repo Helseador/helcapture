@@ -1375,7 +1375,34 @@ async function hacerLogin() {
   codigoActual = codigo;
   codigoPlantilla = disponible.id;
   impulsor = { cedula, nombre };
+  await registrarIngreso(codigo, disponible);
   await cargarActividadesImpulsor(disponible);
+}
+
+// Deja constancia de quién entró cada día. No frena la captura si falla: el
+// reporte enviado sigue llegando al panel igual.
+async function registrarIngreso(codigo, plantilla) {
+  if (!plantilla || !impulsor) return;
+  try {
+    const d = new Date();
+    const fecha = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    const ref = db.collection('ingresos').doc(`${plantilla.id}_${impulsor.cedula}_${fecha}`);
+    const yaEstaba = await ref.get().then(s => s.exists).catch(() => false);
+    const sello = firebase.firestore.FieldValue.serverTimestamp();
+
+    await ref.set({
+      codigo,
+      plantillaId: plantilla.id,
+      plantillaNombre: plantilla.nombre || '',
+      cedula: impulsor.cedula,
+      nombre: impulsor.nombre,
+      fecha,
+      ultimoEn: sello,
+      ...(yaEstaba ? {} : { primerEn: sello }),
+    }, { merge: true });
+  } catch (e) {
+    console.warn('No se pudo registrar el ingreso:', e);
+  }
 }
 
 async function cargarActividadesImpulsor(actividadDelCodigo) {
