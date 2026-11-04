@@ -1996,6 +1996,71 @@ td strong, td b { color: var(--ink); font-weight: 700; }
   color: var(--ink-dim);
 }
 
+/* ── LOGIN DEL PANEL Y SESIÓN ── */
+.login-admin {
+  position: fixed;
+  inset: 0;
+  z-index: 900;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: radial-gradient(900px 600px at 50% 0%, rgba(42, 191, 192, .16), transparent 60%), #05070F;
+}
+.login-admin.show { display: flex; }
+.login-admin-card {
+  width: 100%;
+  max-width: 380px;
+  padding: 30px 28px;
+  border-radius: 24px;
+  text-align: center;
+  background: linear-gradient(165deg, rgba(24, 34, 58, .95), rgba(10, 16, 30, .97));
+  box-shadow: 0 40px 80px -30px #000, inset 0 1px 0 rgba(255, 255, 255, .13), inset 0 0 0 1px rgba(255, 255, 255, .08);
+}
+.login-admin-logo { font-size: 34px; margin-bottom: 10px; }
+.login-admin-title { font-size: 19px; font-weight: 800; color: var(--ink); letter-spacing: -.02em; }
+.login-admin-sub { font-size: 12.5px; color: var(--ink-dim); margin: 6px 0 20px; }
+.login-admin-card input {
+  width: 100%;
+  margin-bottom: 10px;
+  padding: 12px 14px;
+  border: 0;
+  border-radius: var(--r-sm);
+  background: rgba(255, 255, 255, .06);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .1);
+  color: var(--ink);
+  font-family: inherit;
+  font-size: 13.5px;
+  outline: none;
+}
+.login-admin-card input:focus { box-shadow: inset 0 0 0 1px rgba(42, 191, 192, .55), 0 0 0 3px rgba(42, 191, 192, .12); }
+.login-admin-error {
+  display: none;
+  margin-bottom: 12px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  font-size: 12px;
+  line-height: 1.5;
+  text-align: left;
+  color: #FCA5A5;
+  background: rgba(248, 113, 113, .12);
+  box-shadow: inset 0 0 0 1px rgba(248, 113, 113, .3);
+}
+.login-admin-hint { margin-top: 14px; font-size: 10.5px; color: var(--ink-faint); line-height: 1.5; }
+
+.sesion-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 5px 10px;
+  border-radius: 99px;
+  font-size: 11px;
+  background: rgba(255, 255, 255, .05);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .09);
+}
+.sesion-rol { font-weight: 800; color: var(--ink-soft); white-space: nowrap; }
+.sesion-rol.admin { color: var(--teal-bright); }
+.sesion-mail { max-width: 150px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--ink-faint); }
 /* ── 26. SCROLLBARS ────────────────────────────────────────────────── */
 * { scrollbar-width: thin; scrollbar-color: rgba(255, 255, 255, .16) transparent; }
 ::-webkit-scrollbar { width: 8px; height: 8px; }
@@ -2083,6 +2148,20 @@ td strong, td b { color: var(--ink); font-weight: 700; }
   <span class="grain"></span>
 </div>
 
+<!-- LOGIN DEL PANEL -->
+<div class="login-admin" id="login-admin">
+  <div class="login-admin-card">
+    <div class="login-admin-logo">🔐</div>
+    <div class="login-admin-title">Panel HelCapture</div>
+    <div class="login-admin-sub">Entra con tu cuenta de coordinador</div>
+    <input type="email" id="admin-email" placeholder="correo@helteks.com" autocomplete="username" spellcheck="false">
+    <input type="password" id="admin-pass" placeholder="Contraseña" autocomplete="current-password">
+    <div class="login-admin-error" id="admin-error"></div>
+    <button class="btn btn-teal" id="btn-entrar-admin" style="width:100%;justify-content:center;">Entrar</button>
+    <div class="login-admin-hint">Las cuentas las crea un administrador desde la consola de Firebase.</div>
+  </div>
+</div>
+
 <!-- SIDEBAR -->
 <div class="sidebar">
   <div class="sidebar-header">
@@ -2121,7 +2200,7 @@ td strong, td b { color: var(--ink); font-weight: 700; }
     <div class="nav-item" data-view="ingresos" onclick="navigate('ingresos')">
       <span class="nav-icon">👥</span> Ingresos
     </div>
-    <div class="nav-item" data-view="usuarios" onclick="navigate('usuarios')">
+    <div class="nav-item" data-view="usuarios" data-solo-admin onclick="navigate('usuarios')">
       <span class="nav-icon">🎫</span> Usuarios
     </div>
   </nav>
@@ -2140,6 +2219,8 @@ td strong, td b { color: var(--ink); font-weight: 700; }
     <div class="topbar-title" id="topbar-title">Dashboard</div>
     <div class="topbar-actions">
       <span id="last-update" title="Última sincronización">Sincronizando…</span>
+      <span class="sesion-chip" id="sesion-chip" style="display:none;"></span>
+      <button class="btn btn-outline btn-sm" id="btn-salir-admin" style="display:none;" onclick="salirAdmin()" title="Cerrar sesión">Salir</button>
       <button class="btn btn-outline btn-sm" onclick="exportarExcel()">📊 Excel</button>
       <button class="btn btn-teal btn-sm" onclick="navigate('informes')">📄 Informes</button>
     </div>
@@ -2393,7 +2474,10 @@ td strong, td b { color: var(--ink); font-weight: 700; }
     <!-- ══ USUARIOS ══ -->
     <div class="view" id="view-usuarios">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;">
-        <div style="font-size:15px;color:var(--gray-600);">Gestiona el equipo de impulso y administradores</div>
+        <div style="font-size:14px;color:var(--gray-600);max-width:620px;line-height:1.6;">
+          Quién puede entrar al panel y con qué rol. La contraseña se crea en
+          <b>Firebase Console → Authentication</b> con el mismo correo; aquí solo se autoriza el acceso.
+        </div>
         <button class="btn btn-teal" onclick="abrirModalUsuario()">+ Nuevo usuario</button>
       </div>
       <div class="users-grid" id="users-grid">
@@ -2551,7 +2635,7 @@ td strong, td b { color: var(--ink); font-weight: 700; }
       </div>
 
       <!-- PANEL DE MIGRACIÓN -->
-      <div id="panel-migracion">
+      <div id="panel-migracion" data-solo-admin>
         <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;">
           <div>
             <div class="migracion-titulo">⚠️ Migración de registros anteriores</div>
@@ -2693,9 +2777,13 @@ td strong, td b { color: var(--ink); font-weight: 700; }
         <input type="text" id="u-nombre" placeholder="Juan Pérez">
       </div>
       <div class="form-field">
-        <label>Correo</label>
+        <label>Correo (será su usuario)</label>
         <input type="text" id="u-email" placeholder="juan@helteks.com">
       </div>
+    </div>
+    <div style="font-size:11.5px;color:var(--ink-faint);line-height:1.55;margin:-4px 0 12px;">
+      Crea la contraseña en <b>Firebase Console → Authentication → Agregar usuario</b> con este mismo correo.
+      Sin ese paso la persona no podrá entrar aunque esté autorizada aquí.
     </div>
     <div class="form-row">
       <div class="form-field">
@@ -2952,6 +3040,9 @@ td strong, td b { color: var(--ink); font-weight: 700; }
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
 import {
+  getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut,
+} from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+import {
   getFirestore, collection, onSnapshot, getDocs, getDoc, addDoc, setDoc, updateDoc, doc, query, orderBy, serverTimestamp, Timestamp
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 import {
@@ -3155,26 +3246,42 @@ function avisarFalloLectura(coleccion, err) {
   showToast(`No se pudo leer ${coleccion}${err?.code ? ' (' + err.code + ')' : ''}`, 'error');
 }
 
-// ── TIEMPO REAL: ACTIVIDADES ──
-const q = query(collection(db, 'actividades'), orderBy('creadoEn', 'desc'));
-onSnapshot(q, snap => {
-  _fallosAvisados.actividades = false;
-  window._actividades = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-  actualizarStats();
-  renderTabla(window._actividades);
-  renderTablaAll(window._actividades);
-  actualizarSelectImpulsores();
-  actualizarSelectImpulsorRent();
-  if (document.getElementById('view-informes')?.classList.contains('active')) actualizarAlcanceInformes();
-  document.getElementById('last-update').textContent = 'Actualizado: ' + new Date().toLocaleTimeString('es-CO');
-}, err => avisarFalloLectura('actividades', err));
+// ── TIEMPO REAL ──
+// Las escuchas se registran despues del login: con las reglas cerradas, leer
+// sin sesion solo produce errores de permisos.
+let _escuchasActivas = false;
 
-// ── TIEMPO REAL: USUARIOS ──
-onSnapshot(collection(db, 'usuarios'), snap => {
-  _fallosAvisados.usuarios = false;
-  window._usuarios = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-  renderUsuarios();
-}, err => avisarFalloLectura('usuarios', err));
+function iniciarEscuchas() {
+  if (_escuchasActivas) return;
+  _escuchasActivas = true;
+
+  const q = query(collection(db, 'actividades'), orderBy('creadoEn', 'desc'));
+  onSnapshot(q, snap => {
+    _fallosAvisados.actividades = false;
+    window._actividades = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    actualizarStats();
+    renderTabla(window._actividades);
+    renderTablaAll(window._actividades);
+    actualizarSelectImpulsores();
+    actualizarSelectImpulsorRent();
+    if (document.getElementById('view-informes')?.classList.contains('active')) actualizarAlcanceInformes();
+    document.getElementById('last-update').textContent = 'Actualizado: ' + new Date().toLocaleTimeString('es-CO');
+  }, err => avisarFalloLectura('actividades', err));
+
+  onSnapshot(collection(db, 'usuarios'), snap => {
+    _fallosAvisados.usuarios = false;
+    window._usuarios = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    renderUsuarios();
+  }, err => avisarFalloLectura('usuarios', err));
+
+  iniciarEscuchasRestantes();
+}
+
+// Escuchas que viven más abajo en el archivo
+function iniciarEscuchasRestantes() {
+  escuchaDeIngresos();
+  escuchaDePlantillas();
+}
 
 // ── STATS ──
 function actualizarStats() {
@@ -4151,8 +4258,8 @@ window.renderUsuarios = function() {
 window.abrirModalUsuario = function() {
   window._editUserId = null;
   document.getElementById('modal-user-titulo').textContent = 'Nuevo usuario';
-  ['u-nombre','u-email'].forEach(id => document.getElementById(id).value='');
-  document.getElementById('u-rol').value='impulsor';
+  ['u-nombre','u-email'].forEach(id => { const el = document.getElementById(id); el.value=''; el.disabled = false; });
+  document.getElementById('u-rol').value='coordinador';
   document.getElementById('u-estado').value='activo';
   document.getElementById('modal-usuario').classList.add('open');
 };
@@ -4163,26 +4270,34 @@ window.editarUsuario = function(id) {
   window._editUserId = id;
   document.getElementById('modal-user-titulo').textContent = 'Editar usuario';
   document.getElementById('u-nombre').value = u.nombre||'';
-  document.getElementById('u-email').value = u.email||'';
-  document.getElementById('u-rol').value = u.rol||'impulsor';
+  // El correo es la identidad de la cuenta: no se cambia desde aquí
+  const mail = document.getElementById('u-email');
+  mail.value = u.email || id;
+  mail.disabled = true;
+  document.getElementById('u-rol').value = u.rol||'coordinador';
   document.getElementById('u-estado').value = u.estado||'activo';
   document.getElementById('modal-usuario').classList.add('open');
 };
 
 window.guardarUsuario = async function() {
+  const email = document.getElementById('u-email').value.trim().toLowerCase();
   const data = {
     nombre: document.getElementById('u-nombre').value.trim(),
-    email: document.getElementById('u-email').value.trim(),
+    email,
     rol: document.getElementById('u-rol').value,
     estado: document.getElementById('u-estado').value,
     actualizadoEn: serverTimestamp()
   };
   if (!data.nombre) { showToast('El nombre es obligatorio','error'); return; }
+  if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) { showToast('Escribe un correo válido','error'); return; }
+
   try {
-    if (window._editUserId) {
-      await updateDoc(doc(db,'usuarios',window._editUserId), data);
+    const ref = doc(db, 'usuarios', email);
+    const existe = await getDoc(ref).then(s => s.exists()).catch(() => false);
+    if (existe) {
+      await updateDoc(ref, data);
     } else {
-      await addDoc(collection(db,'usuarios'), { ...data, creadoEn: serverTimestamp() });
+      await setDoc(ref, { ...data, creadoEn: serverTimestamp() });
     }
     cerrarModal('modal-usuario');
     showToast('Usuario guardado ✓','success');
@@ -5531,19 +5646,21 @@ window._editPlantillaId = null;
 // ══════════════════════════════════════════
 window._ingresos = [];
 
-onSnapshot(collection(db, 'ingresos'), snap => {
-  _fallosAvisados.ingresos = false;
-  window._ingresos = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-  actualizarSelectActividadIngresos();
-  if (document.getElementById('view-ingresos')?.classList.contains('active')) renderIngresos();
-}, err => {
-  // Todavía puede no existir la regla de esta colección en Firestore
-  console.warn('[Firestore] No se pudo leer ingresos:', err?.code || err);
-  if (!_fallosAvisados.ingresos) {
-    _fallosAvisados.ingresos = true;
-    showToast('Ingresos no disponibles: falta publicar la regla de la colección', 'error');
-  }
-});
+function escuchaDeIngresos() {
+  onSnapshot(collection(db, 'ingresos'), snap => {
+    _fallosAvisados.ingresos = false;
+    window._ingresos = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    actualizarSelectActividadIngresos();
+    if (document.getElementById('view-ingresos')?.classList.contains('active')) renderIngresos();
+  }, err => {
+    // Todavía puede no existir la regla de esta colección en Firestore
+    console.warn('[Firestore] No se pudo leer ingresos:', err?.code || err);
+    if (!_fallosAvisados.ingresos) {
+      _fallosAvisados.ingresos = true;
+      showToast('Ingresos no disponibles: falta publicar la regla de la colección', 'error');
+    }
+  });
+}
 
 // Fecha local (no UTC) de un Timestamp o texto
 function fechaLocalDe(v) {
@@ -5894,12 +6011,14 @@ function msDe(v) {
   return isNaN(t) ? 0 : t;
 }
 
-onSnapshot(collection(db,'plantillas'), snap => {
-  _fallosAvisados.plantillas = false;
-  window._plantillas = snap.docs.map(d=>({id:d.id,...d.data()}))
-    .sort((a,b) => (msDe(b.creadoEn) - msDe(a.creadoEn)) || String(b.fecha||'').localeCompare(String(a.fecha||'')));
-  if (document.getElementById('view-plantillas').classList.contains('active')) renderPlantillas();
-}, err => avisarFalloLectura('plantillas', err));
+function escuchaDePlantillas() {
+  onSnapshot(collection(db,'plantillas'), snap => {
+    _fallosAvisados.plantillas = false;
+    window._plantillas = snap.docs.map(d=>({id:d.id,...d.data()}))
+      .sort((a,b) => (msDe(b.creadoEn) - msDe(a.creadoEn)) || String(b.fecha||'').localeCompare(String(a.fecha||'')));
+    if (document.getElementById('view-plantillas').classList.contains('active')) renderPlantillas();
+  }, err => avisarFalloLectura('plantillas', err));
+}
 
 function estadoRealPlantilla(p) {
   // Si está inactiva manualmente, eso manda
@@ -6282,6 +6401,186 @@ window.ejecutarMigracion = async function() {
     console.error(e);
   }
 };
+
+// ══════════════════════════════════════════
+// SESIÓN Y ROLES
+// El panel exige cuenta de Firebase Auth. El rol vive en usuarios/{correo},
+// con el correo en minúsculas como id del documento.
+// ══════════════════════════════════════════
+const auth = getAuth(app);
+
+const ROLES = {
+  admin:       { etiqueta: 'Administrador', icono: '👑' },
+  coordinador: { etiqueta: 'Coordinador',   icono: '🎫' },
+};
+window._sesion = { email: null, rol: null, nombre: null };
+
+function mostrarLogin(mensaje) {
+  const caja = document.getElementById('login-admin');
+  if (!caja) return;
+  caja.classList.add('show');
+  const err = document.getElementById('admin-error');
+  err.textContent = mensaje || '';
+  err.style.display = mensaje ? 'block' : 'none';
+  document.getElementById('admin-pass').value = '';
+  setTimeout(() => document.getElementById('admin-email')?.focus(), 100);
+}
+
+function ocultarLogin() {
+  document.getElementById('login-admin')?.classList.remove('show');
+}
+
+window.entrarAdmin = async function() {
+  const email = document.getElementById('admin-email').value.trim().toLowerCase();
+  const pass = document.getElementById('admin-pass').value;
+  const err = document.getElementById('admin-error');
+  if (!email || !pass) { err.textContent = 'Escribe tu correo y contraseña.'; err.style.display = 'block'; return; }
+  err.style.display = 'none';
+
+  const btn = document.getElementById('btn-entrar-admin');
+  btn.disabled = true;
+  btn.textContent = 'Entrando...';
+  try {
+    await signInWithEmailAndPassword(auth, email, pass);
+  } catch (e) {
+    const mensajes = {
+      'auth/invalid-credential': 'Correo o contraseña incorrectos.',
+      'auth/user-not-found': 'Correo o contraseña incorrectos.',
+      'auth/wrong-password': 'Correo o contraseña incorrectos.',
+      'auth/invalid-email': 'El correo no tiene un formato válido.',
+      'auth/too-many-requests': 'Demasiados intentos. Espera un momento.',
+      'auth/network-request-failed': 'Sin conexión. Revisa tu red.',
+    };
+    mostrarLogin(mensajes[e.code] || 'No se pudo entrar (' + (e.code || 'error') + ').');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Entrar';
+  }
+};
+
+async function cargarPerfil(user) {
+  const email = String(user.email || '').toLowerCase();
+  let perfil = null;
+
+  try {
+    const snap = await getDoc(doc(db, 'usuarios', email));
+    if (snap.exists()) perfil = snap.data();
+  } catch (e) {
+    console.warn('No se pudo leer el perfil:', e);
+  }
+
+  // Primera puesta en marcha: si no hay ningún usuario, esta cuenta se
+  // configura como administrador.
+  if (!perfil) {
+    let vacia = false;
+    try {
+      const todos = await getDocs(collection(db, 'usuarios'));
+      vacia = todos.size === 0;
+    } catch (e) { /* sin permisos de lectura todavía */ }
+
+    if (vacia) {
+      ocultarLogin();
+      const err = document.getElementById('admin-error');
+      document.getElementById('login-admin').classList.add('show');
+      err.innerHTML = `Tu cuenta <b>${e(email)}</b> todavía no tiene perfil.<br><br>
+        <button class="btn btn-teal btn-sm" style="width:100%;justify-content:center;" onclick="crearPerfilAdmin()">Configurarme como administrador</button>`;
+      err.style.display = 'block';
+      return;
+    }
+
+    await signOut(auth);
+    return mostrarLogin('Tu cuenta no está autorizada. Pídele a un administrador que te agregue.');
+  }
+
+  if (perfil.estado && perfil.estado !== 'activo') {
+    await signOut(auth);
+    return mostrarLogin('Tu cuenta está inactiva. Habla con un administrador.');
+  }
+
+  window._sesion = {
+    email,
+    rol: perfil.rol === 'admin' ? 'admin' : 'coordinador',
+    nombre: perfil.nombre || email,
+  };
+
+  aplicarRol();
+  ocultarLogin();
+  iniciarEscuchas();
+}
+
+window.crearPerfilAdmin = async function() {
+  const user = auth.currentUser;
+  if (!user) return;
+  const email = String(user.email || '').toLowerCase();
+  try {
+    await setDoc(doc(db, 'usuarios', email), {
+      nombre: email.split('@')[0],
+      email,
+      rol: 'admin',
+      estado: 'activo',
+      creadoEn: serverTimestamp(),
+      actualizadoEn: serverTimestamp(),
+    });
+    showToast('Perfil de administrador creado', 'success');
+    await cargarPerfil(user);
+  } catch (err) {
+    console.error(err);
+    showToast('No se pudo crear el perfil (' + (err.code || 'error') + ')', 'error');
+  }
+};
+
+function aplicarRol() {
+  const { rol, email } = window._sesion;
+  const esAdmin = rol === 'admin';
+  const info = ROLES[rol] || ROLES.coordinador;
+
+  const chip = document.getElementById('sesion-chip');
+  if (chip) {
+    chip.innerHTML = `<span class="sesion-rol ${esAdmin ? 'admin' : ''}">${info.icono} ${e(info.etiqueta)}</span>` +
+      `<span class="sesion-mail" title="${e(email)}">${e(email)}</span>`;
+    chip.style.display = 'inline-flex';
+  }
+  const salir = document.getElementById('btn-salir-admin');
+  if (salir) salir.style.display = 'inline-flex';
+
+  document.querySelectorAll('[data-solo-admin]').forEach(el => {
+    el.style.display = esAdmin ? '' : 'none';
+  });
+
+  // Si no es admin y estaba en Usuarios, vuelve al dashboard
+  if (!esAdmin) {
+    const enUsuarios = document.getElementById('view-usuarios')?.classList.contains('active');
+    if (enUsuarios) navigate('dashboard');
+  }
+}
+
+window.salirAdmin = async function() {
+  await signOut(auth);
+};
+
+// Arranque: sin sesión se muestra el login; con sesión se carga el perfil.
+onAuthStateChanged(auth, user => {
+  if (!user) {
+    window._sesion = { email: null, rol: null, nombre: null };
+    const chip = document.getElementById('sesion-chip');
+    if (chip) chip.style.display = 'none';
+    const salir = document.getElementById('btn-salir-admin');
+    if (salir) salir.style.display = 'none';
+    mostrarLogin('');
+    return;
+  }
+  cargarPerfil(user);
+});
+
+// Enter para entrar
+document.getElementById('admin-pass').addEventListener('keypress', ev => {
+  if (ev.key === 'Enter') entrarAdmin();
+});
+document.getElementById('admin-email').addEventListener('keypress', ev => {
+  if (ev.key === 'Enter') document.getElementById('admin-pass').focus();
+});
+document.getElementById('btn-entrar-admin').addEventListener('click', () => entrarAdmin());
+
 </script>
 </body>
 </html>
