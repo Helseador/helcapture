@@ -1057,9 +1057,9 @@ td strong, td b { color: var(--ink); font-weight: 700; }
 /* ── 19. RENTABILIDAD ──────────────────────────────────────────────── */
 .rent-summary-bar {
   display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
-  gap: 14px;
-  margin-bottom: 20px;
+  grid-template-columns: repeat(auto-fit, minmax(148px, 1fr));
+  gap: 12px;
+  margin-bottom: 18px;
 }
 .rent-chip {
   padding: 16px 14px;
@@ -1090,6 +1090,139 @@ td strong, td b { color: var(--ink); font-weight: 700; }
 .rent-chip.neg .val  { color: #FCA5A5; }
 .rent-chip.teal .val { color: #7FE9EA; }
 .rent-chip.navy .val { color: #E8EEF9; }
+.rent-chip.na .val { color: var(--ink-dim); }
+
+/* ── Ayudas contextuales (etiquetas con explicación) ── */
+.ayuda {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 15px;
+  height: 15px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  font-size: 9.5px;
+  font-weight: 800;
+  line-height: 1;
+  color: var(--teal-bright);
+  background: rgba(42, 191, 192, .14);
+  box-shadow: inset 0 0 0 1px rgba(42, 191, 192, .32);
+  cursor: help;
+  vertical-align: middle;
+}
+.ayuda::after {
+  content: attr(data-tip);
+  position: absolute;
+  bottom: 150%;
+  left: 50%;
+  z-index: 80;
+  width: max-content;
+  max-width: 250px;
+  padding: 9px 12px;
+  border-radius: 11px;
+  font-size: 11px;
+  font-weight: 500;
+  line-height: 1.5;
+  letter-spacing: 0;
+  text-align: left;
+  text-transform: none;
+  white-space: normal;
+  color: var(--ink-soft);
+  background: rgba(9, 15, 28, .98);
+  box-shadow: 0 18px 40px -18px #000, inset 0 0 0 1px rgba(255, 255, 255, .13);
+  opacity: 0;
+  transform: translateX(-50%) translateY(4px);
+  pointer-events: none;
+  transition: opacity .18s ease, transform .18s ease;
+}
+.ayuda:hover::after,
+.ayuda:focus::after { opacity: 1; transform: translateX(-50%); }
+
+/* ── Introducción y comparativa visual de rentabilidad ── */
+.rent-intro {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin-bottom: 16px;
+  padding: 12px 15px;
+  border-radius: 13px;
+  font-size: 12.5px;
+  line-height: 1.6;
+  color: var(--ink-dim);
+  background: rgba(255, 255, 255, .04);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .07);
+}
+.rent-intro b { color: var(--ink-soft); }
+
+.rent-barras-card {
+  padding: 16px 20px 18px;
+  margin-bottom: 18px;
+  border-radius: var(--r-md);
+  background: linear-gradient(160deg, rgba(255, 255, 255, .07), rgba(255, 255, 255, .026));
+  box-shadow: var(--neo-out);
+}
+.rent-barras-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+.rent-barras-legend { display: flex; gap: 12px; font-size: 11px; font-weight: 600; }
+.rent-legend.pos { color: #6EE7B7; }
+.rent-legend.neg { color: #FCA5A5; }
+
+.rent-barra {
+  display: grid;
+  grid-template-columns: 190px 1fr 96px;
+  gap: 12px;
+  align-items: center;
+  margin-bottom: 9px;
+}
+.rent-barra-nom {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--ink-soft);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.rent-barra-track {
+  height: 10px;
+  border-radius: 99px;
+  background: rgba(255, 255, 255, .07);
+  overflow: hidden;
+}
+.rent-barra-fill {
+  height: 100%;
+  border-radius: 99px;
+  transition: width .45s cubic-bezier(.2, .9, .3, 1);
+}
+.rent-barra-fill.pos { background: linear-gradient(90deg, #10B981, #6EE7B7); }
+.rent-barra-fill.neg { background: linear-gradient(90deg, #EF4444, #FCA5A5); }
+.rent-barra-val {
+  font-size: 12px;
+  font-weight: 800;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+.rent-barra-val.pos { color: #6EE7B7; }
+.rent-barra-val.neg { color: #FCA5A5; }
+.rent-barras-vacio { font-size: 12.5px; color: var(--ink-faint); }
+
+.rent-sin-datos {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border-radius: 99px;
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--ink-dim);
+  background: rgba(255, 255, 255, .06);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .1);
+}
 
 .rent-tabla { width: 100%; border-collapse: collapse; font-size: 12.5px; }
 .rent-tabla th {
@@ -2144,33 +2277,101 @@ td strong, td b { color: var(--ink); font-weight: 700; }
     <!-- ══ RENTABILIDAD ══ -->
     <div class="view" id="view-rentabilidad">
 
+      <!-- Cómo se calcula -->
+      <div class="rent-intro">
+        <span class="ayuda" data-tip="La ganancia es ingresos menos costos. Los ingresos y los costos adicionales los carga el coordinador en el botón Balance de cada actividad.">?</span>
+        <b>Ganancia = ingresos − (gastos legalizados + costos adicionales).</b>
+        Si una actividad aparece en cero, ábrele el <b>Balance</b> y registra sus ingresos.
+      </div>
+
       <!-- Chips resumen global -->
       <div class="rent-summary-bar" id="rent-summary-bar">
-        <div class="rent-chip teal"><div class="val" id="rs-ingresos">–</div><div class="lbl">Total ingresos</div></div>
-        <div class="rent-chip navy"><div class="val" id="rs-costos">–</div><div class="lbl">Total costos</div></div>
-        <div class="rent-chip pos" id="rs-chip-ganancia"><div class="val" id="rs-ganancia">–</div><div class="lbl">Ganancia neta</div></div>
-        <div class="rent-chip teal"><div class="val" id="rs-roi">–</div><div class="lbl">ROI promedio</div></div>
-        <div class="rent-chip navy"><div class="val" id="rs-cpp">–</div><div class="lbl">Costo/persona prom.</div></div>
+        <div class="rent-chip teal">
+          <div class="val" id="rs-ingresos">–</div>
+          <div class="lbl">Total ingresos
+            <span class="ayuda" data-tip="Suma de los ingresos discriminados de todas las actividades del filtro.">?</span>
+          </div>
+        </div>
+        <div class="rent-chip navy">
+          <div class="val" id="rs-costos">–</div>
+          <div class="lbl">Total costos
+            <span class="ayuda" data-tip="Gastos legalizados por los impulsores + costos adicionales cargados en el balance.">?</span>
+          </div>
+        </div>
+        <div class="rent-chip pos" id="rs-chip-ganancia">
+          <div class="val" id="rs-ganancia">–</div>
+          <div class="lbl">Ganancia neta
+            <span class="ayuda" data-tip="Ingresos menos total costos. Se pone rojo si el resultado es negativo.">?</span>
+          </div>
+        </div>
+        <div class="rent-chip teal">
+          <div class="val" id="rs-margen">–</div>
+          <div class="lbl">Margen
+            <span class="ayuda" data-tip="Qué parte de cada peso que entra queda como ganancia: ganancia ÷ ingresos. Un 30% significa que de cada $100 quedan $30.">?</span>
+          </div>
+        </div>
+        <div class="rent-chip navy">
+          <div class="val" id="rs-roi">–</div>
+          <div class="lbl">ROI promedio
+            <span class="ayuda" data-tip="Retorno sobre la inversión: ganancia ÷ costos. Un ROI del 50% significa que por cada $100 invertidos se recuperan $150. Se promedia solo entre actividades con costos.">?</span>
+          </div>
+        </div>
+        <div class="rent-chip navy">
+          <div class="val" id="rs-cpp">–</div>
+          <div class="lbl">Costo por persona
+            <span class="ayuda" data-tip="Promedio de total costos ÷ personas impactadas. Sirve para comparar el costo de llegar a una persona entre actividades.">?</span>
+          </div>
+        </div>
+        <div class="rent-chip teal">
+          <div class="val" id="rs-personas">–</div>
+          <div class="lbl">Personas impactadas
+            <span class="ayuda" data-tip="Suma de las personas que reportó cada impulsor; si no las reportó se usan los asistentes.">?</span>
+          </div>
+        </div>
+        <div class="rent-chip navy" id="rs-chip-sindatos">
+          <div class="val" id="rs-sindatos">–</div>
+          <div class="lbl">Sin datos
+            <span class="ayuda" data-tip="Actividades sin ingresos ni costos cargados. No entran al promedio de ROI ni al margen porque todavía no tienen balance.">?</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Comparativa visual -->
+      <div class="rent-barras-card">
+        <div class="rent-barras-head">
+          <div class="table-toolbar-title">Ganancia por actividad</div>
+          <div class="rent-barras-legend">
+            <span class="rent-legend pos">● Gana</span>
+            <span class="rent-legend neg">● Pierde</span>
+          </div>
+        </div>
+        <div id="rent-barras"></div>
       </div>
 
       <!-- Filtros -->
       <div class="filter-bar" style="margin-bottom:20px;">
-        <input type="date" class="filter-select" id="rent-desde" onchange="renderRentabilidad()">
-        <input type="date" class="filter-select" id="rent-hasta" onchange="renderRentabilidad()">
-        <select class="filter-select" id="rent-tipo" onchange="renderRentabilidad()">
+        <input type="date" class="filter-select" id="rent-desde" onchange="renderRentabilidad()" title="Desde">
+        <input type="date" class="filter-select" id="rent-hasta" onchange="renderRentabilidad()" title="Hasta">
+        <select class="filter-select" id="rent-tipo" onchange="renderRentabilidad()" title="Tipo de actividad">
           <option value="">Todos los tipos</option>
           <option>Feria</option><option>Charla</option><option>Capacitación</option>
           <option>Evento presencial</option><option>Volanteo</option>
         </select>
+        <select class="filter-select" id="rent-impulsor" onchange="renderRentabilidad()" title="Impulsor">
+          <option value="">Todos los impulsores</option>
+        </select>
         <button class="btn btn-outline btn-sm" onclick="limpiarFiltrosRent()">✕ Limpiar</button>
-        <button class="btn btn-teal btn-sm" onclick="exportarRentabilidadExcel()">📊 Exportar Excel</button>
+        <button class="btn btn-teal btn-sm" onclick="exportarRentabilidadExcel()" title="Descarga el resumen, los ingresos y los costos discriminados">📊 Exportar Excel</button>
       </div>
 
       <!-- Tabla -->
       <div class="table-card">
         <div class="table-toolbar">
           <div class="table-toolbar-title">Comparativa por actividad</div>
-          <div style="font-size:12px;color:var(--text-muted);">Haz clic en los campos de Ingresos o Costos adicionales para editarlos</div>
+          <div style="font-size:12px;color:var(--text-muted);">
+            <span class="ayuda" data-tip="Los ingresos y los costos adicionales se cargan dentro de Balance, no en la tabla.">?</span>
+            Ingresos y costos se cargan en <b>Balance</b>.
+          </div>
         </div>
         <div style="overflow-x:auto;">
           <table class="rent-tabla">
@@ -2178,14 +2379,30 @@ td strong, td b { color: var(--ink); font-weight: 700; }
               <tr>
                 <th>Actividad</th>
                 <th>Fecha</th>
-                <th>Personas</th>
-                <th style="text-align:right;">Gastos legalizados</th>
-                <th style="text-align:right;">Costos adicionales</th>
-                <th style="text-align:right;">Total costos</th>
-                <th style="text-align:right;">Ingresos</th>
-                <th style="text-align:right;">Ganancia neta</th>
-                <th style="text-align:right;">ROI</th>
-                <th style="text-align:right;">Costo/persona</th>
+                <th style="text-align:center;">Personas
+                  <span class="ayuda" data-tip="Personas impactadas que reportó el impulsor. Si no las reportó, se usan los asistentes.">?</span>
+                </th>
+                <th style="text-align:right;">Gastos legalizados
+                  <span class="ayuda" data-tip="Suma de los gastos que el impulsor cargó con soporte en la app de captura.">?</span>
+                </th>
+                <th style="text-align:right;">Costos adicionales
+                  <span class="ayuda" data-tip="Costos que agregaste tú en el balance: transporte, material, alquiler, etc.">?</span>
+                </th>
+                <th style="text-align:right;">Total costos
+                  <span class="ayuda" data-tip="Gastos legalizados + costos adicionales.">?</span>
+                </th>
+                <th style="text-align:right;">Ingresos
+                  <span class="ayuda" data-tip="Lo que registraste como ingreso en el balance de la actividad.">?</span>
+                </th>
+                <th style="text-align:right;">Ganancia neta
+                  <span class="ayuda" data-tip="Ingresos − total costos. Verde si gana, rojo si pierde.">?</span>
+                </th>
+                <th style="text-align:right;">ROI
+                  <span class="ayuda" data-tip="Ganancia ÷ total costos, en porcentaje. Mide cuánto se recupera por cada peso invertido.">?</span>
+                </th>
+                <th style="text-align:right;">Costo por persona
+                  <span class="ayuda" data-tip="Total costos ÷ personas impactadas. Cuánto cuesta llegar a una persona.">?</span>
+                </th>
                 <th></th>
               </tr>
             </thead>
@@ -2820,6 +3037,7 @@ onSnapshot(q, snap => {
   renderTabla(window._actividades);
   renderTablaAll(window._actividades);
   actualizarSelectImpulsores();
+  actualizarSelectImpulsorRent();
   if (document.getElementById('view-informes')?.classList.contains('active')) actualizarAlcanceInformes();
   document.getElementById('last-update').textContent = 'Actualizado: ' + new Date().toLocaleTimeString('es-CO');
 }, err => avisarFalloLectura('actividades', err));
@@ -3878,7 +4096,7 @@ window.navigate = function(view) {
   const content = document.querySelector('.content');
   if (content) content.scrollTop = 0;
 
-  if (view === 'rentabilidad') renderRentabilidad();
+  if (view === 'rentabilidad') { actualizarSelectImpulsorRent(); renderRentabilidad(); }
   if (view === 'plantillas') renderPlantillas();
   if (view === 'constructor') {
     poblarSelectorActividades();
@@ -4923,32 +5141,44 @@ window.guardarBalance = async function() {
   } catch(e) { showToast('Error al guardar','error'); console.error(e); }
 };
 
-window.renderRentabilidad = function() {
-  const desde = document.getElementById('rent-desde')?.value;
-  const hasta  = document.getElementById('rent-hasta')?.value;
-  const tipo   = document.getElementById('rent-tipo')?.value;
-
-  let acts = window._actividades.filter(a => {
+// Conjunto de actividades según los filtros de la pestaña Rentabilidad
+function actsRentFiltradas() {
+  const val = id => { const el = document.getElementById(id); return el ? el.value : ''; };
+  const desde = val('rent-desde');
+  const hasta = val('rent-hasta');
+  const tipo  = val('rent-tipo');
+  const imp   = val('rent-impulsor');
+  return window._actividades.filter(a => {
     if (desde && a.evento?.fecha < desde) return false;
-    if (hasta  && a.evento?.fecha > hasta)  return false;
-    if (tipo   && a.evento?.tipo !== tipo)   return false;
+    if (hasta && a.evento?.fecha > hasta) return false;
+    if (tipo  && a.evento?.tipo !== tipo) return false;
+    if (imp   && (a.impulsor?.nombre || '') !== imp) return false;
     return true;
   });
+}
+
+window.renderRentabilidad = function() {
+  const acts = actsRentFiltradas();
 
   const tbody  = document.getElementById('rent-tbody');
   const empty  = document.getElementById('rent-empty');
-  if (!acts.length) { tbody.innerHTML=''; empty.style.display='block'; resetSummary(); return; }
+  if (!acts.length) { tbody.innerHTML=''; empty.style.display='block'; resetSummary(); renderBarrasRent([]); return; }
   empty.style.display = 'none';
 
-  let sumIngr=0, sumCost=0, sumGan=0, roisArr=[], cppsArr=[];
+  let sumIngr=0, sumCost=0, sumGan=0, roisArr=[], cppsArr=[], sumPersonas=0, sinDatos=0;
 
   tbody.innerHTML = acts.map(a => {
     const r = calcRent(a);
     sumIngr += r.ingresos; sumCost += r.totalCostos; sumGan += r.ganancia;
+    sumPersonas += r.personas;
     if (r.roi !== null) roisArr.push(r.roi);
     if (r.cpp !== null) cppsArr.push(r.cpp);
 
-    const ganCls = r.ganancia > 0 ? 'positive' : r.ganancia < 0 ? 'negative' : 'neutral';
+    // Sin ingresos ni costos: el cero no es "equilibrio", es falta de datos
+    const vacia = r.ingresos === 0 && r.totalCostos === 0;
+    if (vacia) sinDatos++;
+
+    const ganCls = vacia ? 'neutral' : (r.ganancia > 0 ? 'positive' : r.ganancia < 0 ? 'negative' : 'neutral');
     const roiStr = r.roi !== null ? r.roi.toFixed(1)+'%' : '–';
     const roiCls = r.roi !== null ? (r.roi >= 0 ? 'positive' : 'negative') : 'neutral';
     const cppStr = r.cpp !== null ? fmtCOP(r.cpp) : '–';
@@ -4962,6 +5192,7 @@ window.renderRentabilidad = function() {
       <td>
         <strong>${a.evento?.nombre||'–'}</strong>
         <div style="margin-top:5px;display:flex;flex-wrap:wrap;gap:4px;align-items:center;">
+          ${vacia ? '<span class="rent-sin-datos">Sin balance · usa Balance</span>' : ''}
           ${facturas.length ? `<span style="display:inline-flex;align-items:center;gap:3px;background:rgba(139,92,246,.14);border-radius:99px;padding:2px 9px;font-size:10.5px;font-weight:700;color:#C4B5FD;box-shadow:inset 0 0 0 1px rgba(139,92,246,.3);">🧾 ${facturas.length} factura${facturas.length>1?'s':''}</span>` : ''}
           ${tieneBalance ? linesIng.map(l=>`<span style="background:rgba(16,185,129,0.1);border-radius:20px;padding:2px 7px;font-size:10px;font-weight:600;color:var(--success);">+${l.concepto}</span>`).join('') : ''}
           ${tieneBalance ? linesCos.map(l=>`<span style="background:rgba(239,68,68,0.1);border-radius:20px;padding:2px 7px;font-size:10px;font-weight:600;color:var(--danger);">-${l.concepto}</span>`).join('') : ''}
@@ -4973,7 +5204,7 @@ window.renderRentabilidad = function() {
       <td style="text-align:right;">${fmtCOP(r.costosAd)}</td>
       <td style="text-align:right;font-weight:700;">${fmtCOP(r.totalCostos)}</td>
       <td style="text-align:right;">${fmtCOP(r.ingresos)}</td>
-      <td class="${ganCls}" style="text-align:right;font-size:15px;">${fmtCOP(r.ganancia)}</td>
+      <td class="${ganCls}" style="text-align:right;font-size:15px;">${vacia ? '–' : fmtCOP(r.ganancia)}</td>
       <td class="${roiCls}" style="text-align:right;">${roiStr}</td>
       <td class="neutral" style="text-align:right;">${cppStr}</td>
       <td style="white-space:nowrap;">
@@ -4983,35 +5214,88 @@ window.renderRentabilidad = function() {
     </tr>`;
   }).join('');
 
-  // Summary chips
+  // Chips de resumen
   const roiProm = roisArr.length ? (roisArr.reduce((s,v)=>s+v,0)/roisArr.length).toFixed(1)+'%' : '–';
   const cppProm = cppsArr.length ? fmtCOP(cppsArr.reduce((s,v)=>s+v,0)/cppsArr.length) : '–';
+  const margen  = sumIngr > 0 ? ((sumGan / sumIngr) * 100).toFixed(1) + '%' : '–';
+
   document.getElementById('rs-ingresos').textContent = fmtCOP(sumIngr);
   document.getElementById('rs-costos').textContent   = fmtCOP(sumCost);
   document.getElementById('rs-ganancia').textContent = fmtCOP(sumGan);
+  document.getElementById('rs-margen').textContent   = margen;
   document.getElementById('rs-roi').textContent      = roiProm;
   document.getElementById('rs-cpp').textContent      = cppProm;
+  document.getElementById('rs-personas').textContent = sumPersonas.toLocaleString('es-CO');
+  document.getElementById('rs-sindatos').textContent = sinDatos;
+
   const chipGan = document.getElementById('rs-chip-ganancia');
   chipGan.className = `rent-chip ${sumGan >= 0 ? 'pos' : 'neg'}`;
+  const chipSin = document.getElementById('rs-chip-sindatos');
+  if (chipSin) chipSin.className = `rent-chip ${sinDatos > 0 ? 'na' : 'teal'}`;
+
+  renderBarrasRent(acts);
 };
 
+// Barras comparativas de ganancia por actividad
+function renderBarrasRent(acts) {
+  const cont = document.getElementById('rent-barras');
+  if (!cont) return;
+
+  const datos = (acts || [])
+    .map(a => ({ nombre: a.evento?.nombre || '–', r: calcRent(a) }))
+    .filter(d => d.r.ingresos > 0 || d.r.totalCostos > 0);
+
+  if (!datos.length) {
+    cont.innerHTML = '<div class="rent-barras-vacio">Aún no hay ingresos ni costos registrados. Abre el <b>Balance</b> de una actividad para empezar.</div>';
+    return;
+  }
+
+  const max = Math.max(...datos.map(d => Math.abs(d.r.ganancia)), 1);
+  cont.innerHTML = datos
+    .sort((a, b) => b.r.ganancia - a.r.ganancia)
+    .slice(0, 8)
+    .map(d => {
+      const pct = Math.max(3, Math.round((Math.abs(d.r.ganancia) / max) * 100));
+      const pos = d.r.ganancia >= 0;
+      const nombre = String(d.nombre)
+        .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+      return `<div class="rent-barra">
+        <div class="rent-barra-nom" title="${nombre}">${nombre}</div>
+        <div class="rent-barra-track"><div class="rent-barra-fill ${pos ? 'pos' : 'neg'}" style="width:${pct}%"></div></div>
+        <div class="rent-barra-val ${pos ? 'pos' : 'neg'}">${fmtCOP(d.r.ganancia)}</div>
+      </div>`;
+    }).join('');
+}
+
 function resetSummary() {
-  ['rs-ingresos','rs-costos','rs-ganancia','rs-roi','rs-cpp'].forEach(id => {
+  ['rs-ingresos','rs-costos','rs-ganancia','rs-margen','rs-roi','rs-cpp','rs-personas','rs-sindatos'].forEach(id => {
     const el = document.getElementById(id); if(el) el.textContent='–';
   });
 }
 
+// Rellena el filtro de impulsores de rentabilidad
+window.actualizarSelectImpulsorRent = function() {
+  const sel = document.getElementById('rent-impulsor');
+  if (!sel) return;
+  const actual = sel.value;
+  const nombres = [...new Set(window._actividades.map(a => a.impulsor?.nombre).filter(Boolean))]
+    .sort((a, b) => a.localeCompare(b, 'es'));
+  sel.innerHTML = '<option value="">Todos los impulsores</option>'
+    + nombres.map(n => `<option value="${n}">${n}</option>`).join('');
+  if (nombres.includes(actual)) sel.value = actual;
+};
+
 // guardarCampoRent reemplazado por guardarBalance con arrays discriminados
 
 window.limpiarFiltrosRent = function() {
-  ['rent-desde','rent-hasta','rent-tipo'].forEach(id => {
+  ['rent-desde','rent-hasta','rent-tipo','rent-impulsor'].forEach(id => {
     const el = document.getElementById(id); if(el) el.value='';
   });
   renderRentabilidad();
 };
 
 window.exportarRentabilidadExcel = async function() {
-  const acts = window._actividades;
+  const acts = actsRentFiltradas();   // exporta lo mismo que se ve en pantalla
   if (!acts.length) { showToast('No hay datos','error'); return; }
   const wb = XLSX.utils.book_new();
 
