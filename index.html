@@ -1062,6 +1062,7 @@ async function restaurarBorrador(d){
 }
 
 // ── UTILS ──
+function esc(v){ return String(v==null?'':v).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
 function $(id){ return document.getElementById(id); }
 function showScreen(id){ document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active')); $(id).classList.add('active'); window.scrollTo(0,0); }
 function showOverlay(msg){ $('overlay-text').textContent=msg; $('overlay').classList.add('active'); }
@@ -1262,8 +1263,8 @@ function renderFacturas(){
     return `<div class="factura-item">
       ${previewHtml}
       <div class="factura-item-info">
-        <div class="factura-item-name">${f.nombre}</div>
-        <div class="factura-item-meta">${f.tipo.toUpperCase()} · ${kb} KB</div>
+        <div class="factura-item-name">${esc(f.nombre)}</div>
+        <div class="factura-item-meta">${esc(f.tipo.toUpperCase())} · ${kb} KB</div>
       </div>
       <button class="factura-item-remove" data-idx="${i}">×</button>
     </div>`;
@@ -1378,18 +1379,18 @@ function renderActividadesIndex(lista) {
         <div class="act-card-top">
           <div class="act-card-icon">${iconoTipo[p.tipo]||'📌'}</div>
           <div style="flex:1;min-width:0;">
-            <div class="act-card-nombre">${p.nombre}</div>
-            <div class="act-card-tipo">${p.tipo||''}</div>
+            <div class="act-card-nombre">${esc(p.nombre)}</div>
+            <div class="act-card-tipo">${esc(p.tipo||'')}</div>
           </div>
           <span style="font-size:20px;color:var(--g200);">›</span>
         </div>
         <div class="act-card-tags">
-          ${p.fecha?`<span class="act-tag">📅 ${p.fecha}</span>`:''}
-          ${p.lugar?`<span class="act-tag">📍 ${p.lugar}</span>`:''}
-          ${p.ciudad?`<span class="act-tag">🏙️ ${p.ciudad}</span>`:''}
+          ${p.fecha?`<span class="act-tag">📅 ${esc(p.fecha)}</span>`:''}
+          ${p.lugar?`<span class="act-tag">📍 ${esc(p.lugar)}</span>`:''}
+          ${p.ciudad?`<span class="act-tag">🏙️ ${esc(p.ciudad)}</span>`:''}
           ${p.meta?`<span class="act-tag">🎯 Meta ${p.meta}</span>`:''}
         </div>
-        ${p.descripcion?`<div class="act-card-desc">${p.descripcion}</div>`:''}
+        ${p.descripcion?`<div class="act-card-desc">${esc(p.descripcion)}</div>`:''}
       </div>
     </div>`).join('');
 }

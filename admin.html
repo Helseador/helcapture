@@ -3072,6 +3072,7 @@ function actualizarStats() {
 // ── CELDA DE NOMBRE ──
 // Marca los registros que la captura creó pero que aún no terminó de subir
 // (el campo "_subiendo" lo deja puesto la app de impulsadores).
+// Ojo: recibe el registro YA escapado con escaparDatos().
 function nombreEvento(a) {
   const pendiente = a._subiendo === true
     ? ' <span class="badge warning" style="font-size:9.5px;" title="El impulsor no ha completado el envío">⏳ En curso</span>'
@@ -3085,7 +3086,7 @@ function renderTabla(data) {
   const empty = document.getElementById('empty-dashboard');
   if (!data.length) { tbody.innerHTML=''; empty.style.display='block'; return; }
   empty.style.display='none';
-  tbody.innerHTML = data.slice(0,20).map(a => `
+  tbody.innerHTML = data.slice(0,20).map(escaparDatos).map(a => `
     <tr>
       <td>${nombreEvento(a)}</td>
       <td>${badgeType(a.evento?.tipo)}</td>
@@ -3106,7 +3107,7 @@ window.renderTablaAll = function(data) {
   document.getElementById('count-filtradas').textContent = `(${data.length})`;
   if (!data.length) { tbody.innerHTML=''; empty.style.display='block'; return; }
   empty.style.display='none';
-  tbody.innerHTML = data.map(a => `
+  tbody.innerHTML = data.map(escaparDatos).map(a => `
     <tr>
       <td>${nombreEvento(a)}</td>
       <td>${badgeType(a.evento?.tipo)}</td>
@@ -3126,9 +3127,10 @@ window.renderTablaAll = function(data) {
 
 // ── DETALLE ──
 window.verDetalle = function(id) {
-  const a = window._actividades.find(x => x.id===id);
+  let a = window._actividades.find(x => x.id===id);
   if (!a) return;
   document.getElementById('modal-titulo').textContent = a.evento?.nombre || 'Detalle';
+  a = escaparDatos(a);   // a partir de aquí solo se pinta
 
   let html = `
     <div class="detail-grid">
@@ -3150,7 +3152,7 @@ window.verDetalle = function(id) {
   // Fotos generales
   if (a.fotosGenerales?.length) {
     html += `<div class="section-block"><div class="section-block-title">📸 Fotos del evento</div>
-      <div class="foto-mini-grid">${a.fotosGenerales.map(f => { const s=f.url||f.dataUrl||''; return `<img class="foto-mini" src="${s}" onclick="verFoto('${s}')">`; }).join('')}</div>
+      <div class="foto-mini-grid">${a.fotosGenerales.map(f => { const s=f.url||f.dataUrl||''; return `<img class="foto-mini" src="${s}" data-foto="${s}">`; }).join('')}</div>
     </div>`;
   }
 
@@ -3160,7 +3162,7 @@ window.verDetalle = function(id) {
       <div class="section-block-title">🧪 Muestreo</div>
       ${a.muestreo.descripcion ? `<p style="font-size:13px;color:var(--gray-600);margin-bottom:6px;">${a.muestreo.descripcion}</p>` : ''}
       ${a.muestreo.observaciones ? `<p style="font-size:13px;color:var(--gray-400);">${a.muestreo.observaciones}</p>` : ''}
-      ${a.muestreo.fotos?.length ? `<div class="foto-mini-grid">${a.muestreo.fotos.map(f=>{const s=f.url||f.dataUrl||''; return s?`<img class="foto-mini" src="${s}" onclick="verFoto('${s}')">`:'';}).join('')}</div>` : ''}
+      ${a.muestreo.fotos?.length ? `<div class="foto-mini-grid">${a.muestreo.fotos.map(f=>{const s=f.url||f.dataUrl||''; return s?`<img class="foto-mini" src="${s}" data-foto="${s}">`:'';}).join('')}</div>` : ''}
     </div>`;
   }
 
@@ -3171,7 +3173,7 @@ window.verDetalle = function(id) {
       <div class="section-block-title">💰 Ventas</div>
       ${refs.length ? `<table class="ref-table-mini"><thead><tr><th>Referencia</th><th>Cantidad</th></tr></thead><tbody>${refs.map(r=>`<tr><td>${r.referencia}</td><td>${r.cantidad}</td></tr>`).join('')}</tbody></table>` : ''}
       ${a.ventas.observaciones ? `<p style="font-size:13px;color:var(--gray-400);margin-top:8px;">${a.ventas.observaciones}</p>` : ''}
-      ${a.ventas.fotos?.length ? `<div class="foto-mini-grid">${a.ventas.fotos.map(f=>{const s=f.url||f.dataUrl||''; return s?`<img class="foto-mini" src="${s}" onclick="verFoto('${s}')">`:'';}).join('')}</div>` : ''}
+      ${a.ventas.fotos?.length ? `<div class="foto-mini-grid">${a.ventas.fotos.map(f=>{const s=f.url||f.dataUrl||''; return s?`<img class="foto-mini" src="${s}" data-foto="${s}">`:'';}).join('')}</div>` : ''}
     </div>`;
   }
 
@@ -3182,7 +3184,7 @@ window.verDetalle = function(id) {
       <div class="section-block-title">🎁 Obsequios</div>
       ${refs.length ? `<table class="ref-table-mini"><thead><tr><th>Referencia</th><th>Cantidad</th></tr></thead><tbody>${refs.map(r=>`<tr><td>${r.referencia}</td><td>${r.cantidad}</td></tr>`).join('')}</tbody></table>` : ''}
       ${a.obsequios.observaciones ? `<p style="font-size:13px;color:var(--gray-400);margin-top:8px;">${a.obsequios.observaciones}</p>` : ''}
-      ${a.obsequios.fotos?.length ? `<div class="foto-mini-grid">${a.obsequios.fotos.map(f=>{const s=f.url||f.dataUrl||''; return s?`<img class="foto-mini" src="${s}" onclick="verFoto('${s}')">`:'';}).join('')}</div>` : ''}
+      ${a.obsequios.fotos?.length ? `<div class="foto-mini-grid">${a.obsequios.fotos.map(f=>{const s=f.url||f.dataUrl||''; return s?`<img class="foto-mini" src="${s}" data-foto="${s}">`:'';}).join('')}</div>` : ''}
     </div>`;
   }
 
@@ -3996,7 +3998,7 @@ window.renderUsuarios = function() {
   if (!window._usuarios.length) {
     grid.innerHTML = '<div class="empty-state"><div class="icon">👥</div><p>No hay usuarios registrados</p></div>'; return;
   }
-  grid.innerHTML = window._usuarios.map(u => `
+  grid.innerHTML = window._usuarios.map(escaparDatos).map(u => `
     <div class="user-card">
       <div style="display:flex;align-items:center;gap:14px;">
         <div class="user-avatar">${(u.nombre||'U')[0].toUpperCase()}</div>
@@ -4121,6 +4123,39 @@ function showToast(msg, type='') {
 window.showToast = showToast;
 
 function fmtFecha(f) { if(!f) return '–'; const [y,m,d]=f.split('-'); return `${d}/${m}/${y}`; }
+
+// ── ESCAPADO PARA HTML ──
+// Los textos vienen de Firestore y los escribe el impulsor: si traen HTML se
+// ejecutaría en este panel. Todo lo que se pinta con innerHTML pasa por aquí.
+function e(valor) {
+  if (valor === null || valor === undefined) return '';
+  return String(valor)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+// Copia del dato con todos los textos escapados (para pintar, no para editar)
+function escaparDatos(valor) {
+  if (typeof valor === 'string') return e(valor);
+  if (Array.isArray(valor)) return valor.map(escaparDatos);
+  if (valor && typeof valor === 'object') {
+    if (typeof valor.toDate === 'function') return valor;   // Timestamp de Firestore
+    const copia = {};
+    for (const clave in valor) copia[clave] = escaparDatos(valor[clave]);
+    return copia;
+  }
+  return valor;
+}
+
+// Las fotos se abren por delegación: así la URL no viaja dentro de un onclick,
+// donde una comilla podría romper la cadena y ejecutar código.
+document.addEventListener('click', ev => {
+  const destino = ev.target && ev.target.closest ? ev.target.closest('[data-foto]') : null;
+  if (destino) verFoto(destino.getAttribute('data-foto'));
+});
 
 function badgeType(tipo) {
   const map = { 'Feria':'teal','Charla':'navy','Capacitación':'warning','Evento presencial':'success','Otro':'gray' };
@@ -4252,7 +4287,7 @@ function renderSectionToggles() {
   wrap.innerHTML = s.secciones.map((sec, i) => `
     <div class="section-toggle">
       <span class="sec-icono">${sec.icon}</span>
-      <input class="sec-titulo" type="text" value="${(sec.label || '').replace(/"/g, '&quot;')}"
+      <input class="sec-titulo" type="text" value="${e(sec.label || '')}"
              title="Renombrar sección" oninput="renombrarSeccion(${i}, this.value)">
       ${sec.always ? '<span class="sec-fijo">Siempre</span>'
         : `<div class="toggle-switch ${sec.visible ? 'on' : ''}" onclick="toggleSeccion(${i})"></div>`}
@@ -4424,11 +4459,12 @@ window.toggleFoto = function(secKey, idx) {
 window.actualizarPreview = function() {
   const s = window._constructorState;
   if (!s.actividadId) return;
-  const a = window._actividades.find(x => x.id === s.actividadId);
+  let a = window._actividades.find(x => x.id === s.actividadId);
   if (!a) return;
+  a = escaparDatos(a);   // solo para pintar la vista previa
 
-  const titulo = document.getElementById('cfg-titulo').value || a.evento?.nombre || 'Informe';
-  const subtitulo = document.getElementById('cfg-subtitulo').value || 'By Grupo Helse';
+  const titulo = e(document.getElementById('cfg-titulo').value || a.evento?.nombre || 'Informe');
+  const subtitulo = e(document.getElementById('cfg-subtitulo').value || 'By Grupo Helse');
   const fecha = document.getElementById('cfg-fecha').value || a.evento?.fecha || '';
   const color = s.color;
   const colorHex = color;
@@ -4459,7 +4495,7 @@ window.actualizarPreview = function() {
 
   // ── SECCIONES ──
   s.secciones.filter(sec => sec.visible).forEach((sec, secIdx) => {
-    const comentario = s.comentarios[sec.key] || '';
+    const comentario = e(s.comentarios[sec.key] || '');
 
     html += `<div class="preview-section" style="border-left-color:${colorHex};" 
       draggable="true"
@@ -4468,7 +4504,7 @@ window.actualizarPreview = function() {
       ondrop="dropSec(event,${secIdx})"
       ondragleave="dragLeave(event)">
       <div class="preview-section-header">
-        <div class="preview-section-title" style="color:${colorHex};">${sec.icon} ${sec.label}</div>
+        <div class="preview-section-title" style="color:${colorHex};">${sec.icon} ${e(sec.label)}</div>
         <div class="preview-section-drag" title="Arrastrar para reordenar">⠿</div>
       </div>
       <textarea class="preview-comment" placeholder="Agrega un comentario para esta sección..." 
@@ -5038,14 +5074,14 @@ window.abrirBalance = function(id) {
     facList.innerHTML = facturas.map(f => {
       const icon = f.tipo === 'pdf' ? '📄' : '🖼️';
       const kb   = f.size ? (f.size/1024).toFixed(0)+' KB' : '';
-      const ext  = (f.tipo||'').toUpperCase();
+      const ext  = e((f.tipo||'').toUpperCase());
       return `<div style="display:flex;align-items:center;gap:10px;background:var(--bg);box-shadow:var(--neo-sm);border-radius:10px;padding:9px 13px;">
         <span style="font-size:18px;flex-shrink:0;">${icon}</span>
         <div style="flex:1;min-width:0;">
-          <div style="font-size:13px;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${f.nombre||'Archivo'}</div>
+          <div style="font-size:13px;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${e(f.nombre||'Archivo')}</div>
           ${kb ? `<div style="font-size:11px;color:var(--text-muted);">${ext} · ${kb}</div>` : ''}
         </div>
-        <a href="${f.url}" target="_blank" class="btn btn-outline btn-sm" style="flex-shrink:0;">Ver</a>
+        <a href="${e(f.url)}" target="_blank" rel="noopener" class="btn btn-outline btn-sm" style="flex-shrink:0;">Ver</a>
       </div>`;
     }).join('');
   } else {
@@ -5167,7 +5203,7 @@ window.renderRentabilidad = function() {
 
   let sumIngr=0, sumCost=0, sumGan=0, roisArr=[], cppsArr=[], sumPersonas=0, sinDatos=0;
 
-  tbody.innerHTML = acts.map(a => {
+  tbody.innerHTML = acts.map(escaparDatos).map(a => {
     const r = calcRent(a);
     sumIngr += r.ingresos; sumCost += r.totalCostos; sumGan += r.ganancia;
     sumPersonas += r.personas;
@@ -5406,7 +5442,7 @@ function renderPlantillas() {
     'por-vencer': { cls:'activa',   label:'⚠️ Por vencer' },
   };
 
-  grid.innerHTML = window._plantillas.map(p => {
+  grid.innerHTML = window._plantillas.map(escaparDatos).map(p => {
     const icon   = iconoTipo[p.tipo]||'📌';
     const estado = estadoRealPlantilla(p);
     const badge  = badgeEstado[estado];
@@ -5594,7 +5630,7 @@ window.verReportesPlantilla = async function(plantillaId) {
     </div>`;
 
     // ── DETALLE POR IMPULSOR ──
-    html += reportes.map((r,idx) => {
+    html += reportes.map(escaparDatos).map((r,idx) => {
       const fotos   = (r.fotosGenerales||[]);
       const ventasR = r.ventas?.activo ? (r.ventas.referencias||[]).filter(Boolean) : [];
       const obsR    = r.obsequios?.activo ? (r.obsequios.referencias||[]).filter(Boolean) : [];
@@ -5628,7 +5664,7 @@ window.verReportesPlantilla = async function(plantillaId) {
         ${r.cierre?.impacto?`<p style="font-size:12px;color:var(--text-muted);margin-top:8px;line-height:1.5;border-left:3px solid var(--teal);padding-left:8px;">${r.cierre.impacto.slice(0,300)}${r.cierre.impacto.length>300?'...':''}</p>`:''}
 
         ${fotos.length?`<div style="display:flex;gap:6px;margin-top:10px;flex-wrap:wrap;">
-          ${fotos.slice(0,6).map(f=>`<img src="${f.url||f.dataUrl}" style="width:58px;height:58px;border-radius:8px;object-fit:cover;cursor:pointer;box-shadow:var(--neo-sm);" onclick="verFoto('${f.url||f.dataUrl}')">`).join('')}
+          ${fotos.slice(0,6).map(f=>`<img src="${f.url||f.dataUrl}" style="width:58px;height:58px;border-radius:8px;object-fit:cover;cursor:pointer;box-shadow:var(--neo-sm);" data-foto="${f.url||f.dataUrl}">`).join('')}
           ${fotos.length>6?`<div style="width:58px;height:58px;border-radius:8px;background:var(--bg-dark);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:var(--text-muted);">+${fotos.length-6}</div>`:''}
         </div>`:''}
 
