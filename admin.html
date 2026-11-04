@@ -1497,6 +1497,29 @@ td strong, td b { color: var(--ink); font-weight: 700; }
 .plantilla-badge-estado.inactiva { color: var(--ink-faint); background: rgba(255, 255, 255, .055); box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .1); }
 .plantilla-actions { display: flex; gap: 6px; flex-wrap: wrap; }
 
+/* Código de jornada en la tarjeta de la actividad */
+.codigo-jornada {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  flex-wrap: wrap;
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px dashed rgba(255, 255, 255, .1);
+}
+.codigo-chip {
+  padding: 5px 11px;
+  border-radius: 8px;
+  font-family: ui-monospace, 'Cascadia Code', Consolas, monospace;
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: .12em;
+  color: var(--teal-bright);
+  background: rgba(42, 191, 192, .12);
+  box-shadow: inset 0 0 0 1px rgba(42, 191, 192, .3);
+}
+.codigo-hint { font-size: 10.5px; color: var(--ink-faint); }
+
 .reporte-card {
   padding: 14px 16px;
   margin-bottom: 10px;
@@ -2825,7 +2848,7 @@ td strong, td b { color: var(--ink); font-weight: 700; }
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
 import {
-  getFirestore, collection, onSnapshot, getDocs, getDoc, addDoc, setDoc, updateDoc, doc, query, orderBy, serverTimestamp
+  getFirestore, collection, onSnapshot, getDocs, getDoc, addDoc, setDoc, updateDoc, doc, query, orderBy, serverTimestamp, Timestamp
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 import {
   getStorage, ref as storageRef, uploadBytes, getDownloadURL
@@ -5397,6 +5420,116 @@ const CIUDADES_CO = [
 window._plantillas = [];
 window._editPlantillaId = null;
 
+// ── CÓDIGO DE JORNADA ──
+// Va dentro de la propia actividad (plantillas/{id}), así la captura ya lo
+// recibe al listar: no hace falta una colección nueva ni tocar las reglas para
+// empezar a usarlo.
+window._codigos = {};
+
+function codigoAzar() {
+  // Sin caracteres que se confunden al dictarlos por teléfono:
+  // fuera 0/O, 1/I, 5/S y 2/Z
+  const abc = 'ABCDEFGHJKLMNPQRTUVWXY346789';
+  let s = '';
+  for (let i = 0; i < 6; i++) s += abc[Math.floor(Math.random() * abc.length)];
+  return s.slice(0, 3) + '-' + s.slice(3);
+}
+
+function expiracionCodigo(plantilla) {
+  // Vence al final del día de vencimiento de la actividad, o en 7 días.
+  if (plantilla && plantilla.vencimiento) {
+    return new Date(plantilla.vencimiento + 'T23:59:59');
+  }
+  return new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+}
+
+function aFecha(v) {
+  if (!v) return null;
+  if (typeof v.toDate === 'function') return v.toDate();
+  const d = new Date(v);
+  return isNaN(d.getTime()) ? null : d;
+}
+
+function codigoVigente(p) {
+  if (!p || !p.codigoJornada) return false;
+  const exp = aFecha(p.codigoExpira);
+  return exp ? exp.getTime() > Date.now() : true;
+}
+
+function bloqueCodigo(p) {
+  if (!p.codigoJornada) {
+    return `<div class="codigo-jornada">
+      <button class="btn btn-outline btn-sm" onclick="generarCodigoPlantilla('${p.id}')">🔑 Generar código</button>
+      <span class="codigo-hint">para que un impulsor nuevo pueda entrar</span>
+    </div>`;
+  }
+  const exp = aFecha(p.codigoExpira);
+  const expTxt = exp ? exp.toLocaleDateString('es-CO', { day: '2-digit', month: 'short' }) : 'sin vencimiento';
+  const vigente = codigoVigente(p);
+  return `<div class="codigo-jornada">
+    <span class="codigo-chip" style="${vigente ? '' : 'opacity:.45;text-decoration:line-through;'}"
+          title="Pásale este código al impulsor">${e(p.codigoJornada)}</span>
+    ${vigente ? `<button class="btn btn-outline btn-sm" title="Copiar" onclick="copiarCodigo('${e(p.codigoJornada)}')">📋</button>` : ''}
+    <button class="btn btn-outline btn-sm" onclick="revocarCodigo('${p.id}')">${vigente ? 'Revocar' : 'Borrar'}</button>
+    <span class="codigo-hint">${vigente ? 'vence ' + expTxt : 'vencido · genera otro'}</span>
+  </div>`;
+}
+
+window.generarCodigoPlantilla = async function(id) {
+  const p = window._plantillas.find(x => x.id === id);
+  if (!p) return;
+  try {
+    let codigo = codigoAzar();
+    // Que no se repita con el de otra actividad
+    for (let intento = 0; intento < 5 && window._plantillas.some(x => x.codigoJornada === codigo); intento++) {
+      codigo = codigoAzar();
+    }
+
+    await updateDoc(doc(db, 'plantillas', id), {
+      codigoJornada: codigo,
+      codigoExpira: Timestamp.fromDate(expiracionCodigo(p)),
+      codigoCreadoEn: serverTimestamp(),
+    });
+
+    showToast(`Código ${codigo} creado`, 'success');
+    copiarCodigo(codigo, true);
+  } catch (err) {
+    console.error(err);
+    showToast('No se pudo crear el código', 'error');
+  }
+};
+
+window.revocarCodigo = async function(id) {
+  const p = window._plantillas.find(x => x.id === id);
+  if (!p) return;
+  if (!confirm(`¿Anular el código ${p.codigoJornada || ''}? Quien lo tenga dejará de poder enviar.`)) return;
+  try {
+    await updateDoc(doc(db, 'plantillas', id), { codigoJornada: null, codigoExpira: null });
+    showToast('Código anulado', 'success');
+  } catch (err) {
+    console.error(err);
+    showToast('No se pudo anular', 'error');
+  }
+};
+
+window.copiarCodigo = function(codigo, silencioso) {
+  const avisar = () => { if (!silencioso) showToast('Código copiado: ' + codigo, 'success'); };
+  const respaldo = () => {
+    const t = document.createElement('textarea');
+    t.value = codigo;
+    document.body.appendChild(t);
+    t.select();
+    document.execCommand('copy');
+    document.body.removeChild(t);
+    avisar();
+  };
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(codigo).then(avisar).catch(respaldo);
+  } else {
+    respaldo();
+  }
+};
+
 // Escucha en tiempo real la colección plantillas.
 // Se lee completa (sin orderBy) para no descartar documentos que no tengan "creadoEn":
 // la app de captura las consulta sin ordenar, así que el admin debe ver el mismo conjunto.
@@ -5475,6 +5608,7 @@ function renderPlantillas() {
           ${vigenciaLabel ? `<span style="font-size:11px;font-weight:600;color:${estado==='vencida'?'var(--danger)':estado==='por-vencer'?'var(--warning)':'var(--text-muted)'};">${vigenciaLabel}</span>` : ''}
         </div>
         ${p.descripcion?`<div style="font-size:12px;color:var(--text-muted);margin-top:6px;line-height:1.4;">${p.descripcion.slice(0,100)}${p.descripcion.length>100?'...':''}</div>`:''}
+        ${bloqueCodigo(p)}
       </div>
       <div style="display:flex;flex-direction:column;gap:6px;flex-shrink:0;">
         <button class="btn btn-teal btn-sm" onclick="verReportesPlantilla('${p.id}')">📋 Reportes</button>

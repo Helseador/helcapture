@@ -451,7 +451,12 @@ input[type=file]{display:none;}
     </div>
     <div class="login-card">
       <div class="login-greeting">¡Hola! 👋</div>
-      <div class="login-sub">Ingresa tus datos para ver las actividades disponibles en tu ciudad</div>
+      <div class="login-sub">Ingresa tus datos y el código de la jornada que te dio tu coordinador</div>
+      <div class="login-field">
+        <label>Código de la jornada</label>
+        <input type="text" id="login-codigo" placeholder="Ej. X7K-2QP" autocapitalize="characters"
+               autocomplete="off" spellcheck="false" maxlength="9" style="letter-spacing:0.12em;font-weight:700;">
+      </div>
       <div class="login-field">
         <label>Número de documento</label>
         <input type="number" id="login-cedula" placeholder="Ej. 1020304050" inputmode="numeric">
@@ -1321,24 +1326,73 @@ function addGasto(){
 // (subirFotos/subirFacturas viven junto al formulario de captura, más abajo)
 
 // ── LOGIN ──
+// El código de jornada lo genera el coordinador en el panel y se comparte por
+// WhatsApp. Vive dentro de la actividad (plantillas/{id}.codigoJornada), así que
+// se valida con la misma lectura que ya hace la app.
+let codigoActual = null;      // el código con el que entró
+let codigoPlantilla = null;   // a qué actividad da acceso (null = todas)
+
+function fechaDe(v) {
+  if (!v) return null;
+  if (typeof v.toDate === 'function') return v.toDate();
+  const d = new Date(v);
+  return isNaN(d.getTime()) ? null : d;
+}
+
 async function hacerLogin() {
+  const codigo = $('login-codigo').value.trim().toUpperCase();
   const cedula = $('login-cedula').value.trim();
   const nombre = $('login-nombre').value.trim();
   $('login-error').style.display = 'none';
-  if (!cedula || !nombre) { $('login-error').textContent='Completa ambos campos.'; $('login-error').style.display='block'; return; }
-  impulsor = { cedula, nombre };
-  await cargarActividadesImpulsor();
-}
 
-async function cargarActividadesImpulsor() {
-  showOverlay('Cargando actividades...');
+  const fallar = msg => { $('login-error').textContent = msg; $('login-error').style.display = 'block'; };
+  if (!codigo || !cedula || !nombre) return fallar('Completa el código, tu documento y tu nombre.');
+
+  showOverlay('Validando código...');
+  let disponible = null;
   try {
     const snap = await db.collection('plantillas').where('estado','==','activa').get();
-    const hoy  = new Date().toISOString().split('T')[0];
-    // Filtrar las que ya vencieron (sin tocar Firestore, solo en cliente)
-    plantillasDisponibles = snap.docs
-      .map(d=>({id:d.id,...d.data()}))
+    const hoy = new Date().toISOString().split('T')[0];
+    const activas = snap.docs
+      .map(d => ({ id: d.id, ...d.data() }))
       .filter(p => !p.vencimiento || p.vencimiento >= hoy);
+
+    disponible = activas.find(p => String(p.codigoJornada || '').toUpperCase() === codigo) || null;
+  } catch (e) {
+    hideOverlay();
+    console.error('Error validando el código:', e);
+    return fallar('No se pudo validar el código. Revisa tu conexión.');
+  }
+  hideOverlay();
+
+  if (!disponible) return fallar('Ese código no es válido o la actividad ya cerró. Pídele uno nuevo a tu coordinador.');
+
+  const expira = fechaDe(disponible.codigoExpira);
+  if (expira && expira.getTime() <= Date.now()) {
+    return fallar('Ese código ya venció. Pídele uno nuevo a tu coordinador.');
+  }
+
+  codigoActual = codigo;
+  codigoPlantilla = disponible.id;
+  impulsor = { cedula, nombre };
+  await cargarActividadesImpulsor(disponible);
+}
+
+async function cargarActividadesImpulsor(actividadDelCodigo) {
+  showOverlay('Cargando actividades...');
+  try {
+    let lista;
+    if (actividadDelCodigo) {
+      lista = [actividadDelCodigo];
+    } else {
+      const snap = await db.collection('plantillas').where('estado','==','activa').get();
+      const hoy = new Date().toISOString().split('T')[0];
+      lista = snap.docs
+        .map(d => ({ id: d.id, ...d.data() }))
+        .filter(p => !p.vencimiento || p.vencimiento >= hoy);
+    }
+    plantillasDisponibles = lista
+      .filter(p => !codigoPlantilla || p.id === codigoPlantilla);
     hideOverlay();
     $('act-user-pill').textContent = `👤 ${impulsor.nombre}`;
     $('act-subtitle').textContent  = `${plantillasDisponibles.length} actividad(es) disponible(s)`;
@@ -1497,7 +1551,8 @@ async function enviarActividad(){
       evento:{ nombre:$('nombre-evento').value.trim(), tipo, fecha:$('fecha-evento').value, lugar:$('lugar-evento').value.trim(), asistentes:parseInt($('asistentes').value)||0 },
       ubicacion: geo,
       creadoEn:  firebase.firestore.FieldValue.serverTimestamp(),
-      version:   '2.0.0',
+      version:   '2.1.0',
+      codigo:    codigoActual,   // jornada con la que entró; las reglas lo exigen
       _subiendo: true
     };
 

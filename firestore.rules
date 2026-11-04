@@ -1,0 +1,77 @@
+rules_version = '2';
+
+// ══════════════════════════════════════════════════════════════════════
+// HelCapture — reglas de Firestore
+//
+// El código de jornada vive en la propia actividad:
+//   plantillas/{id}.codigoJornada  (texto, ej. "X7K-2QP")
+//   plantillas/{id}.codigoExpira   (timestamp)
+//
+// Estas reglas solo cambian los bloques de actividades y reportes: no crean
+// colecciones nuevas. Las plantillas se siguen leyendo igual.
+//
+// ANTES DE PUBLICAR: copia tu archivo actual y añade la función y las dos
+// condiciones marcadas abajo. No reemplaces todo a ciegas si tienes reglas
+// propias que no aparecen aquí.
+// ══════════════════════════════════════════════════════════════════════
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Un reporte se acepta solo si trae el código vigente de SU actividad.
+    function codigoValido(doc) {
+      return doc.codigo is string
+        && doc.plantillaId is string
+        && exists(/databases/$(database)/documents/plantillas/$(doc.plantillaId))
+        && get(/databases/$(database)/documents/plantillas/$(doc.plantillaId)).data.codigoJornada == doc.codigo
+        && get(/databases/$(database)/documents/plantillas/$(doc.plantillaId)).data.codigoExpira > request.time;
+    }
+
+    // ── Actividades creadas por el coordinador ──
+    match /plantillas/{id} {
+      allow read: if true;      // la captura necesita listarlas
+      allow write: if true;     // el panel genera el código en este documento
+
+      match /reportes/{rid} {
+        allow read: if true;
+        allow create: if codigoValido(request.resource.data);   // ← NUEVO
+        allow update: if codigoValido(resource.data);           // ← NUEVO
+        allow delete: if false;
+      }
+    }
+
+    // ── Reportes capturados ──
+    match /actividades/{id} {
+      allow read: if true;
+      allow create: if codigoValido(request.resource.data);     // ← NUEVO
+      allow update: if codigoValido(resource.data);             // ← NUEVO
+      allow delete: if false;
+    }
+
+    // ── Usuarios ──
+    match /usuarios/{id} {
+      allow read, write: if true;
+    }
+  }
+}
+
+// ══════════════════════════════════════════════════════════════════════
+// PENDIENTE PARA LA SIGUIENTE ETAPA (login de coordinador)
+//
+// Hoy la lectura sigue abierta: cualquiera con la URL puede leer cédulas,
+// GPS y facturas. Cuando el panel tenga login, la lectura queda así:
+//
+//   function esCoordinador() { return request.auth != null; }
+//
+//   match /plantillas/{id} {
+//     allow read: if true;
+//     allow write: if esCoordinador();
+//     match /reportes/{rid} {
+//       allow read: if esCoordinador();
+//       ...
+//
+//   match /actividades/{id} {
+//     allow read: if esCoordinador();      // ← protege los datos personales
+//     ...
+//
+// ══════════════════════════════════════════════════════════════════════
