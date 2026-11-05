@@ -1782,6 +1782,14 @@ async function resolverCodigo(codigo) {
       if (c.activo === false) return { ok: false, motivo: 'Ese código fue revocado. Pídele uno nuevo a tu coordinador.' };
       const exp = fechaDe(c.expiraEn);
       if (exp && exp.getTime() <= Date.now()) return { ok: false, motivo: 'Ese código ya venció. Pídele uno nuevo a tu coordinador.' };
+      // Si la actividad está en la papelera, el código no debe servir
+      if (c.plantillaId) {
+        const plan = await db.collection('plantillas').doc(c.plantillaId).get().catch(() => null);
+        if (plan && plan.exists && plan.data().papelera === true) {
+          return { ok: false, motivo: 'Esa actividad fue eliminada. Pídele un código nuevo a tu coordinador.' };
+        }
+      }
+
       return { ok: true, plantillaId: c.plantillaId || null, tipo: c.tipo === 'equipo' ? 'equipo' : 'jornada' };
     }
 
@@ -1790,6 +1798,7 @@ async function resolverCodigo(codigo) {
     const hoy = new Date().toISOString().split('T')[0];
     const encontrada = q.docs
       .map(d => ({ id: d.id, ...d.data() }))
+      .filter(p => p.papelera !== true)
       .filter(p => !p.vencimiento || p.vencimiento >= hoy)
       .find(p => String(p.codigoJornada || '').toUpperCase() === codigo);
 
@@ -1860,6 +1869,7 @@ async function cargarActividadesImpulsor() {
     plantillasDisponibles = snap.docs
       .map(d => ({ id: d.id, ...d.data() }))
       .filter(p => !p.vencimiento || p.vencimiento >= hoy)
+      .filter(p => p.papelera !== true)
       .filter(p => !codigoPlantilla || p.id === codigoPlantilla);
 
     hideOverlay();
