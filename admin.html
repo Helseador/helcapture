@@ -1498,6 +1498,20 @@ td strong, td b { color: var(--ink); font-weight: 700; }
 .plantilla-actions { display: flex; gap: 6px; flex-wrap: wrap; }
 
 /* Código de jornada en la tarjeta de la actividad */
+.codigo-chip.copiable {
+  border: 0;
+  font-family: inherit;
+  cursor: pointer;
+  transition: filter .15s ease, transform .15s ease;
+}
+.codigo-chip.copiable:hover { filter: brightness(1.2); }
+.codigo-chip.copiable:active { transform: scale(.97); }
+.btn-copiar {
+  background: rgba(42, 191, 192, .18);
+  color: var(--teal-bright);
+  box-shadow: inset 0 0 0 1px rgba(42, 191, 192, .38);
+}
+.btn-copiar:hover { background: rgba(42, 191, 192, .28); }
 .codigo-fila-modal {
   display: flex;
   align-items: center;
@@ -5999,11 +6013,15 @@ function filaCodigo(p, tipo) {
   const vencido = exp && exp.getTime() <= Date.now();
   const expTxt = exp ? exp.toLocaleDateString('es-CO', { day: '2-digit', month: 'short' }) : 'sin vencimiento';
 
+  const cod = e(guardado.codigo);
+  const nombreAct = encodeURIComponent(p.nombre || '');
+
   return `<div class="codigo-jornada">
     <span class="codigo-tipo">${info.icono} ${info.etiqueta}</span>
-    <span class="codigo-chip" style="${vencido ? 'opacity:.45;text-decoration:line-through;' : ''}"
-          title="${info.hint}">${e(guardado.codigo)}</span>
-    ${vencido ? '' : `<button class="btn btn-outline btn-sm" title="Copiar" onclick="copiarCodigo('${e(guardado.codigo)}')">📋</button>`}
+    <button class="codigo-chip copiable" style="${vencido ? 'opacity:.45;text-decoration:line-through;' : ''}"
+            title="Toca el código para copiarlo" onclick="copiarCodigo('${cod}')">${cod}</button>
+    ${vencido ? '' : `<button class="btn btn-copiar btn-sm" onclick="copiarCodigo('${cod}')">📋 Copiar</button>`}
+    ${vencido || tipo !== 'equipo' ? '' : `<button class="btn btn-outline btn-sm" title="Copiar mensaje para enviar por WhatsApp" onclick="copiarMensajeEquipo('${cod}','${nombreAct}')">💬 Mensaje</button>`}
     <button class="btn btn-outline btn-sm" onclick="revocarCodigo('${p.id}','${tipo}')">${vencido ? 'Borrar' : 'Revocar'}</button>
     <span class="codigo-hint">${vencido ? 'vencido' : 'vence ' + expTxt}</span>
   </div>`;
@@ -6046,20 +6064,30 @@ async function crearCodigoPara(p, tipo) {
 }
 
 // Ventana con los dos códigos recién creados, lista para copiar
-function mostrarCodigosCreados(pares) {
+function mostrarCodigosCreados(pares, nombreActividad) {
   const cont = document.getElementById('modal-codigos-lista');
   if (!cont) return;
+
+  const nombre = nombreActividad || '';
+  const codigoEquipo = (pares.find(x => x.tipo === 'equipo') || {}).codigo || '';
+
   cont.innerHTML = pares.map(p => {
     const info = TIPOS_CODIGO[p.tipo] || TIPOS_CODIGO.jornada;
+    const cod = e(p.codigo);
     return `<div class="codigo-fila-modal">
       <div>
         <div class="codigo-tipo">${info.icono} ${info.etiqueta}</div>
         <div class="codigo-hint">${info.hint}</div>
       </div>
-      <span class="codigo-chip">${e(p.codigo)}</span>
-      <button class="btn btn-outline btn-sm" onclick="copiarCodigo('${e(p.codigo)}')">📋</button>
+      <button class="codigo-chip copiable" title="Toca para copiar" onclick="copiarCodigo('${cod}')">${cod}</button>
+      <button class="btn btn-copiar btn-sm" onclick="copiarCodigo('${cod}')">📋 Copiar</button>
     </div>`;
-  }).join('');
+  }).join('') + `
+    <button class="btn btn-outline btn-sm" style="width:100%;justify-content:center;margin-top:8px;"
+            onclick="copiarMensajeEquipo('${e(codigoEquipo)}','${encodeURIComponent(nombre)}')">
+      💬 Copiar mensaje para el equipo
+    </button>`;
+
   document.getElementById('modal-codigos').classList.add('open');
 }
 
@@ -6101,22 +6129,43 @@ window.revocarCodigo = async function(id, tipo) {
   }
 };
 
-window.copiarCodigo = function(codigo, silencioso) {
-  const avisar = () => { if (!silencioso) showToast('Código copiado: ' + codigo, 'success'); };
+// Copia cualquier texto al portapapeles, con respaldo para navegadores viejos
+function copiarTexto(texto, aviso) {
+  const listo = () => { if (aviso) showToast(aviso, 'success'); };
   const respaldo = () => {
     const t = document.createElement('textarea');
-    t.value = codigo;
+    t.value = texto;
+    t.setAttribute('readonly', '');
+    t.style.position = 'fixed';
+    t.style.opacity = '0';
     document.body.appendChild(t);
     t.select();
-    document.execCommand('copy');
+    try { document.execCommand('copy'); } catch (e) { console.error(e); }
     document.body.removeChild(t);
-    avisar();
+    listo();
   };
   if (navigator.clipboard && navigator.clipboard.writeText) {
-    navigator.clipboard.writeText(codigo).then(avisar).catch(respaldo);
+    navigator.clipboard.writeText(texto).then(listo).catch(respaldo);
   } else {
     respaldo();
   }
+}
+
+window.copiarCodigo = function(codigo, silencioso) {
+  copiarTexto(codigo, silencioso ? '' : `Código ${codigo} copiado. Ya lo puedes pegar.`);
+};
+
+// Mensaje listo para mandar por WhatsApp
+window.copiarMensajeEquipo = function(codigo, nombreActividad) {
+  let nombre = nombreActividad || '';
+  try { nombre = decodeURIComponent(nombre); } catch (e) { /* se deja tal cual */ }
+
+  const app = 'https://helseador.github.io/helcapture/';
+  const texto = `Hola 👋 Para registrar la jornada${nombre ? ' de *' + nombre + '*' : ''} entra a:\n` +
+    `${app}\n\n` +
+    `Código: *${codigo}*\n` +
+    `Escribe tu nombre y número de documento.`;
+  copiarTexto(texto, 'Mensaje copiado. Pégalo en el grupo.');
 };
 
 // Escucha en tiempo real la colección plantillas.
@@ -6279,7 +6328,7 @@ window.guardarPlantilla = async function() {
         mostrarCodigosCreados([
           { tipo: 'jornada', ...jornada },
           { tipo: 'equipo',  ...equipo },
-        ]);
+        ], data.nombre);
       } catch (err) {
         console.error(err);
         showToast('Actividad creada, pero no se pudieron generar los códigos', 'error');
