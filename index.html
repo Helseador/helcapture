@@ -1484,22 +1484,55 @@ async function mostrarJornada() {
   showScreen('screen-jornada');
 }
 
-async function cargarEstadoJornada() {
-  const p = plantillaActual;
-  jornada = { iniciada: false, cerrada: false, entradaEn: null, salidaEn: null };
+// La jornada se guarda en el propio teléfono: con las reglas cerradas, la
+// captura no puede leer los ingresos del día.
+const JORNADA_KEY = 'hc_jornada';
+
+function claveJornada() {
+  return `${plantillaActual ? plantillaActual.id : 'x'}_${fechaHoy()}`;
+}
+
+function leerJornadaLocal() {
   try {
-    const snap = await db.collection('ingresos').where('fecha', '==', fechaHoy()).get();
-    const delDia = snap.docs.map(d => d.data()).filter(i => i.plantillaId === p.id);
-    const conEntrada = delDia.filter(i => i.entradaEn);
-    if (conEntrada.length) {
-      jornada.iniciada = true;
-      jornada.entradaEn = conEntrada[0].entradaEn;
-      if (conEntrada.every(i => i.salidaEn)) {
-        jornada.cerrada = true;
-        jornada.salidaEn = conEntrada[conEntrada.length - 1].salidaEn;
+    const todo = JSON.parse(localStorage.getItem(JORNADA_KEY) || '{}');
+    return todo[claveJornada()] || null;
+  } catch (e) { return null; }
+}
+
+function guardarJornadaLocal(datos) {
+  try {
+    const todo = JSON.parse(localStorage.getItem(JORNADA_KEY) || '{}');
+    todo[claveJornada()] = { ...(todo[claveJornada()] || {}), ...datos };
+    localStorage.setItem(JORNADA_KEY, JSON.stringify(todo));
+  } catch (e) { console.warn('No se pudo guardar la jornada en el teléfono:', e); }
+}
+
+async function cargarEstadoJornada() {
+  jornada = { iniciada: false, cerrada: false, entradaEn: null, salidaEn: null };
+
+  const local = leerJornadaLocal();
+  if (local) {
+    jornada.iniciada = true;
+    jornada.entradaEn = local.entradaEn || null;
+    if (local.salidaEn) { jornada.cerrada = true; jornada.salidaEn = local.salidaEn; }
+  } else {
+    // Respaldo: si esta persona entró con un código de jornada desde otro
+    // teléfono, intenta reconstruirlo desde la nube.
+    try {
+      const snap = await db.collection('ingresos').where('fecha', '==', fechaHoy()).get();
+      const conEntrada = snap.docs.map(d => d.data())
+        .filter(i => i.plantillaId === plantillaActual.id && i.entradaEn);
+      if (conEntrada.length) {
+        jornada.iniciada = true;
+        jornada.entradaEn = conEntrada[0].entradaEn;
+        if (conEntrada.every(i => i.salidaEn)) {
+          jornada.cerrada = true;
+          jornada.salidaEn = conEntrada[conEntrada.length - 1].salidaEn;
+        }
       }
-    }
-  } catch (e) { console.warn('No se pudo leer el estado de la jornada:', e); }
+    } catch (e) { /* sin permiso de lectura: se queda como no iniciada */ }
+  }
+
   pintarEstadoJornada();
 }
 
@@ -1544,17 +1577,30 @@ async function abrirEquipo(modo) {
     equipo = [{ nombre: impulsor.nombre, cedula: impulsor.cedula }];
     renderEquipo();
   } else {
-    $('equipo-lista').innerHTML = '<div class="equipo-sub">Cargando la lista de hoy...</div>';
-    try {
-      const snap = await db.collection('ingresos').where('fecha', '==', fechaHoy()).get();
-      const lista = snap.docs.map(d => d.data())
-        .filter(i => i.plantillaId === plantillaActual.id && i.entradaEn && !i.salidaEn);
-      equipo = lista.map(i => ({ nombre: i.nombre, cedula: String(i.cedula), marcado: true }));
-      renderEquipo();
-    } catch (e) {
-      console.error(e);
-      $('equipo-lista').innerHTML = '<div class="equipo-sub">No se pudo cargar la lista.</div>';
+    // La lista sale del propio teléfono; si no está, se intenta desde la nube
+    const local = leerJornadaLocal();
+    let personas = (local && Array.isArray(local.personas)) ? local.personas : null;
+
+    if (!personas) {
+      $('equipo-lista').innerHTML = '<div class="equipo-sub">Buscando la lista...</div>';
+      try {
+        const snap = await db.collection('ingresos').where('fecha', '==', fechaHoy()).get();
+        personas = snap.docs.map(d => d.data())
+          .filter(i => i.plantillaId === plantillaActual.id && i.entradaEn && !i.salidaEn)
+          .map(i => ({ nombre: i.nombre, cedula: String(i.cedula) }));
+      } catch (e) { personas = null; }
     }
+
+    if (!personas || !personas.length) {
+      $('equipo-lista').innerHTML = '<div class="equipo-sub">No hay nadie registrado hoy. Primero inicia la actividad.</div>';
+      equipo = [];
+      renderEvidencia();
+      showScreen('screen-equipo');
+      return;
+    }
+
+    equipo = personas.map(m => ({ nombre: m.nombre, cedula: String(m.cedula), marcado: true }));
+    renderEquipo();
   }
 
   renderEvidencia();
@@ -1693,6 +1739,11 @@ async function guardarJornada() {
 
       await ref.set(datos, { merge: true });
     }
+
+    // Se recuerda en el teléfono para poder cerrar la jornada después
+    const ahora = new Date().toISOString();
+    if (modoJornada === 'inicio') guardarJornadaLocal({ entradaEn: ahora, personas, cerrada: false });
+    else guardarJornadaLocal({ salidaEn: ahora });
 
     hideOverlay();
     toast(modoJornada === 'inicio' ? `Inicio guardado · ${personas.length} persona(s)` : `Cierre guardado · ${personas.length} persona(s)`, 'success');
