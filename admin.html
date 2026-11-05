@@ -1498,14 +1498,26 @@ td strong, td b { color: var(--ink); font-weight: 700; }
 .plantilla-actions { display: flex; gap: 6px; flex-wrap: wrap; }
 
 /* Código de jornada en la tarjeta de la actividad */
+.codigos-card {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-top: 10px;
+  padding-top: 9px;
+  border-top: 1px dashed rgba(255, 255, 255, .1);
+}
 .codigo-jornada {
   display: flex;
   align-items: center;
   gap: 7px;
   flex-wrap: wrap;
-  margin-top: 10px;
-  padding-top: 10px;
-  border-top: 1px dashed rgba(255, 255, 255, .1);
+}
+.codigo-tipo {
+  min-width: 76px;
+  font-size: 10.5px;
+  font-weight: 800;
+  color: var(--ink-dim);
+  white-space: nowrap;
 }
 .codigo-chip {
   padding: 5px 11px;
@@ -5893,46 +5905,88 @@ function guardarCodigosLocal() {
 leerCodigosLocal();
 
 // Comprueba contra Firestore que los códigos recordados sigan vigentes
+// Los códigos se guardan en este navegador como
+// { [plantillaId]: { jornada: {codigo, expira}, equipo: {codigo, expira} } }
+const TIPOS_CODIGO = {
+  jornada: { etiqueta: 'Jornada', icono: '🔑', hint: 'encargado: abre y cierra el día' },
+  equipo:  { etiqueta: 'Equipo',  icono: '👥', hint: 'impulsores: solo capturan' },
+};
+
+// Normaliza registros viejos ({codigo, expira}) al formato nuevo
+function codigosDe(id) {
+  const g = window._codigosLocal[id];
+  if (!g) return {};
+  if (g.codigo) return { jornada: { codigo: g.codigo, expira: g.expira } };
+  return g;
+}
+
 async function verificarCodigosLocales() {
   const mapa = window._codigosLocal || {};
   const ids = Object.keys(mapa);
   if (!ids.length) return;
   let cambiado = false;
+
   for (const plantillaId of ids) {
-    const c = mapa[plantillaId];
-    try {
-      const snap = await getDoc(doc(db, 'codigos', c.codigo));
-      const vivo = snap.exists() && snap.data().activo !== false
-        && (!aFecha(snap.data().expiraEn) || aFecha(snap.data().expiraEn).getTime() > Date.now());
-      if (!vivo) { delete mapa[plantillaId]; cambiado = true; }
-    } catch (e) { /* sin red: se deja como está */ }
+    const tipos = codigosDe(plantillaId);
+    const nuevo = {};
+    for (const tipo of Object.keys(tipos)) {
+      const c = tipos[tipo];
+      try {
+        const snap = await getDoc(doc(db, 'codigos', c.codigo));
+        const datos = snap.exists() ? snap.data() : null;
+        const exp = datos ? aFecha(datos.expiraEn) : null;
+        const vivo = datos && datos.activo !== false && (!exp || exp.getTime() > Date.now());
+        if (vivo) nuevo[tipo] = c;
+      } catch (e) {
+        nuevo[tipo] = c;   // sin red: se deja como está
+      }
+    }
+    if (Object.keys(nuevo).length) {
+      if (JSON.stringify(nuevo) !== JSON.stringify(tipos)) { mapa[plantillaId] = nuevo; cambiado = true; }
+    } else {
+      delete mapa[plantillaId];
+      cambiado = true;
+    }
   }
+
   if (cambiado) { guardarCodigosLocal(); renderPlantillas(); }
 }
 
-function bloqueCodigo(p) {
-  const guardado = window._codigosLocal[p.id];
+function filaCodigo(p, tipo) {
+  const info = TIPOS_CODIGO[tipo];
+  const guardado = codigosDe(p.id)[tipo];
+
   if (!guardado) {
     return `<div class="codigo-jornada">
-      <button class="btn btn-outline btn-sm" onclick="generarCodigoPlantilla('${p.id}')">🔑 Generar código</button>
-      <span class="codigo-hint">para que un impulsor nuevo pueda entrar</span>
+      <span class="codigo-tipo">${info.icono} ${info.etiqueta}</span>
+      <button class="btn btn-outline btn-sm" onclick="generarCodigoPlantilla('${p.id}','${tipo}')">Generar</button>
+      <span class="codigo-hint">${info.hint}</span>
     </div>`;
   }
+
   const exp = aFecha(guardado.expira);
   const vencido = exp && exp.getTime() <= Date.now();
   const expTxt = exp ? exp.toLocaleDateString('es-CO', { day: '2-digit', month: 'short' }) : 'sin vencimiento';
+
   return `<div class="codigo-jornada">
+    <span class="codigo-tipo">${info.icono} ${info.etiqueta}</span>
     <span class="codigo-chip" style="${vencido ? 'opacity:.45;text-decoration:line-through;' : ''}"
-          title="Pásale este código al impulsor">${e(guardado.codigo)}</span>
+          title="${info.hint}">${e(guardado.codigo)}</span>
     ${vencido ? '' : `<button class="btn btn-outline btn-sm" title="Copiar" onclick="copiarCodigo('${e(guardado.codigo)}')">📋</button>`}
-    <button class="btn btn-outline btn-sm" onclick="revocarCodigo('${p.id}')">${vencido ? 'Borrar' : 'Revocar'}</button>
-    <span class="codigo-hint">${vencido ? 'vencido · genera otro' : 'vence ' + expTxt}</span>
+    <button class="btn btn-outline btn-sm" onclick="revocarCodigo('${p.id}','${tipo}')">${vencido ? 'Borrar' : 'Revocar'}</button>
+    <span class="codigo-hint">${vencido ? 'vencido' : 'vence ' + expTxt}</span>
   </div>`;
 }
 
-window.generarCodigoPlantilla = async function(id) {
+function bloqueCodigo(p) {
+  return `<div class="codigos-card">${filaCodigo(p, 'jornada')}${filaCodigo(p, 'equipo')}</div>`;
+}
+
+window.generarCodigoPlantilla = async function(id, tipo) {
+  tipo = TIPOS_CODIGO[tipo] ? tipo : 'jornada';
   const p = window._plantillas.find(x => x.id === id);
   if (!p) return;
+
   try {
     let codigo = codigoAzar();
     for (let intento = 0; intento < 5; intento++) {
@@ -5948,6 +6002,7 @@ window.generarCodigoPlantilla = async function(id) {
 
     await setDoc(doc(db, 'codigos', codigo), {
       codigo,
+      tipo,
       plantillaId: id,
       plantillaNombre: p.nombre || '',
       activo: true,
@@ -5955,11 +6010,13 @@ window.generarCodigoPlantilla = async function(id) {
       expiraEn: Timestamp.fromDate(fin),
     });
 
-    window._codigosLocal[id] = { codigo, expira: fin.toISOString() };
+    const actuales = codigosDe(id);
+    actuales[tipo] = { codigo, expira: fin.toISOString() };
+    window._codigosLocal[id] = actuales;
     guardarCodigosLocal();
     renderPlantillas();
 
-    showToast(`Código ${codigo} creado`, 'success');
+    showToast(`Código de ${TIPOS_CODIGO[tipo].etiqueta.toLowerCase()} ${codigo} creado`, 'success');
     copiarCodigo(codigo, true);
   } catch (err) {
     console.error(err);
@@ -5967,13 +6024,20 @@ window.generarCodigoPlantilla = async function(id) {
   }
 };
 
-window.revocarCodigo = async function(id) {
-  const guardado = window._codigosLocal[id];
+window.revocarCodigo = async function(id, tipo) {
+  tipo = TIPOS_CODIGO[tipo] ? tipo : 'jornada';
+  const actuales = codigosDe(id);
+  const guardado = actuales[tipo];
   if (!guardado) return;
-  if (!confirm(`¿Anular el código ${guardado.codigo}? Quien lo tenga dejará de poder enviar.`)) return;
+
+  const nombre = TIPOS_CODIGO[tipo].etiqueta.toLowerCase();
+  if (!confirm(`¿Anular el código de ${nombre} ${guardado.codigo}? Quien lo tenga dejará de poder entrar.`)) return;
+
   try {
     await updateDoc(doc(db, 'codigos', guardado.codigo), { activo: false, revocadoEn: serverTimestamp() });
-    delete window._codigosLocal[id];
+    delete actuales[tipo];
+    if (Object.keys(actuales).length) window._codigosLocal[id] = actuales;
+    else delete window._codigosLocal[id];
     guardarCodigosLocal();
     renderPlantillas();
     showToast('Código anulado', 'success');
