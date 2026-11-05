@@ -1868,9 +1868,12 @@ async function cargarActividadesImpulsor() {
     const hoy = new Date().toISOString().split('T')[0];
     plantillasDisponibles = snap.docs
       .map(d => ({ id: d.id, ...d.data() }))
-      .filter(p => !p.vencimiento || p.vencimiento >= hoy)
-      .filter(p => p.papelera !== true)
-      .filter(p => !codigoPlantilla || p.id === codigoPlantilla);
+      .filter(p => {
+        if (p.papelera === true) return false;
+        // Con código, la vigencia la manda el código, no la fecha de la actividad
+        if (codigoPlantilla) return p.id === codigoPlantilla;
+        return !p.vencimiento || p.vencimiento >= hoy;
+      });
 
     hideOverlay();
     $('act-user-pill').textContent = `👤 ${impulsor.nombre}`;

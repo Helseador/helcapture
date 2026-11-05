@@ -6054,6 +6054,7 @@ function filaCodigo(p, tipo) {
             title="Toca el código para copiarlo" onclick="copiarCodigo('${cod}')">${cod}</button>
     ${vencido ? '' : `<button class="btn btn-copiar btn-sm" onclick="copiarCodigo('${cod}')">📋 Copiar</button>`}
     ${vencido || tipo !== 'equipo' ? '' : `<button class="btn btn-outline btn-sm" title="Copiar mensaje para enviar por WhatsApp" onclick="copiarMensajeEquipo('${cod}','${nombreAct}')">💬 Mensaje</button>`}
+    ${vencido ? `<button class="btn btn-copiar btn-sm" onclick="generarCodigoPlantilla('${p.id}','${tipo}')">🔄 Generar de nuevo</button>` : ''}
     <button class="btn btn-outline btn-sm" onclick="revocarCodigo('${p.id}','${tipo}')">${vencido ? 'Borrar' : 'Revocar'}</button>
     <span class="codigo-hint">${vencido ? 'vencido' : 'vence ' + expTxt}</span>
   </div>`;
@@ -6072,10 +6073,16 @@ async function crearCodigoPara(p, tipo) {
     codigo = codigoAzar();
   }
 
-  // Vence al final del día de vencimiento de la actividad, o en 7 días.
-  const fin = p.vencimiento
-    ? new Date(p.vencimiento + 'T23:59:59')
-    : new Date(Date.now() + DIAS_CODIGO * 24 * 60 * 60 * 1000);
+  // Vence al final del día de vencimiento de la actividad... pero si esa fecha
+  // ya pasó (o es hoy), el código nacería vencido: en ese caso dura 7 días.
+  const respaldo = new Date(Date.now() + DIAS_CODIGO * 24 * 60 * 60 * 1000);
+  let fin = respaldo;
+  if (p.vencimiento) {
+    const delVencimiento = new Date(p.vencimiento + 'T23:59:59');
+    if (!isNaN(delVencimiento.getTime()) && delVencimiento.getTime() > Date.now() + 60 * 60 * 1000) {
+      fin = delVencimiento;
+    }
+  }
 
   await setDoc(doc(db, 'codigos', codigo), {
     codigo,
@@ -6397,6 +6404,12 @@ window.guardarPlantilla = async function() {
   if (!nombre||!tipo||!fecha||!ciudad) { showToast('Completa los campos obligatorios','error'); return; }
 
   const vencimiento = document.getElementById('pl-vencimiento').value || null;
+  // Un vencimiento anterior a la fecha de la actividad deja los códigos
+  // vencidos desde el primer día
+  if (vencimiento && vencimiento < fecha) {
+    showToast('El vencimiento no puede ser anterior a la fecha de la actividad', 'error');
+    return;
+  }
   const data = {
     nombre, tipo, fecha,
     lugar:       document.getElementById('pl-lugar').value.trim(),
