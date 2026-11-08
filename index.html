@@ -440,6 +440,33 @@ button,.btn-source,.btn-submit,.btn-back,.btn-primary,.btn-login,.btn-new,
   .main-content{padding-bottom:calc(40px + env(safe-area-inset-bottom));}
   .app-header{padding-top:calc(8px + env(safe-area-inset-top));padding-bottom:8px;}
 }
+/* ══ CLARIDAD DEL FORMULARIO ══ */
+.form-intro{
+  display:flex;gap:12px;align-items:flex-start;
+  padding:14px 16px;border-radius:var(--radius-sm);
+  background:linear-gradient(135deg,rgba(42,191,192,.12),rgba(42,191,192,.04));
+  border:1.5px solid rgba(42,191,192,.25);
+  font-size:13px;line-height:1.55;color:var(--g600);
+}
+.form-intro b{color:var(--navy);font-weight:700;}
+.form-intro-icon{font-size:20px;line-height:1;}
+.evento-resumen{
+  display:flex;align-items:center;gap:10px;justify-content:space-between;
+  padding:12px 14px;border-radius:var(--radius-sm);
+  background:#fff;border:1.5px solid var(--g200);
+}
+.evento-resumen-nombre{font-size:14.5px;font-weight:800;color:var(--navy);line-height:1.3;}
+.evento-resumen-sub{font-size:12px;color:var(--g400);margin-top:3px;line-height:1.4;}
+.btn-corregir{
+  flex-shrink:0;padding:9px 13px;border-radius:10px;border:1.5px solid var(--g200);
+  background:#fff;color:var(--g600);font-family:inherit;font-size:12px;font-weight:700;
+  cursor:pointer;display:inline-flex;align-items:center;gap:5px;min-height:40px;
+}
+.btn-corregir:active{background:var(--g50);}
+.opcional-badge{
+  font-size:10px;font-weight:700;letter-spacing:.3px;text-transform:none;
+  background:var(--g100);color:var(--g400);padding:2px 8px;border-radius:20px;margin-left:6px;
+}
 /* ══ PÁGINA ÚNICA DE CAPTURA ══ */
 .sec-chevron{font-size:13px;color:var(--g400);transition:transform .2s ease;flex-shrink:0;}
 .section-toggle-header.active .sec-chevron{transform:rotate(180deg);}
@@ -596,6 +623,16 @@ button,.btn-source,.btn-submit,.btn-back,.btn-primary,.btn-login,.btn-new,
   </div>
   <div class="main-content">
 
+    <!-- INTRO -->
+    <div class="form-intro">
+      <div class="form-intro-icon">👋</div>
+      <div>
+        <b>Llena solo lo que aplique.</b>
+        Son obligatorios el <b>evento</b> y el <b>cierre</b>.
+        Si hubo degustación, ventas u obsequios, actívalos con su interruptor.
+      </div>
+    </div>
+
     <!-- 1 · EVENTO -->
     <div class="section-toggle">
       <div class="section-toggle-header active" id="hdr-evento" data-acc="evento">
@@ -603,40 +640,53 @@ button,.btn-source,.btn-submit,.btn-back,.btn-primary,.btn-login,.btn-new,
           <div class="section-toggle-icon-wrap">📋</div>
           <div>
             <div class="section-toggle-name">Evento</div>
-            <div class="section-toggle-sub">Datos y fotos</div>
+            <div class="section-toggle-sub">Obligatorio · asistentes y fotos</div>
           </div>
         </div>
         <span class="sec-chevron">▾</span>
       </div>
       <div class="section-body open" id="body-evento">
-        <div class="field">
-          <label>Nombre del evento *</label>
-          <input type="text" id="nombre-evento" placeholder="Ej. Lanzamiento Nutrición 2026" maxlength="100">
+
+        <div class="evento-resumen" id="evento-resumen" style="display:none;">
+          <div style="min-width:0;">
+            <div class="evento-resumen-nombre" id="evento-resumen-texto">—</div>
+            <div class="evento-resumen-sub" id="evento-resumen-sub">—</div>
+          </div>
+          <button class="btn-corregir" id="btn-corregir-evento">✏️ Corregir</button>
         </div>
-        <div class="field">
-          <label>Tipo de evento *</label>
-          <select id="tipo-evento">
-            <option value="">Selecciona el tipo...</option>
-            <option value="Feria">🏪 Feria</option>
-            <option value="Charla">🎤 Charla</option>
-            <option value="Capacitación">📚 Capacitación</option>
-            <option value="Evento presencial">📅 Evento presencial</option>
-            <option value="Volanteo">📢 Volanteo</option>
-            <option value="Otro">📌 Otro</option>
-          </select>
+
+        <div id="evento-campos">
+          <div class="field">
+            <label>Nombre del evento *</label>
+            <input type="text" id="nombre-evento" placeholder="Ej. Lanzamiento Nutrición 2026" maxlength="100">
+          </div>
+          <div class="field">
+            <label>Tipo de evento *</label>
+            <select id="tipo-evento">
+              <option value="">Selecciona el tipo...</option>
+              <option value="Feria">🏪 Feria</option>
+              <option value="Charla">🎤 Charla</option>
+              <option value="Capacitación">📚 Capacitación</option>
+              <option value="Evento presencial">📅 Evento presencial</option>
+              <option value="Volanteo">📢 Volanteo</option>
+              <option value="Otro">📌 Otro</option>
+            </select>
+          </div>
+          <div class="field" id="field-tipo-otro" style="display:none">
+            <label>¿Cuál tipo de evento? *</label>
+            <input type="text" id="tipo-otro-texto" placeholder="Describe el tipo de evento...">
+          </div>
+          <div class="field">
+            <label>Fecha del evento *</label>
+            <input type="date" id="fecha-evento">
+          </div>
+          <div class="field">
+            <label>Lugar / Sede *</label>
+            <input type="text" id="lugar-evento" placeholder="Ej. Centro Comercial Gran Estación, Bogotá">
+          </div>
+          <button class="btn-corregir" id="btn-listo-evento" style="width:100%;justify-content:center;">✓ Listo</button>
         </div>
-        <div class="field" id="field-tipo-otro" style="display:none">
-          <label>¿Cuál tipo de evento? *</label>
-          <input type="text" id="tipo-otro-texto" placeholder="Describe el tipo de evento...">
-        </div>
-        <div class="field">
-          <label>Fecha del evento *</label>
-          <input type="date" id="fecha-evento">
-        </div>
-        <div class="field">
-          <label>Lugar / Sede *</label>
-          <input type="text" id="lugar-evento" placeholder="Ej. Centro Comercial Gran Estación, Bogotá">
-        </div>
+
         <div class="field">
           <label>Número de asistentes *</label>
           <input type="number" id="asistentes" placeholder="Ej. 45" inputmode="numeric" min="0">
@@ -649,7 +699,7 @@ button,.btn-source,.btn-submit,.btn-back,.btn-primary,.btn-login,.btn-new,
           </div>
         </div>
         <div>
-          <div class="foto-section-label">Evidencia fotográfica *</div>
+          <div class="foto-section-label">Evidencia fotográfica</div>
           <div id="fotos-generales-container"></div>
         </div>
       </div>
@@ -662,7 +712,7 @@ button,.btn-source,.btn-submit,.btn-back,.btn-primary,.btn-login,.btn-new,
           <div class="section-toggle-icon-wrap">🧪</div>
           <div>
             <div class="section-toggle-name">Muestreo</div>
-            <div class="section-toggle-sub">Degustaciones y sampling</div>
+            <div class="section-toggle-sub">Opcional · si hubo degustación</div>
           </div>
         </div>
         <label class="toggle-switch">
@@ -699,7 +749,7 @@ button,.btn-source,.btn-submit,.btn-back,.btn-primary,.btn-login,.btn-new,
           <div class="section-toggle-icon-wrap">💰</div>
           <div>
             <div class="section-toggle-name">Ventas</div>
-            <div class="section-toggle-sub">Referencias y cantidades vendidas</div>
+            <div class="section-toggle-sub">Opcional · si hubo ventas</div>
           </div>
         </div>
         <label class="toggle-switch">
@@ -737,7 +787,7 @@ button,.btn-source,.btn-submit,.btn-back,.btn-primary,.btn-login,.btn-new,
           <div class="section-toggle-icon-wrap">🎁</div>
           <div>
             <div class="section-toggle-name">Obsequios</div>
-            <div class="section-toggle-sub">Cantidad y referencias entregadas</div>
+            <div class="section-toggle-sub">Opcional · si se entregaron</div>
           </div>
         </div>
         <label class="toggle-switch">
@@ -775,7 +825,7 @@ button,.btn-source,.btn-submit,.btn-back,.btn-primary,.btn-login,.btn-new,
           <div class="section-toggle-icon-wrap">💵</div>
           <div>
             <div class="section-toggle-name">Gastos y facturas</div>
-            <div class="section-toggle-sub">Legalización · mínimo 1 soporte</div>
+            <div class="section-toggle-sub">Opcional · solo si hubo gastos</div>
           </div>
         </div>
         <span class="sec-chevron">▾</span>
@@ -791,7 +841,7 @@ button,.btn-source,.btn-submit,.btn-back,.btn-primary,.btn-login,.btn-new,
           <textarea id="gastos-obs" rows="2" placeholder="Justificación general, pendientes..."></textarea>
         </div>
         <div>
-          <div class="foto-section-label">Facturas y soportes *</div>
+          <div class="foto-section-label">Facturas y soportes <span class="opcional-badge">opcional</span></div>
           <p style="font-size:12.5px;color:var(--gray-400);margin-bottom:10px;line-height:1.5;">
             Fotos de tiquetes, PDFs de facturas o capturas de pantalla.
           </p>
@@ -801,7 +851,7 @@ button,.btn-source,.btn-submit,.btn-back,.btn-primary,.btn-login,.btn-new,
             <button class="btn-source" id="btn-fac-gal">🖼️ Galería</button>
             <button class="btn-source" id="btn-fac-pdf">📄 PDF</button>
           </div>
-          <div class="factura-hint">Máximo 15 archivos · mínimo 1 · JPG, PNG y PDF</div>
+          <div class="factura-hint">Hasta 15 archivos · JPG, PNG y PDF</div>
           <input type="file" id="fac-cam" accept="image/*" capture="environment">
           <input type="file" id="fac-gal" accept="image/*" multiple>
           <input type="file" id="fac-pdf" accept="application/pdf" multiple>
@@ -816,7 +866,7 @@ button,.btn-source,.btn-submit,.btn-back,.btn-primary,.btn-login,.btn-new,
           <div class="section-toggle-icon-wrap">🎯</div>
           <div>
             <div class="section-toggle-name">Cierre e impacto</div>
-            <div class="section-toggle-sub">Qué se hizo y qué se logró</div>
+            <div class="section-toggle-sub">Obligatorio · cómo salió</div>
           </div>
         </div>
         <span class="sec-chevron">▾</span>
@@ -1197,7 +1247,7 @@ async function restaurarBorrador(d){
   ['generales','muestreo','ventas','obsequios'].forEach(sec => renderFotos(sec));
   renderFacturas();
 
-  actualizarProgreso();
+  precargarEvento();
   solicitarGeo();
   showScreen('screen-splash');
   return true;
@@ -1286,8 +1336,10 @@ function problemasFormulario(){
   if(!$('desc-actividad').value.trim()) faltan.push({ sec:'cierre', msg:'Falta la descripción de la actividad' });
   if(!$('impacto').value.trim())        faltan.push({ sec:'cierre', msg:'Falta el impacto y resultados' });
 
-  if(facturas.length === 0)
-    faltan.push({ sec:'gastos', msg:'Adjunta al menos 1 factura o soporte' });
+  // Facturas: opcionales. Solo se piden si el impulsor registró algún gasto.
+  const hayGastos = (gastos||[]).some(g => g && (String(g.concepto||'').trim() || String(g.valor||'').trim()));
+  if(hayGastos && facturas.length === 0)
+    faltan.push({ sec:'gastos', msg:'Registraste gastos: adjunta la factura o el soporte' });
 
   return faltan;
 }
@@ -1320,6 +1372,77 @@ function actualizarProgreso(){
   fill.style.background = hechos === total
     ? 'linear-gradient(90deg,#10B981,#34D399)'
     : 'linear-gradient(90deg,var(--teal),#22D3EE)';
+}
+
+// ── DATOS DEL EVENTO: se toman de la actividad ──
+// El coordinador ya llenó nombre, tipo, fecha y lugar al crear la actividad.
+// Aquí solo se confirman, para que el impulsor no los escriba otra vez.
+let _editandoEvento = false;
+
+function formatoFechaCorta(iso){
+  if(!iso) return '';
+  const d = new Date(iso + 'T12:00:00');
+  return isNaN(d.getTime()) ? iso : d.toLocaleDateString('es-CO', { day:'2-digit', month:'short' });
+}
+
+function actualizarResumenEvento(){
+  const resumen = $('evento-resumen');
+  const campos  = $('evento-campos');
+  if(!resumen || !campos) return;
+
+  const llenos = ['nombre-evento','tipo-evento','fecha-evento','lugar-evento']
+    .every(id => ($(id).value || '').trim() !== '');
+
+  if(llenos && !_editandoEvento){
+    const tipo = $('tipo-evento').value === 'Otro'
+      ? ($('tipo-otro-texto').value.trim() || 'Otro')
+      : $('tipo-evento').value;
+
+    $('evento-resumen-texto').textContent = $('nombre-evento').value.trim();
+    $('evento-resumen-sub').textContent = [
+      tipo,
+      formatoFechaCorta($('fecha-evento').value),
+      $('lugar-evento').value.trim(),
+    ].filter(Boolean).join(' · ');
+
+    resumen.style.display = 'flex';
+    campos.style.display = 'none';
+  } else {
+    resumen.style.display = 'none';
+    campos.style.display = 'block';
+  }
+}
+
+function precargarEvento(){
+  const p = plantillaActual;
+  if(!p) return;
+
+  const ponerSiVacio = (id, val) => {
+    const el = $(id);
+    if(el && !el.value && val) el.value = val;
+  };
+
+  ponerSiVacio('nombre-evento', p.nombre || '');
+  ponerSiVacio('fecha-evento',  p.fecha  || '');
+  ponerSiVacio('lugar-evento',  [p.lugar, p.ciudad].filter(Boolean).join(', '));
+
+  const sel = $('tipo-evento');
+  if(sel && !sel.value && p.tipo){
+    const valores = Array.from(sel.options).map(o => o.value);
+    if(valores.includes(p.tipo)){
+      sel.value = p.tipo;
+    } else {
+      sel.value = 'Otro';
+      ponerSiVacio('tipo-otro-texto', p.tipo);
+    }
+  }
+
+  const otro = $('field-tipo-otro');
+  if(otro) otro.style.display = ($('tipo-evento').value === 'Otro') ? 'flex' : 'none';
+
+  _editandoEvento = false;
+  actualizarResumenEvento();
+  actualizarProgreso();
 }
 
 // ── LÍMITES DE ARCHIVOS ──
@@ -1761,8 +1884,14 @@ async function guardarJornada() {
     const sello = firebase.firestore.FieldValue.serverTimestamp();
     const lider = { cedula: impulsor.cedula, nombre: impulsor.nombre };
 
+    // Las fotos y observaciones se guardan en el registro del que reporta; si
+    // se quitó de la lista, se cuelgan del primero para no perderlas.
+    const portador = personas.some(m => String(m.cedula) === String(impulsor.cedula))
+      ? String(impulsor.cedula)
+      : String(personas[0].cedula);
+
     for (const m of personas) {
-      const esLider = String(m.cedula) === String(impulsor.cedula);
+      const esLider = String(m.cedula) === portador;
       const ref = db.collection('ingresos').doc(`${p.id}_${m.cedula}_${fecha}`);
       const datos = { ultimoEn: sello };
 
@@ -1789,6 +1918,11 @@ async function guardarJornada() {
       }
 
       await ref.set(datos, { merge: true });
+    }
+
+    // Si se adjuntaron fotos y ninguna subió, se dice en vez de callarlo
+    if (fotosEvidencia.length && urls.length === 0) {
+      toast('Las fotos de evidencia no se pudieron subir. El resto quedó guardado.', 'error');
     }
 
     // Se recuerda en el teléfono para poder cerrar la jornada después
@@ -2197,7 +2331,7 @@ function nuevaActividad(){
   geo=null; fotos.generales=[]; fotos.muestreo=[]; fotos.ventas=[]; fotos.obsequios=[];
   refs.ventas=[]; refs.obsequios=[]; gastos=[]; facturas=[];
   fallosSubida=[]; _enviando=false;
-  borrarBorrador(); _enviado=false;
+  borrarBorrador(); _enviado=false; _editandoEvento=false;
   const aviso=$('success-warn'); if(aviso){ aviso.style.display='none'; aviso.innerHTML=''; }
   document.querySelectorAll('input[type=text],input[type=number],textarea').forEach(el=>el.value='');
   document.querySelectorAll('input[type=checkbox]').forEach(el=>el.checked=false);
@@ -2222,8 +2356,19 @@ $('login-nombre').addEventListener('keypress', e=>{ if(e.key==='Enter') hacerLog
 
 $('btn-retry').addEventListener('click', solicitarGeo);
 $('btn-start').addEventListener('click', ()=>{
+  precargarEvento();
   renderFotos('generales');
   showScreen('screen-form');
+});
+
+$('btn-corregir-evento').addEventListener('click', ()=>{
+  _editandoEvento = true;
+  actualizarResumenEvento();
+  $('nombre-evento').focus();
+});
+$('btn-listo-evento').addEventListener('click', ()=>{
+  _editandoEvento = false;
+  actualizarResumenEvento();
 });
 
 $('tipo-evento').addEventListener('change', ()=>{
@@ -2243,8 +2388,9 @@ document.querySelectorAll('[data-acc]').forEach(hdr=>{
 
 // El progreso se recalcula con cualquier cambio dentro del formulario
 const screenForm = $('screen-form');
-screenForm.addEventListener('input', actualizarProgreso);
-screenForm.addEventListener('change', actualizarProgreso);
+const refrescarForm = ()=>{ actualizarResumenEvento(); actualizarProgreso(); };
+screenForm.addEventListener('input', refrescarForm);
+screenForm.addEventListener('change', refrescarForm);
 
 // ── JORNADA ──
 $('btn-iniciar').addEventListener('click', () => abrirEquipo('inicio'));
