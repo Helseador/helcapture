@@ -1525,6 +1525,19 @@ td strong, td b { color: var(--ink); font-weight: 700; }
 .codigo-fila-modal > div { flex: 1; min-width: 0; }
 .codigo-fila-modal .codigo-tipo { display: block; min-width: 0; margin-bottom: 2px; }
 .codigo-fila-modal .codigo-chip { font-size: 15px; letter-spacing: .06em; }
+.balance-manual-wrap {
+  margin: 4px 0 16px;
+  padding: 14px 16px;
+  border-radius: var(--r-md);
+  background: rgba(255, 255, 255, .03);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .07);
+}
+.balance-manual-titulo {
+  font-size: 11.5px;
+  font-weight: 700;
+  color: var(--ink-dim);
+  margin-bottom: 10px;
+}
 /* ── GRÁFICO DE BALANCE ── */
 .graf-titulo {
   margin: 18px 0 10px;
@@ -2971,10 +2984,17 @@ td strong, td b { color: var(--ink); font-weight: 700; }
 
     <!-- Gastos legalizados automáticos -->
     <div class="balance-gastos-leg">
-      <span class="lbl">💵 Legalización de gastos (lo que reportó el impulsor)</span>
+      <span class="lbl">💵 Legalización de gastos (captura + los que agregues)</span>
       <span class="val" id="balance-gastos-leg-val">$0</span>
     </div>
     <div id="balance-gastos-detalle" class="balance-gastos-detalle"></div>
+
+    <!-- Gastos legalizados que se le pasaron a la captura -->
+    <div class="balance-manual-wrap">
+      <div class="balance-manual-titulo">➕ Agregar un gasto legalizado que no reportó la captura</div>
+      <div class="balance-line-list" id="balance-leg-list"></div>
+      <button class="balance-add-btn" onclick="addBalanceLine('leg')">+ Agregar gasto legalizado</button>
+    </div>
 
     <!-- Facturas adjuntas -->
     <div id="balance-facturas-wrap" style="display:none;margin-bottom:16px;">
@@ -5747,7 +5767,10 @@ function fmtCOP(n) {
 }
 
 function calcRent(a) {
-  const gastosLeg = (a.gastos?.items||[]).filter(Boolean).reduce((s,g)=>s+(parseFloat(g.valor)||0),0);
+  // Gastos de la captura + los que el administrador agrega a mano en el balance
+  const gastosCaptura = (a.gastos?.items||[]).filter(Boolean).reduce((s,g)=>s+(parseFloat(g.valor)||0),0);
+  const gastosManual  = (a.rentabilidad?.gastosManual||[]).filter(Boolean).reduce((s,g)=>s+(parseFloat(g.valor)||0),0);
+  const gastosLeg     = gastosCaptura + gastosManual;
   // Sumar arrays discriminados
   const linesIng  = (a.rentabilidad?.lineasIngresos||[]).filter(Boolean);
   const linesCos  = (a.rentabilidad?.lineasCostos||[]).filter(Boolean);
@@ -5820,10 +5843,12 @@ window.abrirBalance = function(id) {
 
   window._balanceIng = JSON.parse(JSON.stringify((origen.lineasIngresos||[]).filter(Boolean)));
   window._balanceCos = JSON.parse(JSON.stringify((origen.lineasCostos||[]).filter(Boolean)));
+  window._balanceLeg = JSON.parse(JSON.stringify((origen.gastosManual||[]).filter(Boolean)));
 
   // Si no hay líneas, agregar una vacía de cada tipo
   if (!window._balanceIng.length) window._balanceIng.push({ concepto:'', valor:'' });
   if (!window._balanceCos.length) window._balanceCos.push({ concepto:'', valor:'' });
+  if (!window._balanceLeg.length) window._balanceLeg.push({ concepto:'', valor:'' });
 
   // Gastos de todos los reportes del equipo
   const items = [];
@@ -5834,11 +5859,11 @@ window.abrirBalance = function(id) {
     });
   });
 
-  const gastosLeg = items.reduce((s,g)=>s+(parseFloat(g.valor)||0),0);
+  // Lo que reportó la captura. Los gastos que agregue el administrador se
+  // suman aparte, así el gráfico y el total muestran la legalización completa.
+  window._balanceGastosCapturados = items.reduce((s,g)=>s+(parseFloat(g.valor)||0),0);
   document.getElementById('balance-titulo').textContent =
     `Balance — ${a.evento?.nombre || 'Actividad'}${esGrupo ? ' · equipo (' + reports.length + ')' : ''}`;
-  document.getElementById('balance-gastos-leg-val').textContent = fmtCOP(gastosLeg);
-  window._balanceGastosLeg = gastosLeg;
   window._balanceGastosItems = items;
   renderGastosLegales();
   window._balancePersonas = reports.reduce((s,r) => s + (parseInt(r.cierre?.personasImpactadas)||parseInt(r.evento?.asistentes)||0), 0);
@@ -5894,12 +5919,26 @@ function renderBalanceLines() {
         oninput="window._balanceCos[${i}].valor=this.value;recalcBalance()">
       <button class="btn-rm" onclick="removeBalanceLine('cos',${i})">×</button>
     </div>`).join('');
+
+  // Gastos legalizados agregados a mano
+  const legList = document.getElementById('balance-leg-list');
+  if (legList) {
+    legList.innerHTML = (window._balanceLeg||[]).map((l,i) => `
+      <div class="balance-line" id="blleg-${i}">
+        <input type="text" placeholder="Concepto (ej. Taxi, papelería)" value="${l.concepto||''}"
+          oninput="window._balanceLeg[${i}].concepto=this.value">
+        <input type="number" placeholder="$ valor" value="${l.valor||''}" min="0"
+          oninput="window._balanceLeg[${i}].valor=this.value;recalcBalance()">
+        <button class="btn-rm" onclick="removeBalanceLine('leg',${i})">×</button>
+      </div>`).join('');
+  }
 }
 
 function recalcBalance() {
   const totalIng  = window._balanceIng.reduce((s,l)=>s+(parseFloat(l.valor)||0),0);
   const totalCosAd= window._balanceCos.reduce((s,l)=>s+(parseFloat(l.valor)||0),0);
-  const gastosLeg = window._balanceGastosLeg||0;
+  const legManual = (window._balanceLeg||[]).reduce((s,l)=>s+(parseFloat(l.valor)||0),0);
+  const gastosLeg = (window._balanceGastosCapturados||0) + legManual;
   const totalCos  = gastosLeg + totalCosAd;
   const resultado = totalIng - totalCos;
   const roi       = totalCos > 0 ? ((resultado/totalCos)*100).toFixed(1) : null;
@@ -5908,6 +5947,8 @@ function recalcBalance() {
 
   const fmt = fmtCOP;
   // Headers de columna
+  const hdrLeg = document.getElementById('balance-gastos-leg-val');
+  if (hdrLeg) hdrLeg.textContent = fmt(gastosLeg);
   document.getElementById('balance-total-ing-hdr').textContent = fmt(totalIng);
   document.getElementById('balance-total-cos-hdr').textContent = fmt(totalCosAd);
   // Subtotales
@@ -5992,15 +6033,17 @@ function renderGraficoBalance(d) {
 }
 
 window.addBalanceLine = function(tipo) {
-  if (tipo==='ing') { window._balanceIng.push({concepto:'',valor:''}); }
-  else              { window._balanceCos.push({concepto:'',valor:''}); }
+  if (tipo==='ing')      { window._balanceIng.push({concepto:'',valor:''}); }
+  else if (tipo==='leg') { window._balanceLeg.push({concepto:'',valor:''}); }
+  else                   { window._balanceCos.push({concepto:'',valor:''}); }
   renderBalanceLines();
   recalcBalance();
 };
 
 window.removeBalanceLine = function(tipo, idx) {
-  if (tipo==='ing') window._balanceIng.splice(idx,1);
-  else              window._balanceCos.splice(idx,1);
+  if (tipo==='ing')      window._balanceIng.splice(idx,1);
+  else if (tipo==='leg') window._balanceLeg.splice(idx,1);
+  else                   window._balanceCos.splice(idx,1);
   renderBalanceLines();
   recalcBalance();
 };
@@ -6010,6 +6053,7 @@ window.guardarBalance = async function() {
   if (!id) return;
   const linesIng = window._balanceIng.filter(l=>l.concepto||l.valor).map(l=>({concepto:l.concepto||'',valor:parseFloat(l.valor)||0}));
   const linesCos = window._balanceCos.filter(l=>l.concepto||l.valor).map(l=>({concepto:l.concepto||'',valor:parseFloat(l.valor)||0}));
+  const gastosManual = (window._balanceLeg||[]).filter(l=>l.concepto||l.valor).map(l=>({concepto:l.concepto||'',valor:parseFloat(l.valor)||0}));
   try {
     if (String(id).startsWith('grupo:')) {
       // El balance del equipo se guarda en la actividad
@@ -6018,6 +6062,7 @@ window.guardarBalance = async function() {
         balance: {
           lineasIngresos: linesIng,
           lineasCostos:   linesCos,
+          gastosManual,
           actualizadoEn:  serverTimestamp(),
         }
       });
@@ -6025,6 +6070,7 @@ window.guardarBalance = async function() {
       await updateDoc(doc(db,'actividades',id), {
         'rentabilidad.lineasIngresos': linesIng,
         'rentabilidad.lineasCostos':   linesCos,
+        'rentabilidad.gastosManual':   gastosManual,
         'rentabilidad.actualizadoEn':  serverTimestamp()
       });
     }
