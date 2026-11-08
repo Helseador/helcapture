@@ -22,8 +22,19 @@
 
 /* ══ RESET ══ */
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
-html,body{font-family:'Segoe UI',system-ui,-apple-system,sans-serif;background:var(--navy);color:var(--g800);min-height:100vh;overflow-x:hidden;}
+html{overflow-x:hidden;}
+body{font-family:'Segoe UI',system-ui,-apple-system,sans-serif;background:var(--navy);color:var(--g800);min-height:100vh;}
 .screen{display:none;min-height:100vh;flex-direction:column;}
+/* En el celular la pantalla misma scrollea: no depende del scroll del body,
+   que en algunos navegadores móviles se queda trabado con la barra de URL. */
+.screen.active{
+  display:flex;
+  height:100vh;
+  height:100dvh;
+  overflow-y:auto;
+  overflow-x:hidden;
+  -webkit-overflow-scrolling:touch;
+}
 .screen.active{display:flex;}
 
 /* ══ ANIMACIONES ══ */
@@ -38,11 +49,11 @@ html,body{font-family:'Segoe UI',system-ui,-apple-system,sans-serif;background:v
 .dark-screen {
   background: linear-gradient(145deg, var(--navy) 0%, var(--navy-mid) 55%, #0D3340 100%);
   position: relative;
-  overflow: hidden;
+  overflow-x: clip;
 }
 .dark-screen::before {
   content:'';
-  position:absolute;
+  position:fixed;
   top:-30%;right:-20%;
   width:60vw;height:60vw;
   border-radius:50%;
@@ -51,7 +62,7 @@ html,body{font-family:'Segoe UI',system-ui,-apple-system,sans-serif;background:v
 }
 .dark-screen::after {
   content:'';
-  position:absolute;
+  position:fixed;
   bottom:-20%;left:-15%;
   width:50vw;height:50vw;
   border-radius:50%;
@@ -213,7 +224,7 @@ html,body{font-family:'Segoe UI',system-ui,-apple-system,sans-serif;background:v
   display:flex;align-items:center;gap:5px;
 }
 .geo-dot{width:7px;height:7px;border-radius:50%;background:var(--teal);display:inline-block;animation:pulse 2s infinite;}
-.main-content{flex:1;padding:16px 16px 60px;display:flex;flex-direction:column;gap:14px;max-width:480px;width:100%;margin:0 auto;}
+.main-content{flex:1 1 auto;padding:16px 16px 60px;display:flex;flex-direction:column;gap:14px;max-width:480px;width:100%;margin:0 auto;}
 
 /* Steps */
 .steps-wrap{background:linear-gradient(135deg,var(--navy),var(--navy-mid));padding:16px 20px 20px;margin:-16px -16px 0;margin-bottom:16px;}
@@ -398,12 +409,10 @@ input[type=file]{display:none;}
 
 /* ══ OPTIMIZACIÓN PARA CELULAR ══ */
 html{-webkit-text-size-adjust:100%;}
-body{overscroll-behavior-y:contain;}
-@supports (min-height:100dvh){.screen{min-height:100dvh;}}
 
 /* Objetivos táctiles cómodos y sin destello azul al tocar */
 button,.btn-source,.btn-submit,.btn-back,.btn-primary,.btn-login,.btn-new,
-.btn-add-ref,.btn-icon,.btn-jornada,.remove-photo,.toggle-switch{
+.btn-add-ref,.btn-icon,.btn-jornada,.remove-photo{
   touch-action:manipulation;-webkit-tap-highlight-color:transparent;
 }
 .btn-source,.btn-submit,.btn-back,.btn-primary,.btn-login,.btn-new{min-height:46px;}
@@ -412,7 +421,7 @@ button,.btn-source,.btn-submit,.btn-back,.btn-primary,.btn-login,.btn-new,
 .remove-photo{width:26px;height:26px;}
 
 /* Respetar notch y barra de gestos */
-.main-content{padding-bottom:calc(64px + env(safe-area-inset-bottom));}
+.main-content{padding-bottom:calc(104px + env(safe-area-inset-bottom));}
 .app-header{padding-top:calc(14px + env(safe-area-inset-top));}
 .toast{bottom:calc(28px + env(safe-area-inset-bottom));}
 .overlay{padding-bottom:env(safe-area-inset-bottom);}
@@ -1256,7 +1265,13 @@ async function restaurarBorrador(d){
 // ── UTILS ──
 function esc(v){ return String(v==null?'':v).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
 function $(id){ return document.getElementById(id); }
-function showScreen(id){ document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active')); $(id).classList.add('active'); window.scrollTo(0,0); }
+function showScreen(id){
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  const pantalla = $(id);
+  pantalla.classList.add('active');
+  pantalla.scrollTop = 0;   // el scroll vive en la pantalla, no en el body
+  window.scrollTo(0,0);
+}
 function showOverlay(msg){ $('overlay-text').textContent=msg; $('overlay').classList.add('active'); }
 function hideOverlay(){ $('overlay').classList.remove('active'); }
 function toast(msg,type=''){
