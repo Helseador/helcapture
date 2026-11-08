@@ -4514,6 +4514,7 @@ function seccionesBadges(a) {
 // ══════════════════════════════════════════
 window._constructorState = {
   actividadId: null,
+  actividad: null,   // objeto activo (reporte suelto o grupo fusionado)
   color: '#2ABFC0',
   logoDataUrl: null,
   secciones: [],        // orden y visibilidad (label editable)
@@ -4534,10 +4535,20 @@ const SECCIONES_DEF = [
 ];
 
 window.abrirConstructor = function(id) {
-  const a = window._actividades.find(x => x.id === id);
+  const s = window._constructorState;
+
+  // Puede ser un reporte suelto o "grupo:<actividad>" con todo el equipo
+  let a;
+  if (String(id).startsWith('grupo:')) {
+    const lista = reportesDeActividad(String(id).slice(6));
+    if (!lista.length) return;
+    a = fusionarReportes(lista);
+  } else {
+    a = window._actividades.find(x => x.id === id);
+  }
   if (!a) return;
 
-  const s = window._constructorState;
+  s.actividad = a;
   s.actividadId = id;
   s.fotosExcluidas = {};
   s.comentarios = {};
@@ -4562,7 +4573,9 @@ window.abrirConstructor = function(id) {
   document.getElementById('cfg-titulo').value = a.evento?.nombre || 'Informe de actividad';
   document.getElementById('cfg-subtitulo').value = 'By Grupo Helse';
   document.getElementById('cfg-fecha').value = a.evento?.fecha || new Date().toISOString().split('T')[0];
-  document.getElementById('constructor-activity-name').textContent = a.evento?.nombre || 'Actividad';
+  document.getElementById('constructor-activity-name').textContent = a.esGrupo
+    ? (a.evento?.nombre || 'Actividad') + ' - equipo (' + a.registros + ')'
+    : (a.evento?.nombre || 'Actividad');
   poblarSelectorActividades();
   const sel = document.getElementById('cfg-actividad');
   if (sel) sel.value = id;
@@ -4572,15 +4585,114 @@ window.abrirConstructor = function(id) {
   navigate('constructor');
 };
 
-// Rellena el desplegable de actividades del constructor
+// ── AGRUPAR REPORTES DE LA MISMA ACTIVIDAD ──
+// Varias personas pueden capturar la misma actividad. Aquí se agrupan por
+// actividad para poder sacar el informe del equipo completo, o el de cada uno.
+
+function claveActividad(a) {
+  if (a.plantillaId) return String(a.plantillaId);
+  return `${a.evento?.nombre || 'sin-nombre'}|${a.evento?.fecha || ''}`;
+}
+
+function reportesDeActividad(clave) {
+  return (window._actividades || []).filter(a => claveActividad(a) === clave);
+}
+
+// Une varios reportes en uno solo, sumando asistentes y gastos y juntando fotos
+function fusionarReportes(lista) {
+  const primero = lista[0];
+  const juntar = (fn) => lista.flatMap(a => (fn(a) || []).filter(Boolean));
+
+  const unirTexto = fn => lista
+    .map(a => ({ quien: a.impulsor?.nombre || '', texto: String(fn(a) || '').trim() }))
+    .filter(x => x.texto)
+    .map(x => x.quien ? `${x.quien}: ${x.texto}` : x.texto)
+    .join('\n\n');
+
+  const gastosItems = juntar(a => a.gastos?.items);
+
+  return {
+    id: 'grupo:' + claveActividad(primero),
+    esGrupo: true,
+    registros: lista.length,
+    plantillaId: primero.plantillaId,
+    plantillaNombre: primero.plantillaNombre,
+    impulsor: primero.impulsor,
+    impulsores: lista.map(a => a.impulsor).filter(Boolean),
+    evento: {
+      ...(primero.evento || {}),
+      asistentes: lista.reduce((s, a) => s + (parseInt(a.evento?.asistentes) || 0), 0),
+    },
+    ubicacion: primero.ubicacion || null,
+
+    fotosGenerales: juntar(a => a.fotosGenerales),
+
+    muestreo: {
+      activo: lista.some(a => a.muestreo?.activo),
+      descripcion: unirTexto(a => a.muestreo?.descripcion),
+      observaciones: unirTexto(a => a.muestreo?.observaciones),
+      fotos: juntar(a => a.muestreo?.fotos),
+    },
+    ventas: {
+      activo: lista.some(a => a.ventas?.activo),
+      referencias: juntar(a => a.ventas?.referencias),
+      observaciones: unirTexto(a => a.ventas?.observaciones),
+      fotos: juntar(a => a.ventas?.fotos),
+    },
+    obsequios: {
+      activo: lista.some(a => a.obsequios?.activo),
+      referencias: juntar(a => a.obsequios?.referencias),
+      observaciones: unirTexto(a => a.obsequios?.observaciones),
+      fotos: juntar(a => a.obsequios?.fotos),
+    },
+    gastos: {
+      items: gastosItems,
+      observaciones: unirTexto(a => a.gastos?.observaciones),
+    },
+    facturas: juntar(a => a.facturas),
+    cierre: {
+      descripcion: unirTexto(a => a.cierre?.descripcion),
+      impacto: unirTexto(a => a.cierre?.impacto),
+      detalleImpacto: unirTexto(a => a.cierre?.detalleImpacto),
+      personasImpactadas: unirTexto(a => a.cierre?.personasImpactadas),
+      observaciones: unirTexto(a => a.cierre?.observaciones),
+    },
+  };
+}
+
+// Desplegable del constructor: una entrada por actividad, con el equipo dentro
 window.poblarSelectorActividades = function() {
   const sel = document.getElementById('cfg-actividad');
   if (!sel) return;
-  const acts = window._actividades.slice().sort((a, b) =>
-    String(b.evento?.fecha || '').localeCompare(String(a.evento?.fecha || '')));
-  sel.innerHTML = '<option value="">Selecciona una actividad…</option>' + acts.map(a =>
-    `<option value="${a.id}">${a.evento?.nombre || 'Sin nombre'} · ${fmtFecha(a.evento?.fecha)}</option>`
-  ).join('');
+
+  const grupos = new Map();
+  (window._actividades || []).forEach(a => {
+    const k = claveActividad(a);
+    if (!grupos.has(k)) grupos.set(k, []);
+    grupos.get(k).push(a);
+  });
+
+  const orden = [...grupos.entries()].sort((x, y) =>
+    String(y[1][0].evento?.fecha || '').localeCompare(String(x[1][0].evento?.fecha || '')));
+
+  sel.innerHTML = '<option value="">Selecciona una actividad…</option>' + orden.map(([clave, lista]) => {
+    const cabeza = `${e(lista[0].evento?.nombre || 'Sin nombre')} · ${fmtFecha(lista[0].evento?.fecha)}`;
+
+    if (lista.length === 1) {
+      const a = lista[0];
+      const quien = a.impulsor?.nombre ? ' · ' + e(a.impulsor.nombre) : '';
+      return `<option value="${e(a.id)}">${cabeza}${quien}</option>`;
+    }
+
+    const personas = lista.map(a =>
+      `<option value="${e(a.id)}">👤 ${e(a.impulsor?.nombre || 'Sin nombre')}</option>`).join('');
+
+    return `<optgroup label="${cabeza} — ${lista.length} registros">
+      <option value="grupo:${e(clave)}">📊 Toda la actividad (${lista.length})</option>
+      ${personas}
+    </optgroup>`;
+  }).join('');
+
   const actual = window._constructorState.actividadId;
   if (actual) sel.value = actual;
 };
@@ -4597,6 +4709,7 @@ window.cambiarActividadConstructor = function(id) {
 function limpiarConstructor() {
   const s = window._constructorState;
   s.actividadId = null;
+  s.actividad = null;
   s.secciones = [];
   s.fotosExcluidas = {};
   s.comentarios = {};
@@ -4792,7 +4905,7 @@ window.toggleFoto = function(secKey, idx) {
 window.actualizarPreview = function() {
   const s = window._constructorState;
   if (!s.actividadId) return;
-  let a = window._actividades.find(x => x.id === s.actividadId);
+  let a = s.actividad || window._actividades.find(x => x.id === s.actividadId);
   if (!a) return;
   a = escaparDatos(a);   // solo para pintar la vista previa
 
@@ -5005,7 +5118,7 @@ async function mapaFotosBase64(a) {
 window.exportarConstructorPDF = async function() {
   const s = window._constructorState;
   if (!s.actividadId) { showToast('Selecciona una actividad primero','error'); return; }
-  const a = window._actividades.find(x => x.id === s.actividadId);
+  const a = s.actividad || window._actividades.find(x => x.id === s.actividadId);
   if (!a) return;
 
   const b64Map = await mapaFotosBase64(a);
@@ -5179,7 +5292,7 @@ function hexToRgb(hex) {
 window.exportarConstructorPPTX = async function() {
   const s = window._constructorState;
   if (!s.actividadId) { showToast('Selecciona una actividad primero','error'); return; }
-  const a = window._actividades.find(x => x.id === s.actividadId);
+  const a = s.actividad || window._actividades.find(x => x.id === s.actividadId);
   if (!a) return;
 
   const b64Map = await mapaFotosBase64(a);
