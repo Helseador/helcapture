@@ -5802,28 +5802,49 @@ window._balanceIng = [];  // [{concepto, valor}]
 window._balanceCos = [];  // [{concepto, valor}]
 
 window.abrirBalance = function(id) {
-  const a = window._actividades.find(x=>x.id===id);
-  if (!a) return;
-  window._balanceActualId = id;
+  const esGrupo = String(id).startsWith('grupo:');
+  const clave = esGrupo ? String(id).slice(6) : null;
+  const reports = esGrupo
+    ? reportesDeActividad(clave)
+    : [window._actividades.find(x => x.id === id)].filter(Boolean);
+  if (!reports.length) return;
 
-  // Cargar datos existentes o defaults vacíos
-  window._balanceIng = JSON.parse(JSON.stringify((a.rentabilidad?.lineasIngresos||[]).filter(Boolean)));
-  window._balanceCos = JSON.parse(JSON.stringify((a.rentabilidad?.lineasCostos||[]).filter(Boolean)));
+  const a = reports[0];
+  window._balanceActualId = id;
+  window._balanceEsGrupo  = esGrupo;
+
+  // Las líneas manuales del equipo viven en la actividad; las de una persona, en su reporte
+  const origen = esGrupo
+    ? (window._plantillas.find(p => p.id === clave)?.balance || {})
+    : (a.rentabilidad || {});
+
+  window._balanceIng = JSON.parse(JSON.stringify((origen.lineasIngresos||[]).filter(Boolean)));
+  window._balanceCos = JSON.parse(JSON.stringify((origen.lineasCostos||[]).filter(Boolean)));
 
   // Si no hay líneas, agregar una vacía de cada tipo
   if (!window._balanceIng.length) window._balanceIng.push({ concepto:'', valor:'' });
   if (!window._balanceCos.length) window._balanceCos.push({ concepto:'', valor:'' });
 
-  const gastosLeg = (a.gastos?.items||[]).filter(Boolean).reduce((s,g)=>s+(parseFloat(g.valor)||0),0);
-  document.getElementById('balance-titulo').textContent = `Balance — ${a.evento?.nombre||'Actividad'}`;
+  // Gastos de todos los reportes del equipo
+  const items = [];
+  reports.forEach(r => {
+    (r.gastos?.items||[]).filter(Boolean).forEach(g => {
+      const quien = esGrupo && reports.length > 1 && r.impulsor?.nombre ? ` · ${r.impulsor.nombre}` : '';
+      items.push({ concepto: `${g.concepto || 'Gasto'}${quien}`, valor: g.valor });
+    });
+  });
+
+  const gastosLeg = items.reduce((s,g)=>s+(parseFloat(g.valor)||0),0);
+  document.getElementById('balance-titulo').textContent =
+    `Balance — ${a.evento?.nombre || 'Actividad'}${esGrupo ? ' · equipo (' + reports.length + ')' : ''}`;
   document.getElementById('balance-gastos-leg-val').textContent = fmtCOP(gastosLeg);
   window._balanceGastosLeg = gastosLeg;
-  window._balanceGastosItems = (a.gastos?.items||[]).filter(Boolean);
+  window._balanceGastosItems = items;
   renderGastosLegales();
-  window._balancePersonas  = parseInt(a.cierre?.personasImpactadas)||parseInt(a.evento?.asistentes)||0;
+  window._balancePersonas = reports.reduce((s,r) => s + (parseInt(r.cierre?.personasImpactadas)||parseInt(r.evento?.asistentes)||0), 0);
 
   // Mostrar facturas adjuntas
-  const facturas = (a.facturas||[]).filter(Boolean);
+  const facturas = reports.flatMap(r => (r.facturas||[]).filter(Boolean));
   const facWrap = document.getElementById('balance-facturas-wrap');
   const facList = document.getElementById('balance-facturas-list');
   if (facturas.length) {
@@ -5990,11 +6011,23 @@ window.guardarBalance = async function() {
   const linesIng = window._balanceIng.filter(l=>l.concepto||l.valor).map(l=>({concepto:l.concepto||'',valor:parseFloat(l.valor)||0}));
   const linesCos = window._balanceCos.filter(l=>l.concepto||l.valor).map(l=>({concepto:l.concepto||'',valor:parseFloat(l.valor)||0}));
   try {
-    await updateDoc(doc(db,'actividades',id), {
-      'rentabilidad.lineasIngresos': linesIng,
-      'rentabilidad.lineasCostos':   linesCos,
-      'rentabilidad.actualizadoEn':  serverTimestamp()
-    });
+    if (String(id).startsWith('grupo:')) {
+      // El balance del equipo se guarda en la actividad
+      const clave = String(id).slice(6);
+      await updateDoc(doc(db,'plantillas',clave), {
+        balance: {
+          lineasIngresos: linesIng,
+          lineasCostos:   linesCos,
+          actualizadoEn:  serverTimestamp(),
+        }
+      });
+    } else {
+      await updateDoc(doc(db,'actividades',id), {
+        'rentabilidad.lineasIngresos': linesIng,
+        'rentabilidad.lineasCostos':   linesCos,
+        'rentabilidad.actualizadoEn':  serverTimestamp()
+      });
+    }
     showToast('Balance guardado ✓','success');
     cerrarModal('modal-balance');
   } catch(e) { showToast('Error al guardar','error'); console.error(e); }
@@ -6047,6 +6080,10 @@ window.renderRentabilidad = function() {
     const facturas  = (a.facturas||[]).filter(Boolean);
     const tieneBalance = linesIng.length>0||linesCos.length>0;
 
+    // Si la actividad la capturaron varias personas, se ofrece el balance del equipo
+    const claveGrupo = claveActividad(a);
+    const nGrupo = reportesDeActividad(claveGrupo).length;
+
     return `<tr>
       <td>
         <strong>${a.evento?.nombre||'–'}</strong>
@@ -6068,6 +6105,7 @@ window.renderRentabilidad = function() {
       <td class="neutral" style="text-align:right;">${cppStr}</td>
       <td style="white-space:nowrap;">
         <button class="btn btn-teal btn-sm" onclick="abrirBalance('${a.id}')" style="margin-bottom:4px;">📊 Balance</button>
+        ${nGrupo > 1 ? `<button class="btn btn-outline btn-sm" onclick="abrirBalance('grupo:${e(claveGrupo)}')" style="margin-bottom:4px;" title="Balance con los gastos de todo el equipo">👥 Equipo (${nGrupo})</button>` : ''}
         <button class="btn btn-outline btn-sm" onclick="verDetalle('${a.id}')">Ver</button>
       </td>
     </tr>`;
