@@ -440,6 +440,24 @@ button,.btn-source,.btn-submit,.btn-back,.btn-primary,.btn-login,.btn-new,
   .main-content{padding-bottom:calc(40px + env(safe-area-inset-bottom));}
   .app-header{padding-top:calc(8px + env(safe-area-inset-top));padding-bottom:8px;}
 }
+/* ══ PÁGINA ÚNICA DE CAPTURA ══ */
+.sec-chevron{font-size:13px;color:var(--g400);transition:transform .2s ease;flex-shrink:0;}
+.section-toggle-header.active .sec-chevron{transform:rotate(180deg);}
+.form-bar{
+  position:fixed;left:0;right:0;bottom:0;z-index:60;
+  display:flex;align-items:center;gap:12px;
+  padding:10px 14px calc(10px + env(safe-area-inset-bottom));
+  background:rgba(248,250,252,.94);
+  -webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);
+  border-top:1px solid var(--g200);
+  box-shadow:0 -6px 22px rgba(15,30,60,.09);
+}
+.form-bar-info{flex:1;min-width:0;}
+.form-bar-track{height:6px;border-radius:99px;background:var(--g200);overflow:hidden;}
+.form-bar-fill{display:block;height:100%;width:0;border-radius:99px;background:linear-gradient(90deg,var(--teal),#22D3EE);transition:width .3s ease;}
+.form-bar-text{font-size:11px;font-weight:700;color:var(--g600);margin-top:4px;}
+.form-bar-btn{width:auto;margin:0;padding:14px 20px;font-size:15px;flex-shrink:0;box-shadow:var(--shadow-teal);}
+.form-bar-btn:active{transform:scale(.98);}
 /* ══ JORNADA ══ */
 .jornada-meta{font-size:12.5px;color:var(--g400);margin-bottom:10px;line-height:1.6;}
 .jornada-estado{font-size:12px;font-weight:700;color:var(--teal-dark);background:rgba(42,191,192,.10);border-radius:var(--radius-sm);padding:9px 12px;margin-bottom:14px;line-height:1.4;}
@@ -578,34 +596,19 @@ button,.btn-source,.btn-submit,.btn-back,.btn-primary,.btn-login,.btn-new,
   </div>
   <div class="main-content">
 
-    <div class="steps-wrap">
-      <div class="steps">
-        <div class="step-item">
-          <div class="step-dot active" id="step1">1</div>
-          <div class="step-label active" id="slabel1">Evento</div>
+    <!-- 1 · EVENTO -->
+    <div class="section-toggle">
+      <div class="section-toggle-header active" id="hdr-evento" data-acc="evento">
+        <div class="section-toggle-left">
+          <div class="section-toggle-icon-wrap">📋</div>
+          <div>
+            <div class="section-toggle-name">Evento</div>
+            <div class="section-toggle-sub">Datos y fotos</div>
+          </div>
         </div>
-        <div class="step-connector" id="line1"></div>
-        <div class="step-item">
-          <div class="step-dot" id="step2">2</div>
-          <div class="step-label" id="slabel2">Evidencia</div>
-        </div>
-        <div class="step-connector" id="line2"></div>
-        <div class="step-item">
-          <div class="step-dot" id="step3">3</div>
-          <div class="step-label" id="slabel3">Gastos</div>
-        </div>
-        <div class="step-connector" id="line3"></div>
-        <div class="step-item">
-          <div class="step-dot" id="step4">4</div>
-          <div class="step-label" id="slabel4">Cierre</div>
-        </div>
+        <span class="sec-chevron">▾</span>
       </div>
-    </div>
-
-    <!-- PASO 1 -->
-    <div id="paso1">
-      <div class="card">
-        <div class="card-title"><div class="card-title-icon">📋</div> Información del evento</div>
+      <div class="section-body open" id="body-evento">
         <div class="field">
           <label>Nombre del evento *</label>
           <input type="text" id="nombre-evento" placeholder="Ej. Lanzamiento Nutrición 2026" maxlength="100">
@@ -634,7 +637,7 @@ button,.btn-source,.btn-submit,.btn-back,.btn-primary,.btn-login,.btn-new,
           <label>Lugar / Sede *</label>
           <input type="text" id="lugar-evento" placeholder="Ej. Centro Comercial Gran Estación, Bogotá">
         </div>
-        <div class="field" style="margin-bottom:16px">
+        <div class="field">
           <label>Número de asistentes *</label>
           <input type="number" id="asistentes" placeholder="Ej. 45" inputmode="numeric" min="0">
         </div>
@@ -645,178 +648,180 @@ button,.btn-source,.btn-submit,.btn-back,.btn-primary,.btn-login,.btn-new,
             <div class="geo-pill-coords" id="geo-display">Cargando...</div>
           </div>
         </div>
-      </div>
-      <button class="btn-submit" id="btn-ir-paso2">Continuar → Evidencia</button>
-    </div>
-
-    <!-- PASO 2 -->
-    <div id="paso2" style="display:none">
-      <!-- Fotos generales -->
-      <div class="card">
-        <div class="card-title"><div class="card-title-icon">📸</div> Fotos del evento</div>
-        <div id="fotos-generales-container"></div>
-      </div>
-
-      <!-- MUESTREO -->
-      <div class="section-toggle" id="toggle-muestreo">
-        <div class="section-toggle-header" id="hdr-muestreo">
-          <div class="section-toggle-left">
-            <div class="section-toggle-icon-wrap">🧪</div>
-            <div>
-              <div class="section-toggle-name">Muestreo</div>
-              <div class="section-toggle-sub">Degustaciones y sampling</div>
-            </div>
-          </div>
-          <label class="toggle-switch">
-            <input type="checkbox" id="chk-muestreo">
-            <span class="toggle-slider"></span>
-          </label>
+        <div>
+          <div class="foto-section-label">Evidencia fotográfica *</div>
+          <div id="fotos-generales-container"></div>
         </div>
-        <div class="section-body" id="body-muestreo">
-          <div class="field">
-            <label>Descripción del muestreo</label>
-            <textarea id="muestreo-desc" rows="3" placeholder="Productos degustados, público objetivo..."></textarea>
-          </div>
-          <div class="field">
-            <label>Observaciones</label>
-            <textarea id="muestreo-obs" rows="2" placeholder="Reacciones, feedback..."></textarea>
-          </div>
-          <div>
-            <div class="foto-section-label">Evidencia fotográfica <span id="cnt-muestreo">0/15</span></div>
-            <div class="photos-grid" id="grid-muestreo"></div>
-            <div class="photo-source-btns" id="btns-muestreo">
-              <button class="btn-source" id="btn-cam-muestreo">📷 Cámara</button>
-              <button class="btn-source" id="btn-gal-muestreo">🖼️ Galería</button>
-            </div>
-            <input type="file" id="cam-muestreo" accept="image/*" capture="environment">
-            <input type="file" id="gal-muestreo" accept="image/*" multiple>
-          </div>
-        </div>
-      </div>
-
-      <!-- VENTAS -->
-      <div class="section-toggle" id="toggle-ventas">
-        <div class="section-toggle-header" id="hdr-ventas">
-          <div class="section-toggle-left">
-            <div class="section-toggle-icon-wrap">💰</div>
-            <div>
-              <div class="section-toggle-name">Ventas</div>
-              <div class="section-toggle-sub">Referencias y cantidades vendidas</div>
-            </div>
-          </div>
-          <label class="toggle-switch">
-            <input type="checkbox" id="chk-ventas">
-            <span class="toggle-slider"></span>
-          </label>
-        </div>
-        <div class="section-body" id="body-ventas">
-          <div>
-            <label style="font-size:13px;font-weight:600;color:var(--gray-600);display:block;margin-bottom:8px;">Referencias vendidas</label>
-            <div class="ref-list" id="ref-list-ventas"></div>
-            <button class="btn-add-ref" id="btn-add-ventas">+ Agregar referencia</button>
-          </div>
-          <div class="field">
-            <label>Observaciones de ventas</label>
-            <textarea id="ventas-obs" rows="2" placeholder="Productos más demandados, objeciones..."></textarea>
-          </div>
-          <div>
-            <div class="foto-section-label">Evidencia fotográfica <span id="cnt-ventas">0/15</span></div>
-            <div class="photos-grid" id="grid-ventas"></div>
-            <div class="photo-source-btns" id="btns-ventas">
-              <button class="btn-source" id="btn-cam-ventas">📷 Cámara</button>
-              <button class="btn-source" id="btn-gal-ventas">🖼️ Galería</button>
-            </div>
-            <input type="file" id="cam-ventas" accept="image/*" capture="environment">
-            <input type="file" id="gal-ventas" accept="image/*" multiple>
-          </div>
-        </div>
-      </div>
-
-      <!-- OBSEQUIOS -->
-      <div class="section-toggle" id="toggle-obsequios">
-        <div class="section-toggle-header" id="hdr-obsequios">
-          <div class="section-toggle-left">
-            <div class="section-toggle-icon-wrap">🎁</div>
-            <div>
-              <div class="section-toggle-name">Obsequios</div>
-              <div class="section-toggle-sub">Cantidad y referencias entregadas</div>
-            </div>
-          </div>
-          <label class="toggle-switch">
-            <input type="checkbox" id="chk-obsequios">
-            <span class="toggle-slider"></span>
-          </label>
-        </div>
-        <div class="section-body" id="body-obsequios">
-          <div>
-            <label style="font-size:13px;font-weight:600;color:var(--gray-600);display:block;margin-bottom:8px;">Referencias entregadas</label>
-            <div class="ref-list" id="ref-list-obsequios"></div>
-            <button class="btn-add-ref" id="btn-add-obsequios">+ Agregar referencia</button>
-          </div>
-          <div class="field">
-            <label>Observaciones de obsequios</label>
-            <textarea id="obsequios-obs" rows="2" placeholder="Reacciones, destino de los obsequios..."></textarea>
-          </div>
-          <div>
-            <div class="foto-section-label">Evidencia fotográfica <span id="cnt-obsequios">0/15</span></div>
-            <div class="photos-grid" id="grid-obsequios"></div>
-            <div class="photo-source-btns" id="btns-obsequios">
-              <button class="btn-source" id="btn-cam-obsequios">📷 Cámara</button>
-              <button class="btn-source" id="btn-gal-obsequios">🖼️ Galería</button>
-            </div>
-            <input type="file" id="cam-obsequios" accept="image/*" capture="environment">
-            <input type="file" id="gal-obsequios" accept="image/*" multiple>
-          </div>
-        </div>
-      </div>
-
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
-        <button class="btn-back" id="btn-ir-paso1b">← Volver</button>
-        <button class="btn-submit" id="btn-ir-paso3">Continuar →</button>
       </div>
     </div>
 
-    <!-- PASO 3 -->
-    <div id="paso3" style="display:none">
-      <div class="card">
-        <div class="card-title"><div class="card-title-icon">💵</div> Legalización de gastos <span class="optional-tag">opcional</span></div>
-        <div class="ref-list" id="ref-list-gastos"></div>
-        <button class="btn-add-ref" id="btn-add-gasto">+ Agregar gasto</button>
-        <div style="height:14px"></div>
+    <!-- 2 · MUESTREO -->
+    <div class="section-toggle">
+      <div class="section-toggle-header" id="hdr-muestreo">
+        <div class="section-toggle-left">
+          <div class="section-toggle-icon-wrap">🧪</div>
+          <div>
+            <div class="section-toggle-name">Muestreo</div>
+            <div class="section-toggle-sub">Degustaciones y sampling</div>
+          </div>
+        </div>
+        <label class="toggle-switch">
+          <input type="checkbox" id="chk-muestreo">
+          <span class="toggle-slider"></span>
+        </label>
+      </div>
+      <div class="section-body" id="body-muestreo">
+        <div class="field">
+          <label>Descripción del muestreo</label>
+          <textarea id="muestreo-desc" rows="3" placeholder="Productos degustados, público objetivo..."></textarea>
+        </div>
+        <div class="field">
+          <label>Observaciones</label>
+          <textarea id="muestreo-obs" rows="2" placeholder="Reacciones, feedback..."></textarea>
+        </div>
+        <div>
+          <div class="foto-section-label">Evidencia fotográfica <span id="cnt-muestreo">0/15</span></div>
+          <div class="photos-grid" id="grid-muestreo"></div>
+          <div class="photo-source-btns" id="btns-muestreo">
+            <button class="btn-source" id="btn-cam-muestreo">📷 Cámara</button>
+            <button class="btn-source" id="btn-gal-muestreo">🖼️ Galería</button>
+          </div>
+          <input type="file" id="cam-muestreo" accept="image/*" capture="environment">
+          <input type="file" id="gal-muestreo" accept="image/*" multiple>
+        </div>
+      </div>
+    </div>
+
+    <!-- 3 · VENTAS -->
+    <div class="section-toggle">
+      <div class="section-toggle-header" id="hdr-ventas">
+        <div class="section-toggle-left">
+          <div class="section-toggle-icon-wrap">💰</div>
+          <div>
+            <div class="section-toggle-name">Ventas</div>
+            <div class="section-toggle-sub">Referencias y cantidades vendidas</div>
+          </div>
+        </div>
+        <label class="toggle-switch">
+          <input type="checkbox" id="chk-ventas">
+          <span class="toggle-slider"></span>
+        </label>
+      </div>
+      <div class="section-body" id="body-ventas">
+        <div>
+          <label style="font-size:13px;font-weight:600;color:var(--gray-600);display:block;margin-bottom:8px;">Referencias vendidas</label>
+          <div class="ref-list" id="ref-list-ventas"></div>
+          <button class="btn-add-ref" id="btn-add-ventas">+ Agregar referencia</button>
+        </div>
+        <div class="field">
+          <label>Observaciones de ventas</label>
+          <textarea id="ventas-obs" rows="2" placeholder="Productos más demandados, objeciones..."></textarea>
+        </div>
+        <div>
+          <div class="foto-section-label">Evidencia fotográfica <span id="cnt-ventas">0/15</span></div>
+          <div class="photos-grid" id="grid-ventas"></div>
+          <div class="photo-source-btns" id="btns-ventas">
+            <button class="btn-source" id="btn-cam-ventas">📷 Cámara</button>
+            <button class="btn-source" id="btn-gal-ventas">🖼️ Galería</button>
+          </div>
+          <input type="file" id="cam-ventas" accept="image/*" capture="environment">
+          <input type="file" id="gal-ventas" accept="image/*" multiple>
+        </div>
+      </div>
+    </div>
+
+    <!-- 4 · OBSEQUIOS -->
+    <div class="section-toggle">
+      <div class="section-toggle-header" id="hdr-obsequios">
+        <div class="section-toggle-left">
+          <div class="section-toggle-icon-wrap">🎁</div>
+          <div>
+            <div class="section-toggle-name">Obsequios</div>
+            <div class="section-toggle-sub">Cantidad y referencias entregadas</div>
+          </div>
+        </div>
+        <label class="toggle-switch">
+          <input type="checkbox" id="chk-obsequios">
+          <span class="toggle-slider"></span>
+        </label>
+      </div>
+      <div class="section-body" id="body-obsequios">
+        <div>
+          <label style="font-size:13px;font-weight:600;color:var(--gray-600);display:block;margin-bottom:8px;">Referencias entregadas</label>
+          <div class="ref-list" id="ref-list-obsequios"></div>
+          <button class="btn-add-ref" id="btn-add-obsequios">+ Agregar referencia</button>
+        </div>
+        <div class="field">
+          <label>Observaciones de obsequios</label>
+          <textarea id="obsequios-obs" rows="2" placeholder="Reacciones, destino de los obsequios..."></textarea>
+        </div>
+        <div>
+          <div class="foto-section-label">Evidencia fotográfica <span id="cnt-obsequios">0/15</span></div>
+          <div class="photos-grid" id="grid-obsequios"></div>
+          <div class="photo-source-btns" id="btns-obsequios">
+            <button class="btn-source" id="btn-cam-obsequios">📷 Cámara</button>
+            <button class="btn-source" id="btn-gal-obsequios">🖼️ Galería</button>
+          </div>
+          <input type="file" id="cam-obsequios" accept="image/*" capture="environment">
+          <input type="file" id="gal-obsequios" accept="image/*" multiple>
+        </div>
+      </div>
+    </div>
+
+    <!-- 5 · GASTOS -->
+    <div class="section-toggle">
+      <div class="section-toggle-header" id="hdr-gastos" data-acc="gastos">
+        <div class="section-toggle-left">
+          <div class="section-toggle-icon-wrap">💵</div>
+          <div>
+            <div class="section-toggle-name">Gastos y facturas</div>
+            <div class="section-toggle-sub">Legalización · mínimo 1 soporte</div>
+          </div>
+        </div>
+        <span class="sec-chevron">▾</span>
+      </div>
+      <div class="section-body" id="body-gastos">
+        <div>
+          <label style="font-size:13px;font-weight:600;color:var(--gray-600);display:block;margin-bottom:8px;">Gastos</label>
+          <div class="ref-list" id="ref-list-gastos"></div>
+          <button class="btn-add-ref" id="btn-add-gasto">+ Agregar gasto</button>
+        </div>
         <div class="field">
           <label>Observaciones de gastos</label>
           <textarea id="gastos-obs" rows="2" placeholder="Justificación general, pendientes..."></textarea>
         </div>
-      </div>
-
-      <!-- FACTURAS -->
-      <div class="card">
-        <div class="card-title"><div class="card-title-icon">🧾</div> Facturas y soportes <span class="required-tag">mínimo 1</span></div>
-        <p style="font-size:13px;color:var(--gray-400);margin-bottom:14px;line-height:1.5;">
-          Adjunta las facturas o comprobantes de los gastos. Puedes subir fotos de tiquetes, PDFs de facturas electrónicas o capturas de pantalla.
-        </p>
-        <div class="factura-list" id="factura-list"></div>
-        <div class="factura-source-btns">
-          <button class="btn-source" id="btn-fac-cam">📷 Cámara</button>
-          <button class="btn-source" id="btn-fac-gal">🖼️ Galería</button>
-          <button class="btn-source" id="btn-fac-pdf">📄 PDF</button>
+        <div>
+          <div class="foto-section-label">Facturas y soportes *</div>
+          <p style="font-size:12.5px;color:var(--gray-400);margin-bottom:10px;line-height:1.5;">
+            Fotos de tiquetes, PDFs de facturas o capturas de pantalla.
+          </p>
+          <div class="factura-list" id="factura-list"></div>
+          <div class="factura-source-btns">
+            <button class="btn-source" id="btn-fac-cam">📷 Cámara</button>
+            <button class="btn-source" id="btn-fac-gal">🖼️ Galería</button>
+            <button class="btn-source" id="btn-fac-pdf">📄 PDF</button>
+          </div>
+          <div class="factura-hint">Máximo 15 archivos · mínimo 1 · JPG, PNG y PDF</div>
+          <input type="file" id="fac-cam" accept="image/*" capture="environment">
+          <input type="file" id="fac-gal" accept="image/*" multiple>
+          <input type="file" id="fac-pdf" accept="application/pdf" multiple>
         </div>
-        <div class="factura-hint">Máximo 15 archivos · mínimo 1 · JPG, PNG y PDF</div>
-        <input type="file" id="fac-cam" accept="image/*" capture="environment">
-        <input type="file" id="fac-gal" accept="image/*" multiple>
-        <input type="file" id="fac-pdf" accept="application/pdf" multiple>
-      </div>
-
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
-        <button class="btn-back" id="btn-ir-paso2b">← Volver</button>
-        <button class="btn-submit" id="btn-ir-paso4">Continuar →</button>
       </div>
     </div>
 
-    <!-- PASO 4 -->
-    <div id="paso4" style="display:none">
-      <div class="card">
-        <div class="card-title"><div class="card-title-icon">🎯</div> Detalle e impacto</div>
+    <!-- 6 · CIERRE -->
+    <div class="section-toggle">
+      <div class="section-toggle-header" id="hdr-cierre" data-acc="cierre">
+        <div class="section-toggle-left">
+          <div class="section-toggle-icon-wrap">🎯</div>
+          <div>
+            <div class="section-toggle-name">Cierre e impacto</div>
+            <div class="section-toggle-sub">Qué se hizo y qué se logró</div>
+          </div>
+        </div>
+        <span class="sec-chevron">▾</span>
+      </div>
+      <div class="section-body" id="body-cierre">
         <div class="field">
           <label>Descripción de la actividad *</label>
           <textarea id="desc-actividad" rows="4" placeholder="Describe qué se hizo: demostraciones, charlas, materiales..."></textarea>
@@ -827,23 +832,27 @@ button,.btn-source,.btn-submit,.btn-back,.btn-primary,.btn-login,.btn-new,
         </div>
         <div class="field">
           <label>Detalle de impacto</label>
-          <textarea id="detalle-impacto" rows="4" placeholder="Describe el impacto generado en el público, cambios de percepción, menciones, interacciones..."></textarea>
+          <textarea id="detalle-impacto" rows="3" placeholder="Cambios de percepción, menciones, interacciones..."></textarea>
         </div>
         <div class="field">
           <label>Número de personas impactadas</label>
-          <input type="text" id="personas-impactadas" placeholder="Ej. 120 personas, aprox. 80 adultos y 40 niños..." inputmode="text">
+          <input type="text" id="personas-impactadas" placeholder="Ej. 120 personas, aprox. 80 adultos y 40 niños">
         </div>
         <div class="field">
           <label>Observaciones adicionales</label>
           <textarea id="obs-adicional" rows="3" placeholder="Novedades, inconvenientes, oportunidades..."></textarea>
         </div>
       </div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
-        <button class="btn-back" id="btn-ir-paso3b">← Volver</button>
-        <button class="btn-submit" id="btn-enviar">✅ Cerrar actividad</button>
-      </div>
     </div>
 
+    <!-- BARRA FIJA -->
+    <div class="form-bar">
+      <div class="form-bar-info">
+        <div class="form-bar-track"><span class="form-bar-fill" id="form-fill"></span></div>
+        <div class="form-bar-text" id="form-text">Empezando</div>
+      </div>
+      <button class="btn-submit form-bar-btn" id="btn-enviar">✅ Enviar</button>
+    </div>
   </div>
 </div>
 
@@ -967,7 +976,6 @@ const fotos = { generales:[], muestreo:[], ventas:[], obsequios:[] };
 const refs  = { ventas:[], obsequios:[] };
 let gastos  = [];
 let facturas = [];   // { nombre, tipo, size, file, preview? }
-let pasoActual = 1;
 
 // ── BORRADOR (localStorage) ──
 // Guarda el texto capturado para que un cierre del navegador o un corte de red
@@ -1108,7 +1116,6 @@ function guardarBorrador(){
       guardadoEn:  Date.now(),
       cedula:      impulsor.cedula,
       plantillaId: plantillaActual.id,
-      paso:        pasoActual,
       campos, checks,
       refs:   { ventas: refs.ventas.filter(Boolean), obsequios: refs.obsequios.filter(Boolean) },
       gastos: gastos.filter(Boolean),
@@ -1190,8 +1197,7 @@ async function restaurarBorrador(d){
   ['generales','muestreo','ventas','obsequios'].forEach(sec => renderFotos(sec));
   renderFacturas();
 
-  showPaso(Math.min(Math.max(parseInt(d.paso)||1,1),4));
-  setStep(pasoActual);
+  actualizarProgreso();
   solicitarGeo();
   showScreen('screen-splash');
   return true;
@@ -1232,44 +1238,88 @@ function solicitarGeo(){
   },{ enableHighAccuracy:true, timeout:15000, maximumAge:0 });
 }
 
-// ── PASOS ──
-function setStep(n){
-  const labels = ['Evento','Evidencia','Gastos','Cierre'];
-  for(let i=1;i<=4;i++){
-    const d=$('step'+i); d.classList.remove('active','done');
-    if(i<n) d.classList.add('done'); else if(i===n) d.classList.add('active');
-    const lbl=$('slabel'+i);
-    if(lbl){ lbl.className='step-label'+(i<n?' done':i===n?' active':''); }
-  }
-  for(let i=1;i<=3;i++) $('line'+i).classList.toggle('done',i<n);
-}
-function showPaso(n){
-  pasoActual = n;
-  for(let i=1;i<=4;i++){ const el=$('paso'+i); if(el) el.style.display=i===n?'block':'none'; }
-  window.scrollTo(0,0);
-  programarGuardado();
+// ── PÁGINA ÚNICA: acordeón, progreso y validación ──
+// Cada sección se abre por su cuenta. Las de muestreo/ventas/obsequios se
+// abren con su interruptor; evento, gastos y cierre con la cabecera.
+
+function alternarAcordeon(nombre){
+  const body = $('body-'+nombre);
+  const hdr  = $('hdr-'+nombre);
+  if(!body) return;
+  const abierto = body.classList.toggle('open');
+  if(hdr) hdr.classList.toggle('active', abierto);
 }
 
-function irPaso1(){ showPaso(1); setStep(1); }
-function irPaso2(){
-  const nombre=$('nombre-evento').value.trim();
-  const tipo=$('tipo-evento').value;
-  const tipoOtro=$('tipo-otro-texto').value.trim();
-  const fecha=$('fecha-evento').value;
-  const lugar=$('lugar-evento').value.trim();
-  const asistentes=$('asistentes').value.trim();
-  if(!nombre||!tipo||!fecha||!lugar||!asistentes){ toast('Completa todos los campos obligatorios','error'); return; }
-  if(tipo==='Otro'&&!tipoOtro){ toast('Indica cuál tipo de evento','error'); return; }
-  showPaso(2); setStep(2);
+function abrirSeccion(nombre){
+  const body = $('body-'+nombre);
+  const hdr  = $('hdr-'+nombre);
+  if(!body) return;
+  body.classList.add('open');
+  if(hdr) hdr.classList.add('active');
+  setTimeout(()=>{ body.scrollIntoView({behavior:'smooth', block:'center'}); }, 60);
 }
-function irPaso3(){
-  const faltan = seccionesSinFoto();
-  if(faltan.length){ toast(`Falta al menos 1 foto en: ${faltan.join(', ')}`,'error'); return; }
-  showPaso(3); setStep(3);
+
+// Qué le falta al formulario, en orden de importancia
+function problemasFormulario(){
+  const faltan = [];
+
+  const campos = [];
+  if(!$('nombre-evento').value.trim())          campos.push('nombre');
+  if(!$('tipo-evento').value)                   campos.push('tipo');
+  if(!$('fecha-evento').value)                  campos.push('fecha');
+  if(!$('lugar-evento').value.trim())           campos.push('lugar');
+  if(!$('asistentes').value.trim())             campos.push('asistentes');
+  if(campos.length) faltan.push({ sec:'evento', msg:'Faltan datos del evento: ' + campos.join(', ') });
+
+  if($('tipo-evento').value==='Otro' && !$('tipo-otro-texto').value.trim())
+    faltan.push({ sec:'evento', msg:'Indica cuál tipo de evento' });
+
+  if(fotos.generales.length === 0)
+    faltan.push({ sec:'evento', msg:'Falta al menos 1 foto del evento' });
+
+  ['muestreo','ventas','obsequios'].forEach(sec=>{
+    const chk = $('chk-'+sec);
+    if(chk && chk.checked && fotos[sec].length === 0)
+      faltan.push({ sec, msg:`Falta al menos 1 foto en ${sec}` });
+  });
+
+  if(!$('desc-actividad').value.trim()) faltan.push({ sec:'cierre', msg:'Falta la descripción de la actividad' });
+  if(!$('impacto').value.trim())        faltan.push({ sec:'cierre', msg:'Falta el impacto y resultados' });
+
+  if(facturas.length === 0)
+    faltan.push({ sec:'gastos', msg:'Adjunta al menos 1 factura o soporte' });
+
+  return faltan;
 }
-function irPaso4(){
-  if(facturas.length === 0){ toast('Adjunta al menos 1 factura o soporte','error'); return; }
-  showPaso(4); setStep(4);
+
+// Barra de progreso. Solo cuenta lo que aplica: las secciones apagadas no
+// suman, así un formulario recién abierto marca 0.
+function actualizarProgreso(){
+  const fill = $('form-fill');
+  const txt  = $('form-text');
+  if(!fill || !txt) return;
+
+  let hechos = 0, total = 0;
+  const sumar = ok => { total++; if(ok) hechos++; };
+
+  sumar(['nombre-evento','tipo-evento','fecha-evento','lugar-evento','asistentes']
+    .every(id => ($(id).value || '').trim() !== ''));
+  sumar(fotos.generales.length > 0);
+  ['muestreo','ventas','obsequios'].forEach(sec=>{
+    if($('chk-'+sec).checked) sumar(fotos[sec].length > 0);
+  });
+  sumar(facturas.length > 0);
+  sumar(!!$('desc-actividad').value.trim() && !!$('impacto').value.trim());
+
+  const pct = total ? Math.round(hechos / total * 100) : 0;
+
+  fill.style.width = pct + '%';
+  txt.textContent = hechos === 0 ? 'Empezando'
+    : hechos === total ? 'Todo listo para enviar ✓'
+    : `${hechos} de ${total} listo${hechos===1?'':'s'}`;
+  fill.style.background = hechos === total
+    ? 'linear-gradient(90deg,#10B981,#34D399)'
+    : 'linear-gradient(90deg,var(--teal),#22D3EE)';
 }
 
 // ── LÍMITES DE ARCHIVOS ──
@@ -1291,7 +1341,7 @@ function seccionesSinFoto() {
 function renderFotos(seccion){
   const max = MAX_FOTOS;
   const arr = fotos[seccion];
-
+  setTimeout(actualizarProgreso, 0);
   if(seccion==='generales'){
     const c=$('fotos-generales-container');
     let html=`<div style="text-align:right;font-size:12px;color:var(--gray-400);margin-bottom:8px;"><strong style="color:var(--teal-dark)">${arr.length}</strong>/${max} fotos</div><div class="photos-grid" id="grid-generales">`;
@@ -1389,6 +1439,7 @@ function addRef(seccion){
 // ── FACTURAS ──
 function renderFacturas(){
   const list = $('factura-list');
+  setTimeout(actualizarProgreso, 0);
   if(!facturas.length){ list.innerHTML=''; return; }
   list.innerHTML = facturas.map((f,i) => {
     const icon = f.tipo === 'pdf' ? '📄' : '🖼️';
@@ -2020,13 +2071,18 @@ async function subirFacturas(reporteId){
 }
 
 async function enviarActividad(){
+  if(!plantillaActual){ toast('No hay actividad seleccionada','error'); return; }
+
+  // Lo que falte se avisa abriendo esa sección, no con un mensaje suelto
+  const faltan = problemasFormulario();
+  if(faltan.length){
+    abrirSeccion(faltan[0].sec);
+    toast(faltan[0].msg, 'error');
+    return;
+  }
+
   const desc=$('desc-actividad').value.trim();
   const impacto=$('impacto').value.trim();
-  if(!desc||!impacto){ toast('Completa la descripción e impacto','error'); return; }
-  if(!plantillaActual){ toast('No hay actividad seleccionada','error'); return; }
-  const faltanFotos = seccionesSinFoto();
-  if(faltanFotos.length){ toast(`Falta al menos 1 foto en: ${faltanFotos.join(', ')}`,'error'); return; }
-  if(facturas.length === 0){ toast('Adjunta al menos 1 factura o soporte','error'); return; }
 
   // Evita registros duplicados si se toca dos veces "Cerrar actividad".
   if(_enviando) return;
@@ -2141,12 +2197,16 @@ function nuevaActividad(){
   geo=null; fotos.generales=[]; fotos.muestreo=[]; fotos.ventas=[]; fotos.obsequios=[];
   refs.ventas=[]; refs.obsequios=[]; gastos=[]; facturas=[];
   fallosSubida=[]; _enviando=false;
-  borrarBorrador(); pasoActual=1; _enviado=false;
+  borrarBorrador(); _enviado=false;
   const aviso=$('success-warn'); if(aviso){ aviso.style.display='none'; aviso.innerHTML=''; }
   document.querySelectorAll('input[type=text],input[type=number],textarea').forEach(el=>el.value='');
   document.querySelectorAll('input[type=checkbox]').forEach(el=>el.checked=false);
   document.querySelectorAll('.section-body').forEach(el=>el.classList.remove('open'));
   document.querySelectorAll('.section-toggle-header').forEach(el=>el.classList.remove('active'));
+  // El evento vuelve a quedar abierto y el progreso en cero
+  $('body-evento').classList.add('open');
+  $('hdr-evento').classList.add('active');
+  actualizarProgreso();
   document.querySelectorAll('.ref-list').forEach(el=>el.innerHTML='');
   $('tipo-evento').value=''; $('field-tipo-otro').style.display='none';
   $('factura-list').innerHTML='';
@@ -2170,17 +2230,21 @@ $('tipo-evento').addEventListener('change', ()=>{
   $('field-tipo-otro').style.display=$('tipo-evento').value==='Otro'?'flex':'none';
 });
 
-$('btn-ir-paso2').addEventListener('click', irPaso2);
-$('btn-ir-paso1b').addEventListener('click', irPaso1);
-$('btn-ir-paso3').addEventListener('click', irPaso3);
-$('btn-ir-paso2b').addEventListener('click', irPaso2);
-$('btn-ir-paso4').addEventListener('click', irPaso4);
-$('btn-ir-paso3b').addEventListener('click', irPaso3);
 $('btn-enviar').addEventListener('click', enviarActividad);
 $('btn-nueva').addEventListener('click', nuevaActividad);
 $('btn-add-gasto').addEventListener('click', addGasto);
 $('btn-add-ventas').addEventListener('click', ()=>addRef('ventas'));
 $('btn-add-obsequios').addEventListener('click', ()=>addRef('obsequios'));
+
+// Cabeceras que despliegan su sección (evento, gastos, cierre)
+document.querySelectorAll('[data-acc]').forEach(hdr=>{
+  hdr.addEventListener('click', ()=>alternarAcordeon(hdr.dataset.acc));
+});
+
+// El progreso se recalcula con cualquier cambio dentro del formulario
+const screenForm = $('screen-form');
+screenForm.addEventListener('input', actualizarProgreso);
+screenForm.addEventListener('change', actualizarProgreso);
 
 // ── JORNADA ──
 $('btn-iniciar').addEventListener('click', () => abrirEquipo('inicio'));
@@ -2197,7 +2261,8 @@ $('ev-gal').addEventListener('change', () => agregarEvidencia($('ev-gal')));
 
 ['muestreo','ventas','obsequios'].forEach(nombre=>{
   $('hdr-'+nombre).addEventListener('click', e=>{
-    if(e.target.tagName==='INPUT') return;
+    // El interruptor maneja su propio estado: no se toca desde la cabecera
+    if(e.target.closest && e.target.closest('.toggle-switch')) return;
     toggleSeccion(nombre, !$('chk-'+nombre).checked);
   });
   $('chk-'+nombre).addEventListener('change', ()=>toggleSeccion(nombre, $('chk-'+nombre).checked));
