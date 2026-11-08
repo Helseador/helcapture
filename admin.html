@@ -1525,6 +1525,22 @@ td strong, td b { color: var(--ink); font-weight: 700; }
 .codigo-fila-modal > div { flex: 1; min-width: 0; }
 .codigo-fila-modal .codigo-tipo { display: block; min-width: 0; margin-bottom: 2px; }
 .codigo-fila-modal .codigo-chip { font-size: 15px; letter-spacing: .06em; }
+.graf-fila-pct {
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--ink-faint);
+  margin-left: 5px;
+}
+.graf-nota {
+  flex-basis: 100%;
+  font-size: 11px;
+  line-height: 1.55;
+  color: var(--ink-faint);
+  padding-top: 4px;
+  border-top: 1px solid rgba(255, 255, 255, .06);
+  margin-top: 2px;
+}
+.graf-nota b { color: var(--ink-dim); font-weight: 700; }
 .balance-manual-wrap {
   margin: 4px 0 16px;
   padding: 14px 16px;
@@ -5986,7 +6002,9 @@ function renderGastosLegales() {
     </div>`).join('');
 }
 
-// Gráfico: dona de composición del costo + barras de ingresos, costos y resultado
+// Gráfico del balance.
+// La dona es el MARGEN: qué parte de lo que entró quedó como ganancia.
+// Las barras comparan cada rubro, y al lado dicen cuánto pesa sobre los ingresos.
 function renderGraficoBalance(d) {
   const cont = document.getElementById('balance-grafico');
   if (!cont) return;
@@ -5995,16 +6013,24 @@ function renderGraficoBalance(d) {
   const tope = Math.max(d.ing, totalCos, Math.abs(d.res), 1);
   const ancho = v => Math.max(0, Math.min(100, (v / tope) * 100));
 
-  const frac = totalCos > 0 ? d.leg / totalCos : 0;
+  // Margen de ganancia sobre los ingresos
+  const margen = d.ing > 0 ? (d.res / d.ing) * 100 : null;
+  const ganando = d.res >= 0;
+  const colorArco = ganando ? 'var(--teal)' : '#EF4444';
+
   const radio = 48;
   const circunferencia = 2 * Math.PI * radio;
+  const frac = margen === null ? 0 : Math.min(1, Math.abs(margen) / 100);
   const arco = circunferencia * frac;
 
-  const fila = (etiqueta, valor, clase) => `
+  // Porcentaje de cada rubro sobre los ingresos
+  const peso = v => d.ing > 0 ? Math.round((v / d.ing) * 100) + '%' : '–';
+
+  const fila = (etiqueta, valor, clase, pct) => `
     <div class="graf-fila">
       <div class="graf-fila-top">
         <span class="graf-fila-lbl">${etiqueta}</span>
-        <span class="graf-fila-val">${fmtCOP(valor)}</span>
+        <span class="graf-fila-val">${fmtCOP(valor)}${pct ? ` <span class="graf-fila-pct">${pct}</span>` : ''}</span>
       </div>
       <div class="graf-fila-track">
         <span class="graf-fila-fill ${clase}" style="width:${ancho(valor)}%"></span>
@@ -6013,22 +6039,29 @@ function renderGraficoBalance(d) {
 
   cont.innerHTML = `
     <div class="graf-dona">
-      <svg viewBox="0 0 120 120" width="132" height="132" role="img" aria-label="Composición de los costos">
+      <svg viewBox="0 0 120 120" width="132" height="132" role="img"
+           aria-label="Margen de ganancia sobre los ingresos">
         <circle cx="60" cy="60" r="${radio}" fill="none" stroke="rgba(255,255,255,.08)" stroke-width="17"/>
-        ${totalCos > 0 ? `<circle cx="60" cy="60" r="${radio}" fill="none" stroke="var(--teal)" stroke-width="17"
+        ${margen !== null && frac > 0 ? `<circle cx="60" cy="60" r="${radio}" fill="none" stroke="${colorArco}" stroke-width="17"
           stroke-dasharray="${arco} ${circunferencia - arco}" stroke-linecap="round"
           transform="rotate(-90 60 60)"/>` : ''}
       </svg>
       <div class="graf-dona-centro">
-        <div class="graf-dona-val">${totalCos > 0 ? Math.round(frac * 100) + '%' : '–'}</div>
-        <div class="graf-dona-lbl">del costo son gastos legalizados</div>
+        <div class="graf-dona-val" style="color:${margen === null ? 'var(--ink-faint)' : (ganando ? '#34D399' : '#F87171')};">
+          ${margen === null ? '–' : Math.round(margen) + '%'}
+        </div>
+        <div class="graf-dona-lbl">${margen === null ? 'sin ingresos registrados' : (ganando ? 'de los ingresos es ganancia' : 'de los ingresos se perdió')}</div>
       </div>
     </div>
     <div class="graf-barras">
-      ${fila('Ingresos', d.ing, 'ingreso')}
-      ${fila('Gastos legalizados', d.leg, 'leg')}
-      ${fila('Costos adicionales', d.ad, 'ad')}
-      ${fila(d.res >= 0 ? 'Ganancia' : 'Pérdida', Math.abs(d.res), d.res >= 0 ? 'gan' : 'per')}
+      ${fila('Ingresos', d.ing, 'ingreso', '')}
+      ${fila('Gastos legalizados', d.leg, 'leg', peso(d.leg))}
+      ${fila('Costos adicionales', d.ad, 'ad', peso(d.ad))}
+      ${fila(ganando ? 'Ganancia' : 'Pérdida', Math.abs(d.res), ganando ? 'gan' : 'per', margen === null ? '' : Math.round(Math.abs(margen)) + '%')}
+    </div>
+    <div class="graf-nota">
+      La dona muestra el <b>margen</b>: de cada $100 que entraron, cuánto quedó de ${ganando ? 'ganancia' : 'pérdida'}.
+      Al lado de cada barra, el porcentaje que ese rubro representa sobre los ingresos.
     </div>`;
 }
 
