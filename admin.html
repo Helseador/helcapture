@@ -1525,6 +1525,69 @@ td strong, td b { color: var(--ink); font-weight: 700; }
 .codigo-fila-modal > div { flex: 1; min-width: 0; }
 .codigo-fila-modal .codigo-tipo { display: block; min-width: 0; margin-bottom: 2px; }
 .codigo-fila-modal .codigo-chip { font-size: 15px; letter-spacing: .06em; }
+/* ── GRÁFICO DE BALANCE ── */
+.graf-titulo {
+  margin: 18px 0 10px;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  color: var(--ink-dim);
+}
+.balance-grafico {
+  display: flex;
+  align-items: center;
+  gap: 22px;
+  padding: 16px 18px;
+  border-radius: var(--r-md);
+  background: rgba(255, 255, 255, .03);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .07);
+  flex-wrap: wrap;
+}
+.graf-dona { position: relative; flex-shrink: 0; width: 132px; height: 132px; }
+.graf-dona-centro {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  pointer-events: none;
+}
+.graf-dona-val { font-size: 21px; font-weight: 800; color: var(--ink); line-height: 1; }
+.graf-dona-lbl { font-size: 8.5px; color: var(--ink-dim); margin-top: 4px; max-width: 80px; line-height: 1.25; }
+.graf-barras { flex: 1; min-width: 240px; display: flex; flex-direction: column; gap: 9px; }
+.graf-fila { display: flex; flex-direction: column; gap: 3px; }
+.graf-fila-top { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+.graf-fila-lbl { font-size: 11px; color: var(--ink-dim); font-weight: 600; }
+.graf-fila-val { font-size: 11.5px; font-weight: 800; color: var(--ink-soft); white-space: nowrap; }
+.graf-fila-track { height: 9px; border-radius: 99px; background: rgba(255, 255, 255, .07); overflow: hidden; }
+.graf-fila-fill { display: block; height: 100%; border-radius: 99px; transition: width .35s ease; min-width: 3px; }
+.graf-fila-fill.ingreso { background: linear-gradient(90deg, #2ABFC0, #22D3EE); }
+.graf-fila-fill.leg     { background: linear-gradient(90deg, #F59E0B, #FBBF24); }
+.graf-fila-fill.ad      { background: linear-gradient(90deg, #EF4444, #F87171); }
+.graf-fila-fill.gan     { background: linear-gradient(90deg, #10B981, #34D399); }
+.graf-fila-fill.per     { background: linear-gradient(90deg, #DC2626, #EF4444); }
+
+.balance-gastos-detalle {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: -6px 0 14px;
+}
+.gasto-leg-fila {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 6px 12px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, .03);
+  font-size: 12px;
+}
+.gasto-leg-fila .g-nombre { color: var(--ink-soft); }
+.gasto-leg-fila .g-valor { color: var(--ink-dim); font-weight: 700; white-space: nowrap; }
+.gasto-leg-vacio { padding: 4px 12px; font-size: 12px; color: var(--ink-faint); }
 /* ── PAPELERA DE ACTIVIDADES ── */
 .papelera {
   margin-top: 18px;
@@ -2908,9 +2971,10 @@ td strong, td b { color: var(--ink); font-weight: 700; }
 
     <!-- Gastos legalizados automáticos -->
     <div class="balance-gastos-leg">
-      <span class="lbl">💵 Gastos ya legalizados (automático)</span>
+      <span class="lbl">💵 Legalización de gastos (lo que reportó el impulsor)</span>
       <span class="val" id="balance-gastos-leg-val">$0</span>
     </div>
+    <div id="balance-gastos-detalle" class="balance-gastos-detalle"></div>
 
     <!-- Facturas adjuntas -->
     <div id="balance-facturas-wrap" style="display:none;margin-bottom:16px;">
@@ -2949,6 +3013,10 @@ td strong, td b { color: var(--ink); font-weight: 700; }
       </div>
 
     </div>
+
+    <!-- GRÁFICO DE BALANCE -->
+    <div class="graf-titulo">📊 Balance de la actividad</div>
+    <div class="balance-grafico" id="balance-grafico"></div>
 
     <!-- RESULTADO -->
     <div class="balance-result-box">
@@ -3417,7 +3485,10 @@ function renderTabla(data) {
       <td style="max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${a.evento?.lugar||'–'}</td>
       <td style="text-align:center;">${a.evento?.asistentes||0}</td>
       <td>${seccionesBadges(a)}</td>
-      <td><button class="btn btn-outline btn-sm" onclick="verDetalle('${a.id}')">Ver</button></td>
+      <td>
+        <button class="btn btn-outline btn-sm" onclick="verDetalle('${a.id}')">Ver</button>
+        <button class="btn btn-outline btn-sm" onclick="abrirBalance('${a.id}')" title="Legalización de gastos y balance" style="margin-top:4px;">💰 Balance</button>
+      </td>
       <td><button class="btn btn-teal btn-sm" onclick="abrirConstructor('${a.id}')">🎨 Construir</button></td>
     </tr>
   `).join('');
@@ -3442,7 +3513,10 @@ window.renderTablaAll = function(data) {
       <td style="text-align:center;">${a.obsequios?.activo ? '✅' : '–'}</td>
       <td style="text-align:center;">${(a.gastos?.items||[]).length > 0 ? '✅' : '–'}</td>
       <td style="text-align:center;">${a.ubicacion ? `<a href="https://maps.google.com/?q=${a.ubicacion.lat},${a.ubicacion.lng}" target="_blank" class="map-link">📍</a>` : '–'}</td>
-      <td><button class="btn btn-outline btn-sm" onclick="verDetalle('${a.id}')">Ver</button></td>
+      <td>
+        <button class="btn btn-outline btn-sm" onclick="verDetalle('${a.id}')">Ver</button>
+        <button class="btn btn-outline btn-sm" onclick="abrirBalance('${a.id}')" title="Legalización de gastos y balance" style="margin-top:4px;">💰 Balance</button>
+      </td>
       <td><button class="btn btn-teal btn-sm" onclick="abrirConstructor('${a.id}')">🎨 Construir</button></td>
     </tr>
   `).join('');
@@ -5744,6 +5818,8 @@ window.abrirBalance = function(id) {
   document.getElementById('balance-titulo').textContent = `Balance — ${a.evento?.nombre||'Actividad'}`;
   document.getElementById('balance-gastos-leg-val').textContent = fmtCOP(gastosLeg);
   window._balanceGastosLeg = gastosLeg;
+  window._balanceGastosItems = (a.gastos?.items||[]).filter(Boolean);
+  renderGastosLegales();
   window._balancePersonas  = parseInt(a.cierre?.personasImpactadas)||parseInt(a.evento?.asistentes)||0;
 
   // Mostrar facturas adjuntas
@@ -5826,6 +5902,72 @@ function recalcBalance() {
   const elRes = document.getElementById('br-resultado');
   elRes.textContent = fmt(resultado);
   elRes.className = 'val balance-final ' + (resultado>0?'balance-ganancia':resultado<0?'balance-perdida':'balance-neutral');
+
+  renderGraficoBalance({ ing: totalIng, leg: gastosLeg, ad: totalCosAd, res: resultado });
+}
+
+// Detalle de los gastos que reportó el impulsor en la captura
+function renderGastosLegales() {
+  const cont = document.getElementById('balance-gastos-detalle');
+  if (!cont) return;
+  const items = window._balanceGastosItems || [];
+
+  if (!items.length) {
+    cont.innerHTML = '<div class="gasto-leg-vacio">El impulsor no reportó gastos en esta actividad.</div>';
+    return;
+  }
+
+  cont.innerHTML = items.map(g => `
+    <div class="gasto-leg-fila">
+      <span class="g-nombre">${e(g.concepto || 'Sin concepto')}</span>
+      <span class="g-valor">${fmtCOP(parseFloat(g.valor) || 0)}</span>
+    </div>`).join('');
+}
+
+// Gráfico: dona de composición del costo + barras de ingresos, costos y resultado
+function renderGraficoBalance(d) {
+  const cont = document.getElementById('balance-grafico');
+  if (!cont) return;
+
+  const totalCos = d.leg + d.ad;
+  const tope = Math.max(d.ing, totalCos, Math.abs(d.res), 1);
+  const ancho = v => Math.max(0, Math.min(100, (v / tope) * 100));
+
+  const frac = totalCos > 0 ? d.leg / totalCos : 0;
+  const radio = 48;
+  const circunferencia = 2 * Math.PI * radio;
+  const arco = circunferencia * frac;
+
+  const fila = (etiqueta, valor, clase) => `
+    <div class="graf-fila">
+      <div class="graf-fila-top">
+        <span class="graf-fila-lbl">${etiqueta}</span>
+        <span class="graf-fila-val">${fmtCOP(valor)}</span>
+      </div>
+      <div class="graf-fila-track">
+        <span class="graf-fila-fill ${clase}" style="width:${ancho(valor)}%"></span>
+      </div>
+    </div>`;
+
+  cont.innerHTML = `
+    <div class="graf-dona">
+      <svg viewBox="0 0 120 120" width="132" height="132" role="img" aria-label="Composición de los costos">
+        <circle cx="60" cy="60" r="${radio}" fill="none" stroke="rgba(255,255,255,.08)" stroke-width="17"/>
+        ${totalCos > 0 ? `<circle cx="60" cy="60" r="${radio}" fill="none" stroke="var(--teal)" stroke-width="17"
+          stroke-dasharray="${arco} ${circunferencia - arco}" stroke-linecap="round"
+          transform="rotate(-90 60 60)"/>` : ''}
+      </svg>
+      <div class="graf-dona-centro">
+        <div class="graf-dona-val">${totalCos > 0 ? Math.round(frac * 100) + '%' : '–'}</div>
+        <div class="graf-dona-lbl">del costo son gastos legalizados</div>
+      </div>
+    </div>
+    <div class="graf-barras">
+      ${fila('Ingresos', d.ing, 'ingreso')}
+      ${fila('Gastos legalizados', d.leg, 'leg')}
+      ${fila('Costos adicionales', d.ad, 'ad')}
+      ${fila(d.res >= 0 ? 'Ganancia' : 'Pérdida', Math.abs(d.res), d.res >= 0 ? 'gan' : 'per')}
+    </div>`;
 }
 
 window.addBalanceLine = function(tipo) {
