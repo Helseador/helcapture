@@ -2208,6 +2208,22 @@ td strong, td b { color: var(--ink); font-weight: 700; }
   background: rgba(248, 113, 113, .12);
   box-shadow: inset 0 0 0 1px rgba(248, 113, 113, .3);
 }
+.login-admin-link {
+  width: 100%;
+  margin-top: 10px;
+  padding: 8px;
+  border: 0;
+  background: none;
+  color: var(--ink-dim);
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.login-admin-link:hover { color: var(--teal-bright); }
+.login-admin-link:disabled { opacity: .5; cursor: default; text-decoration: none; }
 .login-admin-hint { margin-top: 14px; font-size: 10.5px; color: var(--ink-faint); line-height: 1.5; }
 
 .sesion-chip {
@@ -2320,6 +2336,7 @@ td strong, td b { color: var(--ink); font-weight: 700; }
     <input type="password" id="admin-pass" placeholder="Contraseña" autocomplete="current-password">
     <div class="login-admin-error" id="admin-error"></div>
     <button class="btn btn-teal" id="btn-entrar-admin" style="width:100%;justify-content:center;">Entrar</button>
+    <button class="login-admin-link" id="btn-olvide" onclick="recuperarPassword()">¿Olvidaste tu contraseña?</button>
     <div class="login-admin-hint">Las cuentas las crea un administrador desde la consola de Firebase.</div>
   </div>
 </div>
@@ -3233,7 +3250,7 @@ td strong, td b { color: var(--ink); font-weight: 700; }
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
 import {
-  getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut,
+  getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut, sendPasswordResetEmail,
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 import {
   getFirestore, collection, onSnapshot, getDocs, getDoc, addDoc, setDoc, updateDoc, doc, query, orderBy, serverTimestamp, Timestamp
@@ -7360,6 +7377,45 @@ window.entrarAdmin = async function() {
   } finally {
     btn.disabled = false;
     btn.textContent = 'Entrar';
+  }
+};
+
+// Envía el correo de recuperación de contraseña
+window.recuperarPassword = async function() {
+  const campo = document.getElementById('admin-email');
+  const err = document.getElementById('admin-error');
+  const email = (campo.value || '').trim().toLowerCase();
+
+  if (!email) {
+    err.style.color = '';
+    err.textContent = 'Escribe primero tu correo arriba y vuelve a darle.';
+    err.style.display = 'block';
+    campo.focus();
+    return;
+  }
+
+  const btn = document.getElementById('btn-olvide');
+  btn.disabled = true;
+  btn.textContent = 'Enviando...';
+
+  try {
+    await sendPasswordResetEmail(auth, email);
+    err.style.color = '#86EFAC';
+    err.innerHTML = `Te enviamos un correo a <b>${e(email)}</b>.<br>Ábrelo y crea una contraseña nueva.`;
+    err.style.display = 'block';
+  } catch (ex) {
+    const mensajes = {
+      'auth/user-not-found': 'No existe una cuenta con ese correo.',
+      'auth/invalid-email': 'Ese correo no tiene un formato válido.',
+      'auth/too-many-requests': 'Demasiados intentos. Espera un momento.',
+      'auth/network-request-failed': 'Sin conexión. Revisa tu red.',
+    };
+    err.style.color = '';
+    err.textContent = mensajes[ex.code] || 'No se pudo enviar el correo (' + (ex.code || 'error') + ').';
+    err.style.display = 'block';
+  } finally {
+    btn.disabled = false;
+    btn.textContent = '¿Olvidaste tu contraseña?';
   }
 };
 
