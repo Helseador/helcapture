@@ -2377,7 +2377,7 @@ td strong, td b { color: var(--ink); font-weight: 700; }
       <span class="nav-icon">📌</span> Plantillas
     </div>
     <div class="nav-item" data-view="ingresos" onclick="navigate('ingresos')">
-      <span class="nav-icon">👥</span> Ingresos
+      <span class="nav-icon">👥</span> Personal / Equipo
     </div>
     <div class="nav-item" data-view="usuarios" data-solo-admin onclick="navigate('usuarios')">
       <span class="nav-icon">🎫</span> Usuarios
@@ -2563,11 +2563,11 @@ td strong, td b { color: var(--ink); font-weight: 700; }
       </div>
     </div>
 
-    <!-- ══ INGRESOS DE IMPULSORES ══ -->
+    <!-- ══ PERSONAL Y EQUIPO ══ -->
     <div class="view" id="view-ingresos">
       <div class="informes-hint">
         <span class="ayuda" data-tip="Cada vez que un impulsor entra con su código de jornada queda registrado aquí. Si la misma persona vuelve a entrar el mismo día, se actualiza la hora y no se duplica.">?</span>
-        Quién entró a capturar, por actividad y por día.
+        Quién entró a trabajar, por actividad y por día.
       </div>
 
       <div class="filter-bar">
@@ -2601,14 +2601,14 @@ td strong, td b { color: var(--ink); font-weight: 700; }
         <div class="rent-chip navy">
           <div class="val" id="ing-actividades">–</div>
           <div class="lbl">Actividades
-            <span class="ayuda" data-tip="Cuántas actividades distintas tienen ingresos con este filtro.">?</span>
+            <span class="ayuda" data-tip="Cuántas actividades distintas tienen personal registrado con este filtro.">?</span>
           </div>
         </div>
       </div>
 
       <div class="table-card">
         <div class="table-toolbar">
-          <div class="table-toolbar-title">Personas que entraron</div>
+          <div class="table-toolbar-title">Personal que entró</div>
           <div class="search-box">
             <span>🔍</span>
             <input type="text" id="ing-buscar" placeholder="Buscar por nombre o documento..." oninput="renderIngresos()">
@@ -4536,7 +4536,7 @@ const TITULOS_VISTA = {
   constructor:  'Constructor de informe',
   rentabilidad: 'Rentabilidad',
   plantillas:   'Plantillas de actividades',
-  ingresos:     'Ingresos de impulsores',
+  ingresos:     'Personal y equipo',
   usuarios:     'Usuarios'
 };
 
@@ -6355,7 +6355,7 @@ window._plantillas = [];
 window._editPlantillaId = null;
 
 // ══════════════════════════════════════════
-// INGRESOS DE IMPULSORES (quién entró cada día)
+// PERSONAL Y EQUIPO (quién entró cada día)
 // ══════════════════════════════════════════
 window._ingresos = [];
 
@@ -6370,7 +6370,7 @@ function escuchaDeIngresos() {
     console.warn('[Firestore] No se pudo leer ingresos:', err?.code || err);
     if (!_fallosAvisados.ingresos) {
       _fallosAvisados.ingresos = true;
-      showToast('Ingresos no disponibles: falta publicar la regla de la colección', 'error');
+      showToast('Personal no disponible: falta publicar la regla de la colección', 'error');
     }
   });
 }
@@ -6537,7 +6537,7 @@ window.renderIngresos = function() {
 
 window.exportarIngresosExcel = async function() {
   const filas = (window._ingresos || []);
-  if (!filas.length) { showToast('Todavía no hay ingresos registrados', 'error'); return; }
+  if (!filas.length) { showToast('Todavía no hay personal registrado', 'error'); return; }
 
   const act = document.getElementById('ing-actividad')?.value || '';
   const fecha = document.getElementById('ing-fecha')?.value || '';
@@ -6562,8 +6562,8 @@ window.exportarIngresosExcel = async function() {
   }).sort((a, b) => String(b['Día']).localeCompare(String(a['Día'])) || String(a['Persona']).localeCompare(String(b['Persona']), 'es'));
 
   const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, hojaFormateada(rows, [30, 16, 34, 12, 9, 14, 14, 8, 20, 13, 50, 40]), 'Ingresos');
-  const nombre = `HelCapture_Ingresos_${new Date().toISOString().split('T')[0]}.xlsx`;
+  XLSX.utils.book_append_sheet(wb, hojaFormateada(rows, [30, 16, 34, 12, 9, 14, 14, 8, 20, 13, 50, 40]), 'Personal');
+  const nombre = `HelCapture_Personal_${new Date().toISOString().split('T')[0]}.xlsx`;
   const blob = new Blob([XLSX.write(wb, { bookType: 'xlsx', type: 'array' })],
     { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
   await window.mostrarModalInforme(blob, nombre, 'xlsx', '👥');
