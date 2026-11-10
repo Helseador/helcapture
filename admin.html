@@ -2525,7 +2525,7 @@ td strong, td b { color: var(--ink); font-weight: 700; }
           <select class="filter-select" id="inf-tipo" onchange="actualizarAlcanceInformes()">
             <option value="">Todos los tipos</option>
             <option>Feria</option><option>Charla</option>
-            <option>Capacitación</option><option>Evento presencial</option><option>Volanteo</option>
+            <option>Capacitación</option><option>Evento presencial</option><option>Volanteo</option><option>Otro</option>
           </select>
           <select class="filter-select" id="inf-impulsor" onchange="actualizarAlcanceInformes()">
             <option value="">Todos los impulsores</option>
@@ -3473,6 +3473,7 @@ function iniciarEscuchas() {
     renderTabla(window._actividades);
     renderTablaAll(window._actividades);
     actualizarSelectImpulsores();
+    actualizarSelectTiposInformes();
     actualizarSelectImpulsorRent();
     if (document.getElementById('view-informes')?.classList.contains('active')) actualizarAlcanceInformes();
     document.getElementById('last-update').textContent = 'Actualizado: ' + new Date().toLocaleTimeString('es-CO');
@@ -3830,8 +3831,24 @@ window.actualizarSelectImpulsores = function() {
   const nombres = [...new Set(window._actividades.map(a => a.impulsor?.nombre).filter(Boolean))]
     .sort((a, b) => a.localeCompare(b, 'es'));
   sel.innerHTML = '<option value="">Todos los impulsores</option>'
-    + nombres.map(n => `<option value="${n}">${n}</option>`).join('');
+    + nombres.map(n => `<option value="${e(n)}">${e(n)}</option>`).join('');
   if (nombres.includes(actual)) sel.value = actual;
+};
+
+// El filtro de tipo debe ofrecer los tipos que de verdad existen, incluidos
+// los que el impulsor escribió a mano cuando eligió "Otro".
+window.actualizarSelectTiposInformes = function() {
+  const sel = document.getElementById('inf-tipo');
+  if (!sel) return;
+  const actual = sel.value;
+
+  const base = ['Feria', 'Charla', 'Capacitación', 'Evento presencial', 'Volanteo', 'Otro'];
+  const enDatos = window._actividades.map(a => a.evento?.tipo).filter(Boolean);
+  const tipos = [...new Set(base.concat(enDatos))].sort((a, b) => a.localeCompare(b, 'es'));
+
+  sel.innerHTML = '<option value="">Todos los tipos</option>'
+    + tipos.map(t => `<option value="${e(t)}">${e(t)}</option>`).join('');
+  if (tipos.includes(actual)) sel.value = actual;
 };
 
 // Cuánto entra en el informe con los filtros puestos
@@ -3884,6 +3901,21 @@ function filaTotales(ws, fila) {
   return ws;
 }
 
+// Gastos de una actividad: los que reportó la captura + los que agregó el
+// administrador en el balance. Los informes deben mostrar los dos, igual que
+// la pestaña Rentabilidad.
+function gastosDeActividad(a) {
+  const captura = (a.gastos?.items || []).filter(Boolean)
+    .map(g => ({ concepto: g.concepto || '', valor: parseFloat(g.valor) || 0, origen: 'Captura' }));
+  const manual = (a.rentabilidad?.gastosManual || []).filter(Boolean)
+    .map(g => ({ concepto: g.concepto || '', valor: parseFloat(g.valor) || 0, origen: 'Administrador' }));
+  return captura.concat(manual);
+}
+
+function totalGastosActividad(a) {
+  return gastosDeActividad(a).reduce((s, g) => s + g.valor, 0);
+}
+
 window.exportarExcel = async function() {
   const acts = getActividadesFiltradas();
   if (!acts.length) { showToast('No hay datos para exportar','error'); return; }
@@ -3899,7 +3931,9 @@ window.exportarExcel = async function() {
     const udsObsequio = refs(a.obsequios).reduce((s, r) => s + (parseInt(r.cantidad) || 0), 0);
     const fotos = (a.fotosGenerales || []).length + (a.muestreo?.fotos || []).length
       + (a.ventas?.fotos || []).length + (a.obsequios?.fotos || []).length;
-    const gastos = items(a).reduce((s, g) => s + (parseFloat(g.valor) || 0), 0);
+    const gastos = totalGastosActividad(a);
+    const gastosAdmin = (a.rentabilidad?.gastosManual || []).filter(Boolean)
+      .reduce((s, g) => s + (parseFloat(g.valor) || 0), 0);
     return {
       'Actividad': a.evento?.nombre || '',
       'Impulsor': nomImpulsor(a),
@@ -3912,10 +3946,11 @@ window.exportarExcel = async function() {
       'Uds vendidas': udsVendidas,
       'Obsequios entregados': udsObsequio,
       'Gastos legalizados': gastos,
+      'De esos, del administrador': gastosAdmin,
       'Facturas': (a.facturas || []).length,
     };
   });
-  XLSX.utils.book_append_sheet(wb, hojaFormateada(rowsResumen, [34, 20, 16, 12, 24, 11, 20, 8, 13, 20, 19, 10]), 'Resumen');
+  XLSX.utils.book_append_sheet(wb, hojaFormateada(rowsResumen, [34, 20, 16, 12, 24, 11, 20, 8, 13, 20, 19, 24, 10]), 'Resumen');
 
   // Hoja 2: Actividades (detalle)
   const rowsActs = acts.map(a => ({
@@ -3985,18 +4020,18 @@ window.exportarExcel = async function() {
   // Hoja 6: Gastos
   const rowsGastos = [];
   acts.forEach(a => {
-    items(a).forEach(g => {
+    gastosDeActividad(a).forEach(g => {
       rowsGastos.push({
         'Evento': a.evento?.nombre, 'Impulsor': nomImpulsor(a), 'Fecha': a.evento?.fecha,
-        'Lugar': a.evento?.lugar, 'Concepto': g.concepto || '',
-        'Valor': parseFloat(g.valor) || 0,
+        'Lugar': a.evento?.lugar, 'Concepto': g.concepto, 'Origen': g.origen,
+        'Valor': g.valor,
       });
     });
   });
   if (rowsGastos.length) {
-    const ws = hojaFormateada(rowsGastos, [34, 20, 12, 24, 30, 14]);
+    const ws = hojaFormateada(rowsGastos, [34, 20, 12, 24, 30, 15, 14]);
     const total = rowsGastos.reduce((s, r) => s + r.Valor, 0);
-    XLSX.utils.book_append_sheet(wb, filaTotales(ws, ['TOTAL', '', '', '', '', total]), 'Gastos');
+    XLSX.utils.book_append_sheet(wb, filaTotales(ws, ['TOTAL', '', '', '', '', '', total]), 'Gastos');
   }
 
   const nombre = `HelCapture_Informe_${new Date().toISOString().split('T')[0]}.xlsx`;
@@ -4007,15 +4042,36 @@ window.exportarExcel = async function() {
 window.generarLegalizacion = async function() {
   const acts = getActividadesFiltradas();
   const rows = [];
+
   acts.forEach(a => {
-    (a.gastos?.items||[]).filter(Boolean).forEach(g => {
-      rows.push({ 'Punto / Evento': a.evento?.nombre||'', 'Fecha': a.evento?.fecha||'', 'Lugar': a.evento?.lugar||'', 'Concepto del gasto': g.concepto||'', 'Valor ($)': parseFloat(g.valor)||0, 'Observaciones': a.gastos?.observaciones||'' });
+    gastosDeActividad(a).forEach(g => {
+      rows.push({
+        'Punto / Evento': a.evento?.nombre || '',
+        'Fecha': a.evento?.fecha || '',
+        'Lugar': a.evento?.lugar || '',
+        'Concepto del gasto': g.concepto,
+        'Origen': g.origen,
+        'Valor ($)': g.valor,
+        'Observaciones': a.gastos?.observaciones || '',
+        'Soportes': (a.facturas || []).filter(Boolean).length,
+      });
     });
   });
-  if (!rows.length) { showToast('No hay gastos para legalizar','error'); return; }
+
+  if (!rows.length) {
+    showToast('No hay gastos para legalizar con estos filtros', 'error');
+    return;
+  }
+
   const wb = XLSX.utils.book_new();
-  const ws = XLSX.utils.json_to_sheet(rows);
-  XLSX.utils.book_append_sheet(wb, ws, 'Legalización');
+  const ws = hojaFormateada(rows, [34, 12, 24, 34, 15, 14, 34, 10]);
+  const total = rows.reduce((s, r) => s + r['Valor ($)'], 0);
+  XLSX.utils.book_append_sheet(
+    wb,
+    filaTotales(ws, ['TOTAL', '', '', `${rows.length} gasto(s)`, '', total, '', '']),
+    'Legalización'
+  );
+
   const nombre = `HelCapture_Legalizacion_${new Date().toISOString().split('T')[0]}.xlsx`;
   const wbBlob = new Blob([XLSX.write(wb, { bookType:'xlsx', type:'array' })], { type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
   await window.mostrarModalInforme(wbBlob, nombre, 'xlsx', '💵');
@@ -4122,8 +4178,7 @@ window.generarPDF = async function() {
     doc.text('Informe de actividades de impulso · By Grupo Helse', 14, 32);
 
     const totalAsist = acts.reduce((s, a) => s + (parseInt(a.evento?.asistentes) || 0), 0);
-    const totalGastos = acts.reduce((s, a) =>
-      s + (a.gastos?.items || []).filter(Boolean).reduce((x, g) => x + (parseFloat(g.valor) || 0), 0), 0);
+    const totalGastos = acts.reduce((s, a) => s + totalGastosActividad(a), 0);
     const totalFotos = acts.reduce((s, a) =>
       s + (a.fotosGenerales || []).length + (a.muestreo?.fotos || []).length
         + (a.ventas?.fotos || []).length + (a.obsequios?.fotos || []).length, 0);
@@ -4234,14 +4289,21 @@ window.generarPDF = async function() {
         if ((a.obsequios.fotos || []).length) y = await pdfBloqueFotos(doc, a.obsequios.fotos, y, 'Fotos de obsequios');
       }
 
-      // Gastos
-      const gastos = (a.gastos?.items || []).filter(Boolean);
+      // Gastos: los de la captura y los que agregó el administrador
+      const gastos = gastosDeActividad(a);
       if (gastos.length) {
-        const total = gastos.reduce((s, g) => s + (parseFloat(g.valor) || 0), 0);
+        const total = gastos.reduce((s, g) => s + g.valor, 0);
+        const conManual = gastos.some(g => g.origen === 'Administrador');
         y = pdfSubtitulo(doc, 'Gastos legalizados', y);
-        y = pdfTabla(doc, ['Concepto', 'Valor'],
-          gastos.map(g => [g.concepto || '', '$' + (parseFloat(g.valor) || 0).toLocaleString('es-CO')])
-            .concat([['TOTAL', '$' + Math.round(total).toLocaleString('es-CO')]]), y);
+
+        const filasGasto = gastos.map(g => conManual
+          ? [g.concepto || '', g.origen, '$' + g.valor.toLocaleString('es-CO')]
+          : [g.concepto || '', '$' + g.valor.toLocaleString('es-CO')]);
+        filasGasto.push(conManual
+          ? ['TOTAL', '', '$' + Math.round(total).toLocaleString('es-CO')]
+          : ['TOTAL', '$' + Math.round(total).toLocaleString('es-CO')]);
+
+        y = pdfTabla(doc, conManual ? ['Concepto', 'Origen', 'Valor'] : ['Concepto', 'Valor'], filasGasto, y);
         y = pdfParrafo(doc, 'Observaciones', a.gastos?.observaciones, y);
       }
 
@@ -4398,7 +4460,7 @@ async function _generarPPTX() {
       a.muestreo?.activo  && { icon:'🧪', val:'Sí', label:'muestreo' },
       a.ventas?.activo    && { icon:'💰', val:`${(a.ventas.referencias||[]).filter(Boolean).reduce((s,r)=>s+(parseInt(r.cantidad)||0),0)}`, label:'uds vendidas' },
       a.obsequios?.activo && { icon:'🎁', val:`${(a.obsequios.referencias||[]).filter(Boolean).reduce((s,r)=>s+(parseInt(r.cantidad)||0),0)}`, label:'obsequios' },
-      (a.gastos?.items||[]).filter(Boolean).length && { icon:'💵', val:`$${(a.gastos.items||[]).filter(Boolean).reduce((s,g)=>s+(parseFloat(g.valor)||0),0).toLocaleString('es-CO')}`, label:'gastos' },
+      totalGastosActividad(a) > 0 && { icon:'💵', val:`$${Math.round(totalGastosActividad(a)).toLocaleString('es-CO')}`, label:'gastos legalizados' },
     ].filter(Boolean);
 
     chips.forEach((c, i) => {
@@ -4567,6 +4629,7 @@ window.navigate = function(view) {
   }
   if (view === 'informes') {
     actualizarSelectImpulsores();
+    actualizarSelectTiposInformes();
     actualizarAlcanceInformes();
   }
 };
@@ -7112,10 +7175,12 @@ window.verReportesPlantilla = async function(plantillaId) {
 
     // ── TOTALES CONSOLIDADOS ──
     const totalAsist    = reportes.reduce((s,r)=>s+(parseInt(r.evento?.asistentes)||0),0);
-    const totalFotos    = reportes.reduce((s,r)=>s+(r.fotosGenerales?.length||0),0);
+    const totalFotos    = reportes.reduce((s,r)=>s+(r.fotosGenerales?.length||0)
+      +(r.muestreo?.fotos?.length||0)+(r.ventas?.fotos?.length||0)+(r.obsequios?.fotos?.length||0),0);
     const totalVentasUd = reportes.filter(r=>r.ventas?.activo).reduce((s,r)=>s+(r.ventas.referencias||[]).filter(Boolean).reduce((ss,ref)=>ss+(parseInt(ref.cantidad)||0),0),0);
     const totalObsUd    = reportes.filter(r=>r.obsequios?.activo).reduce((s,r)=>s+(r.obsequios.referencias||[]).filter(Boolean).reduce((ss,ref)=>ss+(parseInt(ref.cantidad)||0),0),0);
-    const totalGastos   = reportes.reduce((s,r)=>s+(r.gastos?.items||[]).filter(Boolean).reduce((ss,g)=>ss+(parseFloat(g.valor)||0),0),0);
+    // Gastos: los de la captura + los que agregó el administrador en el balance
+    const totalGastos   = reportes.reduce((s,r)=>s+totalGastosActividad(r),0);
     const totalFacturas = reportes.reduce((s,r)=>s+(r.facturas?.length||0),0);
     const conMuestreo   = reportes.filter(r=>r.muestreo?.activo).length;
     const meta          = p?.meta||0;
