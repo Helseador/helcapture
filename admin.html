@@ -1554,6 +1554,36 @@ td strong, td b { color: var(--ink); font-weight: 700; }
   color: var(--ink-dim);
   margin-bottom: 10px;
 }
+.rent-fila-total td {
+  background: rgba(42, 191, 192, .10);
+  border-top: 2px solid rgba(42, 191, 192, .45);
+  font-weight: 700;
+  color: var(--ink);
+}
+.rent-fila-total td:first-child { border-top-left-radius: 10px; }
+.rent-fila-total td:last-child { border-top-right-radius: 10px; }
+
+/* ── CAPTURAS EN VIVO ── */
+.vivo-lista { display: flex; flex-direction: column; gap: 8px; padding: 4px 2px; }
+.vivo-fila {
+  display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+  padding: 10px 14px; border-radius: var(--r-sm);
+  background: rgba(255, 255, 255, .03);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .07);
+}
+.vivo-quien { font-size: 13.5px; font-weight: 700; color: var(--ink); min-width: 130px; }
+.vivo-hora { font-size: 11.5px; color: var(--ink-dim); }
+.vivo-datos { display: flex; gap: 6px; flex-wrap: wrap; margin-left: auto; }
+.vivo-chip {
+  font-size: 10.5px; font-weight: 700; padding: 3px 9px; border-radius: 99px;
+  background: rgba(255, 255, 255, .06); color: var(--ink-dim);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .08);
+}
+.vivo-chip.fotos { color: #7DD3FC; }
+.vivo-chip.facturas { color: #C4B5FD; }
+.vivo-chip.curso { color: #FBBF24; }
+.vivo-chip.listo { color: #34D399; }
+.vivo-vacio { padding: 14px; font-size: 12.5px; color: var(--ink-faint); text-align: center; }
 /* ── GRÁFICO DE BALANCE ── */
 .graf-titulo {
   margin: 18px 0 10px;
@@ -2570,6 +2600,15 @@ td strong, td b { color: var(--ink); font-weight: 700; }
         Quién entró a trabajar, por actividad y por día.
       </div>
 
+      <!-- CAPTURAS DE HOY EN VIVO -->
+      <div class="table-card" style="margin-bottom:16px;">
+        <div class="table-toolbar">
+          <div class="table-toolbar-title">Capturas de hoy · en vivo</div>
+          <span class="live-badge">● en vivo</span>
+        </div>
+        <div class="vivo-lista" id="ing-vivo"></div>
+      </div>
+
       <div class="filter-bar">
         <select class="filter-select" id="ing-actividad" onchange="renderIngresos()" title="Actividad">
           <option value="">Todas las actividades</option>
@@ -3029,6 +3068,19 @@ td strong, td b { color: var(--ink); font-weight: 700; }
       <button class="balance-add-btn" onclick="addBalanceLine('leg')">+ Agregar gasto legalizado</button>
     </div>
 
+    <!-- Soportes que se le pasaron al comercial -->
+    <div class="balance-manual-wrap">
+      <div class="balance-manual-titulo">📎 Adjuntar soportes que se le pasaron a la captura</div>
+      <p style="font-size:11.5px;color:var(--ink-faint);line-height:1.5;margin-bottom:10px;">
+        Facturas o comprobantes que el comercial no subió desde la app. Se guardan en el mismo reporte.
+      </p>
+      <button class="balance-add-btn" onclick="document.getElementById('balance-file').click()">
+        + Subir factura o soporte
+      </button>
+      <input type="file" id="balance-file" accept="image/*,application/pdf" multiple
+             style="display:none" onchange="subirSoportesAdmin(this)">
+    </div>
+
     <!-- Facturas adjuntas -->
     <div id="balance-facturas-wrap" style="display:none;margin-bottom:16px;">
       <div style="font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px;">🧾 Facturas adjuntas por el impulsor</div>
@@ -3476,6 +3528,7 @@ function iniciarEscuchas() {
     actualizarSelectTiposInformes();
     actualizarSelectImpulsorRent();
     if (document.getElementById('view-informes')?.classList.contains('active')) actualizarAlcanceInformes();
+    if (document.getElementById('view-ingresos')?.classList.contains('active')) renderEnVivo();
     document.getElementById('last-update').textContent = 'Actualizado: ' + new Date().toLocaleTimeString('es-CO');
   }, err => avisarFalloLectura('actividades', err));
 
@@ -3901,6 +3954,27 @@ function filaTotales(ws, fila) {
   return ws;
 }
 
+// Gastos que legalizó el coordinador para todo el equipo (aguas, bolsas, transporte)
+function gastosDeEquipo(plantillaId) {
+  if (!plantillaId) return [];
+  const salida = [];
+  const vistos = new Set();
+
+  (window._ingresos || []).forEach(i => {
+    if (i.plantillaId !== plantillaId) return;
+    (i.gastosEquipo || []).filter(Boolean).forEach(g => {
+      const concepto = String(g.concepto || '').trim();
+      const valor = parseFloat(g.valor) || 0;
+      const clave = `${concepto}|${valor}`;
+      if (vistos.has(clave)) return;   // si se registró dos veces, no se duplica
+      vistos.add(clave);
+      salida.push({ concepto: concepto || 'Gasto del equipo', valor, origen: 'Equipo' });
+    });
+  });
+
+  return salida;
+}
+
 // Gastos de una actividad: los que reportó la captura + los que agregó el
 // administrador en el balance. Los informes deben mostrar los dos, igual que
 // la pestaña Rentabilidad.
@@ -3909,7 +3983,12 @@ function gastosDeActividad(a) {
     .map(g => ({ concepto: g.concepto || '', valor: parseFloat(g.valor) || 0, origen: 'Captura' }));
   const manual = (a.rentabilidad?.gastosManual || []).filter(Boolean)
     .map(g => ({ concepto: g.concepto || '', valor: parseFloat(g.valor) || 0, origen: 'Administrador' }));
-  return captura.concat(manual);
+
+  // Los del equipo son de la actividad: se cuentan una sola vez, en su primer reporte
+  const primero = reportesDeActividad(claveActividad(a))[0];
+  const equipo = (primero && primero.id === a.id) ? gastosDeEquipo(a.plantillaId) : [];
+
+  return captura.concat(equipo, manual);
 }
 
 function totalGastosActividad(a) {
@@ -4621,7 +4700,7 @@ window.navigate = function(view) {
 
   if (view === 'rentabilidad') { actualizarSelectImpulsorRent(); renderRentabilidad(); }
   if (view === 'plantillas') { renderPlantillas(); verificarCodigosLocales(); }
-  if (view === 'ingresos') { actualizarSelectActividadIngresos(); renderIngresos(); }
+  if (view === 'ingresos') { actualizarSelectActividadIngresos(); renderEnVivo(); renderIngresos(); }
   if (view === 'constructor') {
     poblarSelectorActividades();
     if (!window._constructorState.actividadId) limpiarConstructor();
@@ -5955,6 +6034,11 @@ window.abrirBalance = function(id) {
     });
   });
 
+  // Más los que legalizó el coordinador para todo el equipo
+  if (esGrupo) {
+    gastosDeEquipo(clave).forEach(g => items.push({ concepto: g.concepto + ' · equipo', valor: g.valor }));
+  }
+
   // Lo que reportó la captura. Los gastos que agregue el administrador se
   // suman aparte, así el gráfico y el total muestran la legalización completa.
   window._balanceGastosCapturados = items.reduce((s,g)=>s+(parseFloat(g.valor)||0),0);
@@ -5965,32 +6049,91 @@ window.abrirBalance = function(id) {
   window._balancePersonas = reports.reduce((s,r) => s + (parseInt(r.cierre?.personasImpactadas)||parseInt(r.evento?.asistentes)||0), 0);
 
   // Mostrar facturas adjuntas
-  const facturas = reports.flatMap(r => (r.facturas||[]).filter(Boolean));
-  const facWrap = document.getElementById('balance-facturas-wrap');
-  const facList = document.getElementById('balance-facturas-list');
-  if (facturas.length) {
-    facWrap.style.display = 'block';
-    facList.innerHTML = facturas.map(f => {
-      const icon = f.tipo === 'pdf' ? '📄' : '🖼️';
-      const kb   = f.size ? (f.size/1024).toFixed(0)+' KB' : '';
-      const ext  = e((f.tipo||'').toUpperCase());
-      return `<div style="display:flex;align-items:center;gap:10px;background:var(--bg);box-shadow:var(--neo-sm);border-radius:10px;padding:9px 13px;">
-        <span style="font-size:18px;flex-shrink:0;">${icon}</span>
-        <div style="flex:1;min-width:0;">
-          <div style="font-size:13px;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${e(f.nombre||'Archivo')}</div>
-          ${kb ? `<div style="font-size:11px;color:var(--text-muted);">${ext} · ${kb}</div>` : ''}
-        </div>
-        <a href="${e(f.url)}" target="_blank" rel="noopener" class="btn btn-outline btn-sm" style="flex-shrink:0;">Ver</a>
-      </div>`;
-    }).join('');
-  } else {
-    facWrap.style.display = 'none';
-    facList.innerHTML = '';
-  }
+  window._balanceReports = reports;
+  window._balanceSoportesReporte = reports[0]?.id || null;
+  renderFacturasBalance();
 
   renderBalanceLines();
   recalcBalance();
   document.getElementById('modal-balance').classList.add('open');
+};
+
+// Lista de soportes del balance (los de la captura y los que sube el admin)
+function renderFacturasBalance() {
+  const reports = window._balanceReports || [];
+  const facturas = reports.flatMap(r => (r.facturas || []).filter(Boolean));
+  const facWrap = document.getElementById('balance-facturas-wrap');
+  const facList = document.getElementById('balance-facturas-list');
+  if (!facWrap || !facList) return;
+
+  if (!facturas.length) {
+    facWrap.style.display = 'none';
+    facList.innerHTML = '';
+    return;
+  }
+
+  facWrap.style.display = 'block';
+  facList.innerHTML = facturas.map(f => {
+    const icon = f.tipo === 'pdf' ? '📄' : '🖼️';
+    const kb   = f.size ? (f.size / 1024).toFixed(0) + ' KB' : '';
+    const ext  = e((f.tipo || '').toUpperCase());
+    return `<div style="display:flex;align-items:center;gap:10px;background:var(--bg);box-shadow:var(--neo-sm);border-radius:10px;padding:9px 13px;">
+      <span style="font-size:18px;flex-shrink:0;">${icon}</span>
+      <div style="flex:1;min-width:0;">
+        <div style="font-size:13px;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${e(f.nombre||'Archivo')}</div>
+        ${kb ? `<div style="font-size:11px;color:var(--text-muted);">${ext} · ${kb}</div>` : ''}
+      </div>
+      <a href="${e(f.url)}" target="_blank" rel="noopener" class="btn btn-outline btn-sm" style="flex-shrink:0;">Ver</a>
+    </div>`;
+  }).join('');
+}
+
+// El administrador sube soportes que se le pasaron al comercial
+window.subirSoportesAdmin = async function(input) {
+  const archivos = Array.from(input.files || []);
+  input.value = '';
+  if (!archivos.length) return;
+
+  const destino = window._balanceSoportesReporte;
+  if (!destino) { showToast('Elige una actividad primero', 'error'); return; }
+
+  progresoMostrar('Subiendo soportes...');
+  try {
+    const reporte = (window._actividades || []).find(a => a.id === destino);
+    const nuevas = [];
+
+    for (let i = 0; i < archivos.length; i++) {
+      const f = archivos[i];
+      progresoMostrar(`Subiendo ${i + 1}/${archivos.length}...`);
+      const ruta = `actividades/${destino}/facturas/${Date.now()}_${f.name}`;
+      const referencia = storageRef(window._storage, ruta);
+      await uploadBytes(referencia, f, { contentType: f.type || 'application/octet-stream' });
+      const url = await getDownloadURL(referencia);
+      nuevas.push({
+        url,
+        nombre: f.name,
+        tipo: (f.type || '').includes('pdf') ? 'pdf' : 'imagen',
+        size: f.size,
+        subidoPorAdmin: true,
+      });
+    }
+
+    const facturas = ((reporte?.facturas || []).filter(Boolean)).concat(nuevas);
+    await updateDoc(doc(db, 'actividades', destino), { facturas });
+
+    showToast(`${nuevas.length} soporte(s) adjuntado(s) ✓`, 'success');
+
+    // Se reflejan de inmediato en el modal
+    if (window._balanceReports?.[0]) {
+      window._balanceReports[0] = { ...window._balanceReports[0], facturas };
+    }
+    renderFacturasBalance();
+  } catch (err) {
+    console.error(err);
+    showToast('No se pudo subir el soporte (' + (err?.code || 'error') + ')', 'error');
+  } finally {
+    progresoOcultar();
+  }
 };
 
 function renderBalanceLines() {
@@ -6217,10 +6360,12 @@ window.renderRentabilidad = function() {
   empty.style.display = 'none';
 
   let sumIngr=0, sumCost=0, sumGan=0, roisArr=[], cppsArr=[], sumPersonas=0, sinDatos=0;
+  let sumGastosLeg=0, sumCostosAd=0;
 
   tbody.innerHTML = acts.map(escaparDatos).map(a => {
     const r = calcRent(a);
     sumIngr += r.ingresos; sumCost += r.totalCostos; sumGan += r.ganancia;
+    sumGastosLeg += r.gastosLeg; sumCostosAd += r.costosAd;
     sumPersonas += r.personas;
     if (r.roi !== null) roisArr.push(r.roi);
     if (r.cpp !== null) cppsArr.push(r.cpp);
@@ -6268,7 +6413,31 @@ window.renderRentabilidad = function() {
         <button class="btn btn-outline btn-sm" onclick="verDetalle('${a.id}')">Ver</button>
       </td>
     </tr>`;
-  }).join('');
+  }).join('') + `
+    <tr class="rent-fila-total">
+      <td>
+        <strong>TOTAL GENERAL</strong>
+        <div style="font-size:11px;color:var(--ink-dim);margin-top:3px;">
+          ${acts.length} actividad(es) sumadas
+        </div>
+      </td>
+      <td></td>
+      <td style="text-align:center;">${sumPersonas.toLocaleString('es-CO')}</td>
+      <td style="text-align:right;">${fmtCOP(sumGastosLeg)}</td>
+      <td style="text-align:right;">${fmtCOP(sumCostosAd)}</td>
+      <td style="text-align:right;font-weight:800;">${fmtCOP(sumCost)}</td>
+      <td style="text-align:right;">${fmtCOP(sumIngr)}</td>
+      <td class="${sumGan >= 0 ? 'positive' : 'negative'}" style="text-align:right;font-size:15px;font-weight:800;">
+        ${fmtCOP(sumGan)}
+      </td>
+      <td class="${sumGan >= 0 ? 'positive' : 'negative'}" style="text-align:right;">
+        ${sumCost > 0 ? ((sumGan / sumCost) * 100).toFixed(1) + '%' : '–'}
+      </td>
+      <td class="neutral" style="text-align:right;">
+        ${sumPersonas > 0 && sumCost > 0 ? fmtCOP(sumCost / sumPersonas) : '–'}
+      </td>
+      <td></td>
+    </tr>`;
 
   // Chips de resumen
   const roiProm = roisArr.length ? (roisArr.reduce((s,v)=>s+v,0)/roisArr.length).toFixed(1)+'%' : '–';
@@ -6427,7 +6596,7 @@ function escuchaDeIngresos() {
     _fallosAvisados.ingresos = false;
     window._ingresos = snap.docs.map(d => ({ id: d.id, ...d.data() }));
     actualizarSelectActividadIngresos();
-    if (document.getElementById('view-ingresos')?.classList.contains('active')) renderIngresos();
+    if (document.getElementById('view-ingresos')?.classList.contains('active')) { renderEnVivo(); renderIngresos(); }
   }, err => {
     // Todavía puede no existir la regla de esta colección en Firestore
     console.warn('[Firestore] No se pudo leer ingresos:', err?.code || err);
@@ -6506,6 +6675,48 @@ window.limpiarFiltrosIngresos = function() {
     if (el) el.value = '';
   });
   renderIngresos();
+};
+
+// Capturas de hoy: se refrescan solas con cada cambio de Firestore
+window.renderEnVivo = function() {
+  const cont = document.getElementById('ing-vivo');
+  if (!cont) return;
+
+  const d = new Date();
+  const hoy = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+
+  const deHoy = (window._actividades || [])
+    .filter(a => fechaLocalDe(a.creadoEn) === hoy)
+    .sort((a, b) => msDe(b.creadoEn) - msDe(a.creadoEn));
+
+  if (!deHoy.length) {
+    cont.innerHTML = '<div class="vivo-vacio">Todavía no hay capturas hoy. Aparecerán aquí en cuanto alguien entre con su código.</div>';
+    return;
+  }
+
+  cont.innerHTML = deHoy.map(a => {
+    const fotos = (a.fotosGenerales||[]).length + (a.muestreo?.fotos||[]).length
+      + (a.ventas?.fotos||[]).length + (a.obsequios?.fotos||[]).length;
+    const facturas = (a.facturas||[]).length;
+    const enCurso = a._subiendo === true;
+
+    // Hora en la que entró, desde el registro de personal
+    const ing = (window._ingresos || []).find(i =>
+      i.plantillaId === a.plantillaId &&
+      String(i.cedula || '') === String(a.impulsor?.cedula || '') &&
+      i.fecha === hoy);
+    const inicio = ing?.entradaEn ? `Inició ${horaDe(ing.entradaEn)}` : `Entró ${horaDe(a.creadoEn)}`;
+
+    return `<div class="vivo-fila">
+      <span class="vivo-quien">${e(a.impulsor?.nombre || 'Sin nombre')}</span>
+      <span class="vivo-hora">${inicio} · ${e(a.evento?.nombre || '')}</span>
+      <div class="vivo-datos">
+        <span class="vivo-chip ${enCurso ? 'curso' : 'listo'}">${enCurso ? '⏳ En curso' : '✓ Enviado'}</span>
+        <span class="vivo-chip fotos">📷 ${fotos} foto(s)</span>
+        <span class="vivo-chip facturas">🧾 ${facturas} soporte(s)</span>
+      </div>
+    </div>`;
+  }).join('');
 };
 
 window.renderIngresos = function() {

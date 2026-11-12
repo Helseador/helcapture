@@ -968,6 +968,13 @@ button,.btn-source,.btn-submit,.btn-back,.btn-primary,.btn-login,.btn-new,
           <input type="file" id="ev-gal" accept="image/*" multiple>
         </div>
 
+        <div class="card" id="card-gastos-equipo" style="display:none;">
+          <div class="card-title"><div class="card-title-icon">🧾</div> Gastos del equipo</div>
+          <p class="equipo-sub">Compras para todo el equipo: aguas, bolsas, transporte… Quedan a nombre de la actividad.</p>
+          <div class="ref-list" id="gastos-equipo-lista"></div>
+          <button class="btn-add-ref" id="btn-add-gasto-equipo">+ Agregar gasto del equipo</button>
+        </div>
+
         <div class="card">
           <div class="field">
             <label>Observaciones de la jornada</label>
@@ -1642,6 +1649,27 @@ function addGasto(){
   list.appendChild(div);
 }
 
+// ── GASTOS DEL EQUIPO (los legaliza el coordinador) ──
+function addGastoEquipo(){
+  const list = $('gastos-equipo-lista');
+  if (!list) return;
+  const idx = gastosEquipo.length;
+  gastosEquipo.push({ concepto:'', valor:'' });
+
+  const div = document.createElement('div');
+  div.className = 'ref-item';
+  div.innerHTML = '<input type="text" placeholder="Ej. Aguas, bolsas, transporte">' +
+                  '<input type="number" placeholder="$ valor" min="0" inputmode="numeric">' +
+                  '<button class="btn-icon">×</button>';
+
+  const inputs = div.querySelectorAll('input');
+  inputs[0].addEventListener('input', ev => gastosEquipo[idx].concepto = ev.target.value);
+  inputs[1].addEventListener('input', ev => gastosEquipo[idx].valor = ev.target.value);
+  div.querySelector('.btn-icon').addEventListener('click', () => { div.remove(); gastosEquipo[idx] = null; });
+
+  list.appendChild(div);
+}
+
 // ── ENVIAR ──
 // (subirFotos/subirFacturas viven junto al formulario de captura, más abajo)
 
@@ -1652,6 +1680,7 @@ function addGasto(){
 let jornada = { iniciada: false, cerrada: false, entradaEn: null, salidaEn: null };
 let equipo = [];
 let fotosEvidencia = [];
+let gastosEquipo = [];
 let modoJornada = 'inicio';
 
 function fechaHoy() {
@@ -1753,6 +1782,9 @@ async function abrirEquipo(modo) {
   modoJornada = modo;
   equipo = [];
   fotosEvidencia = [];
+  gastosEquipo = [];
+  const listaGastos = $('gastos-equipo-lista');
+  if (listaGastos) listaGastos.innerHTML = '';
   $('jornada-obs').value = '';
   $('equipo-titulo').textContent = modo === 'inicio' ? 'Quién llegó hoy' : 'Quién sale hoy';
   $('evidencia-titulo').textContent = modo === 'inicio' ? 'Evidencia de llegada' : 'Evidencia de salida';
@@ -1761,6 +1793,8 @@ async function abrirEquipo(modo) {
     ? 'Escribe el nombre y el documento de cada persona. Tú ya vienes incluido.'
     : 'Desmarca a quien no estaba al cierre.';
   $('btn-add-miembro').style.display = modo === 'inicio' ? 'block' : 'none';
+  const cardGastos = $('card-gastos-equipo');
+  if (cardGastos) cardGastos.style.display = modo === 'fin' ? 'block' : 'none';
 
   if (modo === 'inicio') {
     equipo = [{ nombre: impulsor.nombre, cedula: impulsor.cedula }];
@@ -1930,6 +1964,14 @@ async function guardarJornada() {
       if (esLider) {
         if (urls.length) datos[modoJornada === 'inicio' ? 'evidenciaInicio' : 'evidenciaFin'] = urls;
         if (obs) datos.observaciones = obs;
+
+        // Gastos de todo el equipo, a nombre de la actividad
+        if (modoJornada === 'fin') {
+          const limpiosEquipo = (gastosEquipo || [])
+            .filter(g => g && (String(g.concepto||'').trim() || String(g.valor||'').trim()))
+            .map(g => ({ concepto: String(g.concepto||'').trim(), valor: parseFloat(g.valor) || 0 }));
+          if (limpiosEquipo.length) datos.gastosEquipo = limpiosEquipo;
+        }
       }
 
       await ref.set(datos, { merge: true });
@@ -2413,6 +2455,8 @@ $('btn-cerrar').addEventListener('click', () => abrirEquipo('fin'));
 $('btn-capturar').addEventListener('click', () => { if (plantillaActual) seleccionarActividad(plantillaActual.id); });
 $('btn-jornada-salir').addEventListener('click', nuevaActividad);
 $('btn-add-miembro').addEventListener('click', () => { equipo.push({ nombre: '', cedula: '' }); renderEquipo(); });
+$('btn-add-gasto-equipo').addEventListener('click', addGastoEquipo);
+$('btn-add-gasto-equipo').addEventListener('click', addGastoEquipo);
 $('btn-equipo-volver').addEventListener('click', () => showScreen('screen-jornada'));
 $('btn-guardar-jornada').addEventListener('click', guardarJornada);
 $('btn-ev-cam').addEventListener('click', () => $('ev-cam').click());
